@@ -18,6 +18,7 @@
 #include "intc.h"
 #include "dmac.h"
 #include "graphic.h"
+#include "ledflash.h"
 
 #define LINEMARK() \
 	do { \
@@ -25,8 +26,12 @@
 		iop_prints("\n"); \
 	} while(0)
 
+#define SBIOS_BASE	0x80001000
+
+#if 0
 /** PS2 bootinfo structure. */
 struct ps2_bootinfo *bootinfo;
+#endif
 
 /**
  * SBIOS function entry.
@@ -127,13 +132,21 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	graphic_init_module();
 	intc_init_module();
 	dmac_init_module();
+	// Working with RTE until here:
 
+#if 0
+	/* Not wroking with RTE disc, but working with kernelloader. */
 	bootinfo = (struct ps2_bootinfo *) envp;
 
 	sbios = *((sbios_t **) bootinfo->sbios_base);
+#else
+	/* Working with RTE disc and kernelloader. */
+	sbios = *((sbios_t **) SBIOS_BASE);
+#endif
 
 	iop_prints("Calling sbios\n");
 	version = sbios(0, NULL);
+	//ledflash();
 	printf("Version %d\n", version);
 
 	mmu_init_module();

@@ -332,31 +332,43 @@ void SifExitCmd(void)
 	return;
 }
 
-/* Functions is same as RTE. */
+/* Functions is same as RTE, but with error handling. */
 void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 {
 	if (((u32) fid) & 0x80000000)
 	{
-		_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].handler = handler;
-		_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].harg = harg;
+		if (_sif_cmd_data.sys_cmd_handlers != NULL) {
+			_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].handler = handler;
+			_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].harg = harg;
+		} else {
+			printf("Error: SifAddCmdHandler() sys_cmd_handlers not setup.\n");
+		}
 	}
 	else
 	{
-		_sif_cmd_data.usr_cmd_handlers[(u32) fid].handler = handler;
-		_sif_cmd_data.usr_cmd_handlers[(u32) fid].harg = harg;
+		if (_sif_cmd_data.usr_cmd_handlers != NULL) {
+			_sif_cmd_data.usr_cmd_handlers[(u32) fid].handler = handler;
+			_sif_cmd_data.usr_cmd_handlers[(u32) fid].harg = harg;
+		} else {
+			printf("Error: SifAddCmdHandler() usr_cmd_handlers not setup.\n");
+		}
 	}
 }
 
-/* Functions is same as RTE. */
+/* Functions is same as RTE, but with error handling. */
 static void sif_cmd_del_handler(u32 fid)
 {
 	if (fid & 0x80000000)
 	{
-		_sif_cmd_data.sys_cmd_handlers[fid & 0x7FFFFFFF].handler = NULL;
+		if (_sif_cmd_data.sys_cmd_handlers != NULL) {
+			_sif_cmd_data.sys_cmd_handlers[fid & 0x7FFFFFFF].handler = NULL;
+		}
 	}
 	else
 	{
-		_sif_cmd_data.usr_cmd_handlers[fid].handler = NULL;
+		if (_sif_cmd_data.usr_cmd_handlers != NULL) {
+			_sif_cmd_data.usr_cmd_handlers[fid].handler = NULL;
+		}
 	}
 }
 

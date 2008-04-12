@@ -20,6 +20,7 @@
 #include "speedregs.h"
 #include "smapregs.h"
 #include "iopmem.h"
+#include "loader.h"
 
 #define M_PRINTF(format, args...)	\
 	iop_printf(format, ## args)
@@ -63,25 +64,6 @@ static void expbay_set_stat(int stat);
 static int expbay_device_probe(void);
 static int expbay_device_reset(void);
 static int expbay_init(void);
-
-static inline void nopdelay1ms(void)
-{
-	/* (300 MHz CPU / 1ms) / 7 CPU cycles per loop (4 * nop + assumed loop overhead), so we will wait for 1ms. */
-	int i = (300000000 / 1000) / 7;
-
-	do {
-		__asm__ ("nop\nnop\nnop\nnop\nnop\n");
-	} while (i-- != -1);
-}
-
-void DelayThread(int delay)
-{
-	int i;
-
-	for (i = 0; i < delay; i++) {
-		nopdelay1ms();
-	}
-}
 
 int ps2dev9_init()
 {

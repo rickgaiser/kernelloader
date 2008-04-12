@@ -15,6 +15,14 @@
 #include "eedebug.h"
 #include "configuration.h"
 
+#ifdef NEW_ROM_MODULES
+#define MODPREFIX "X"
+#endif
+
+#ifdef OLD_ROM_MODULES
+#define MODPREFIX ""
+#endif
+
 /** Structure describing module that should be loaded. */
 typedef struct
 {
@@ -37,29 +45,29 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 #ifdef RESET_IOP
 	{
-		.path = "rom0:SIO2MAN",
+		.path = "rom0:" MODPREFIX "SIO2MAN",
 		.argLen = 0,
 		.args = NULL
 	},
 	{
-		.path = "rom0:MCMAN",
+		.path = "rom0:" MODPREFIX "MCMAN",
 		.argLen = 0,
 		.args = NULL
 	},
 	{
-		.path = "rom0:MCSERV",
+		.path = "rom0:" MODPREFIX "MCSERV",
 		.argLen = 0,
 		.args = NULL
 	},
 #endif
 	{
-		.path = "rom0:PADMAN",
+		.path = "rom0:" MODPREFIX "PADMAN",
 		.argLen = 0,
 		.args = NULL
 	},
 #ifdef RESET_IOP
 	{
-		.path = "rom0:CDVDMAN",
+		.path = "rom0:" MODPREFIX "CDVDMAN",
 		.argLen = 0,
 		.args = NULL
 	},
@@ -199,4 +207,5 @@ int loadLoaderModules(void)
 		}
 	}
 	graphic_setStatusMessage(NULL);
+	printAllModules();
 }

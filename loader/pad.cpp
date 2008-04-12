@@ -17,7 +17,9 @@ static char actAlign[PADCOUNT][6];
 static int actuators[PADCOUNT];
 static int padInitialized[PADCOUNT];
 
+#ifdef OLD_ROM_MODULES
 #define ROM_PADMAN
+#endif
 
 int initializePad(int port, int slot);
 

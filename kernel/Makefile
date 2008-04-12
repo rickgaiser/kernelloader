@@ -14,7 +14,8 @@ CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G
 
 SRC = start $(PROGRAM) rtesif strlen strncpy \
 	cache timers irq interrupts panic mmu demo loader syscall \
-	entry graphic time string exception memory thread intc dmac
+	entry graphic time string exception memory thread intc dmac \
+	ledflash
 
 ifeq ($(SHARED_MEM_DEBUG),yes)
 CFLAGS += -DSHARED_MEM_DEBUG

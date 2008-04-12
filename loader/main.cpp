@@ -212,10 +212,18 @@ extern "C" {
 
 		usePad = false;	
 		if (smod_get_mod_by_name("padman", &module) != NULL) {
+#ifdef OLD_ROM_MODULES
 			/* Only old ROM version of padman is working. */
 			if ((module.version >> 8) <= 1) {
 				usePad = true;
 			}
+#endif
+#ifdef NEW_ROM_MODULES
+			/* Only old ROM version of padman is working. */
+			if ((module.version >> 8) > 1) {
+				usePad = true;
+			}
+#endif
 		}
 		enablePad(usePad);
 

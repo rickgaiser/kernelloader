@@ -4,7 +4,7 @@
 
 #include "stdint.h"
 
-#define LOADER_VERSION "1.2"
+#define LOADER_VERSION "1.3"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,6 +69,8 @@ extern "C" {
 	char *getKernelParameter(void);
 	void waitForUser(void);
 	const char *getPS2MAPParameter(int *len);
+	void printAllModules(void);
+	void DelayThread(int delay);
 #ifdef __cplusplus
 }
 #endif

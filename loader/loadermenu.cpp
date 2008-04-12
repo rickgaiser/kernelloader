@@ -712,6 +712,18 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		""
 	};
 	linuxMenu->addItem(kmc1Param.menuName, fsroot, (void *) &kmc1Param);
+#if !defined(RESET_IOP) || defined(PS2LINK)
+	static fsRootParam_t khostParam = {
+		kernelFilename,
+		menu,
+		linuxMenu,
+		NULL,
+		"Host",
+		"host:",
+		""
+	};
+	linuxMenu->addItem(khostParam.menuName, fsroot, (void *) &khostParam);
+#endif
 
 	Menu *initrdMenu = menu->addSubMenu("Select Initrd");
 
@@ -754,6 +766,18 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		""
 	};
 	initrdMenu->addItem(mc1Param.menuName, fsroot, (void *) &mc1Param);
+#if !defined(RESET_IOP) || defined(PS2LINK)
+	static fsRootParam_t hostParam = {
+		initrdFilename,
+		menu,
+		initrdMenu,
+		NULL,
+		"Host",
+		"host:",
+		""
+	};
+	initrdMenu->addItem(hostParam.menuName, fsroot, (void *) &hostParam);
+#endif
 
 	/* Config menu */
 	Menu *configMenu = menu->addSubMenu("Configuration Menu");

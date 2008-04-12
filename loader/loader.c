@@ -26,6 +26,7 @@
 #include "smod.h"
 #include "usb.h"
 #include "ps2dev9.h"
+#include "hdd.h"
 #include "debug.h"
 #include "pad.h"
 #include "rom.h"
@@ -1332,7 +1333,8 @@ int loader(void *arg)
 		if (loaderConfig.enableDev9) {
 			/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
 			if (ps2dev9_init() == 0) {
-				/* DEV9 is initialized and at least network should be available. */
+				/* Activate hard disc. */
+				ata_setup();
 
 				/* Tell Linux to activate HDD and Network. */
 				bootinfo->pccard_type = 0x0100;
@@ -1504,5 +1506,24 @@ int loader(void *arg)
 	error_printf("Unknown program state.");
 
 	return -2;
+}
+
+static inline void nopdelay1ms(void)
+{
+	/* (300 MHz CPU / 1ms) / 7 CPU cycles per loop (4 * nop + assumed loop overhead), so we will wait for 1ms. */
+	int i = (300000000 / 1000) / 7;
+
+	do {
+		__asm__ ("nop\nnop\nnop\nnop\nnop\n");
+	} while (i-- != -1);
+}
+
+void DelayThread(int delay)
+{
+	int i;
+
+	for (i = 0; i < delay; i++) {
+		nopdelay1ms();
+	}
 }
 

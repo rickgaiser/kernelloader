@@ -110,3 +110,9 @@ bf801600
 .code writeSPD_REG0x205c(value)
 01000f50
 .code initDev9HardDiscAndNetwork
+01011be8
+.code serial_printf
+01011ca8
+.code serial_putc
+01011d28
+.code serial_puts
