@@ -41,6 +41,7 @@ extern "C" {
 	void enablePad(int val);
 	void setInputBuffer(char *buffer);
 	char *getInputBuffer(void);
+	void graphic_screenshot(void);
 #ifdef __cplusplus
 }
 #endif

@@ -26,6 +26,9 @@ endif
 ifeq ($(RESET_IOP),yes)
 EE_CFLAGS += -DRESET_IOP
 endif
+ifeq ($(SCREENSHOT),yes)
+EE_CFLAGS += -DSCREENSHOT
+endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
 
 # Autodetect if RTE is available.

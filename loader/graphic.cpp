@@ -10,6 +10,7 @@
 #include "rom.h"
 #include "graphic.h"
 #include "loader.h"
+#include <screenshot.h>
 
 
 /** Maximum buffer size for error_printf(). */
@@ -202,11 +203,11 @@ void graphic_paint(void)
 	paintTexture(texPenguin, 5, 10, 1);
 
 	gsKit_font_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
-		"Loader for Linux 1.1");
+		"Loader for Linux " LOADER_VERSION);
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"13.1.2008");
+		"18.01.2008");
 
 	if (statusMessage != NULL) {
 		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
@@ -352,7 +353,7 @@ Menu *graphic_main(graphic_mode_t mode)
 
 	//gsGlobal = gsKit_init_global(GS_MODE_AUTO_I);
 	if (mode == MODE_NTSC) {
-		gsGlobal = gsKit_init_global(GS_MODE_NTSC);
+		gsGlobal = gsKit_init_global(GS_MODE_NTSC_I);
 		numberOfMenuItems = 7;
 	} else {
 		gsGlobal = gsKit_init_global(GS_MODE_PAL_I);
@@ -641,6 +642,21 @@ extern "C" {
 	char *getInputBuffer(void)
 	{
 		return inputBuffer;
+	}
+
+	void graphic_screenshot(void)
+	{
+		static int screenshotCounter = 0;
+		char text[256];
+
+#ifdef RESET_IOP
+		snprintf(text, 256, "mass0:kloader%d.tga", screenshotCounter);
+#else
+		snprintf(text, 256, "host:kloader%d.tga", screenshotCounter);
+#endif
+		ps2_screenshot_file(text, gsGlobal->ScreenBuffer[gsGlobal->ActiveBuffer & 1],
+			gsGlobal->Width, gsGlobal->Height / 2, gsGlobal->PSM);
+		screenshotCounter++;
 	}
 }
 

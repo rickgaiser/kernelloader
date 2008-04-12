@@ -15,3 +15,5 @@ LOAD_PS2LINK = no
 
 # Debug output using fileio functions (RPC).
 FILEIO_DEBUG = no
+
+SCREENSHOT = no

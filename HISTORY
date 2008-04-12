@@ -1,3 +1,7 @@
+1.2
+- Fixed out of VRAM in NTSC mode.
+- Added code for making screenshots. Code is unstable, so I deactivated it.
+
 1.1
 - Better graphical look and style of boot screen.
 - Fixed error when switching mc directories to often.

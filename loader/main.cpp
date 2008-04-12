@@ -106,6 +106,11 @@ int main(int argc, char **argv)
 		} else {
 			key = 0;
 		}
+#ifdef SCREENSHOT
+		if (new_pad & PAD_R1) {
+			graphic_screenshot();
+		}
+#endif
 
 		menu = getCurrentMenu();
 		errorMessage = getErrorMessage();
