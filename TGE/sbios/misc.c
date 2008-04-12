@@ -17,6 +17,8 @@
 #include "cache.h"
 #include "iopmem.h"
 
+#include "core.h"
+
 int sbcall_getver()
 {
 	return TGE_SBIOS_VERSION;
@@ -75,6 +77,9 @@ int sbcall_setrgbyc(tge_sbcall_setrgbyc_arg_t *arg)
 
 void FlushCache(int operation)
 {
+	u32 status;
+
+	core_save_disable(&status);
 	switch(operation)
 	{
 		case 0:
@@ -95,4 +100,18 @@ void FlushCache(int operation)
 			iop_prints("Invalidate DCache not supported (3).\n");
 			break;
 	}
+	core_restore(status);
+}
+
+void SyncDCache(void *start, void *end)
+{
+	extern void _SyncDCache(void *start, void *end);
+
+	u32 status;
+
+	core_save_disable(&status);
+
+	_SyncDCache((void *)((u32)start & 0xffffffc0), (void *)((u32)end & 0xffffffc0));
+
+	core_restore(status);
 }

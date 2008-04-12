@@ -71,4 +71,24 @@ int sbcall_mcunformat(tge_sbcall_rpc_arg_t *carg);
 int sbcall_mcgetentspace(tge_sbcall_rpc_arg_t *carg);
 int sbcall_mcrename(tge_sbcall_rpc_arg_t *carg);
 
+/* pad.c */
+int sbcall_padinit(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padend(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padportopen(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padportclose(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padsetmainmode(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padsetactdirect(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padsetactalign(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padinfopressmode(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padenterpressmode(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padexitpressmode(tge_sbcall_rpc_arg_t *carg);
+int sbcall_padread(tge_sbcall_padread_arg_t *arg);
+int sbcall_padgetstate(tge_sbcall_padgetstate_arg_t *arg);
+int sbcall_padgetreqstate(tge_sbcall_padgetreqstate_arg_t *arg);
+int sbcall_padinfoact(tge_sbcall_padinfoact_arg_t *arg);
+#if 0
+int sbcall_padinfocomb(tge_sbcall_padinfocomb_arg_t *arg);
+#endif
+int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg);
+
 #endif /* TGE_SBCALLS_H */

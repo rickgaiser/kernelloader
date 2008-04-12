@@ -380,6 +380,7 @@ typedef struct {
 typedef struct {
 	int	port;
 	int	slot;
+	void *addr;
 } tge_sbcall_padportopen_arg_t;
 
 /* [RPC] TGE_SBCALL_PADPORTCLOSE */

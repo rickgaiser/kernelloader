@@ -321,42 +321,40 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	sbcall_iopaheapalloc,
 	/* 66 */
 	sbcall_iopheapfree,
-	/* 67 */
-	sbcall_mcinit,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 80 */
-	0, /* PAD init */
+	sbcall_padinit,
 	/* 81 */
-	0,
+	sbcall_padend,
 	/* 82 */
-	0,
+	sbcall_padportopen,
 	/* 83 */
-	0,
+	sbcall_padportclose,
 	/* 84 */
-	0,
+	sbcall_padsetmainmode,
 	/* 85 */
-	0,
+	sbcall_padsetactdirect,
 	/* 86 */
-	0,
+	sbcall_padsetactalign,
 	/* 87 */
-	0,
+	sbcall_padinfopressmode,
 	/* 88 */
-	0,
+	sbcall_padenterpressmode,
 	/* 89 */
-	0,
+	sbcall_padexitpressmode,
 	/* 90 */
-	0,
+	sbcall_padread,
 	/* 91 */
-	0,
+	sbcall_padgetstate,
 	/* 92 */
-	0,
+	sbcall_padgetreqstate,
 	/* 93 */
-	0,
+	sbcall_padinfoact,
 	/* 94 */
-	0,
+	0, /* sbcall_padinfocomb */
 	/* 95 */
-	0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	sbcall_padinfomode,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 112 */
 	0, /* Sound init. */
 	/* 113 */

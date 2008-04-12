@@ -155,6 +155,12 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+	{
+		.path = "rom0:XPADMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL
+	},
 #else
 	{
 		.path = "rom0:SIO2MAN",
@@ -170,6 +176,12 @@ moduleEntry_t modules[] = {
 	},
 	{
 		.path = "rom0:MCSERV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL
+	},
+	{
+		.path = "rom0:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL

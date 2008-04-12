@@ -9,7 +9,8 @@ EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS) -Wall -W -Werror-implicit-function
 SBIOS_ADDR = 0x80001000
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
 
-EE_OBJS = prologue.o sbios.o misc.o sifdma.o core.o sifcmd.o sifrpc.o iopheap.o mc.o cache.o strlen.o strncpy.o memcpy.o
+EE_OBJS = prologue.o sbios.o misc.o sifdma.o core.o sifcmd.o sifrpc.o iopheap.o mc.o cache.o \
+	strlen.o strncpy.o memcpy.o pad.o memset.o strcpy.o
 ifeq ($(SHARED_MEM_DEBUG),yes)
 EE_CFLAGS += -DSHARED_MEM_DEBUG
 EE_OBJS += iopmem.o printf.o snprintf.o
