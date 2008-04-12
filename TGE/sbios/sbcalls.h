@@ -43,4 +43,14 @@ int sbcall_sifgetsreg(tge_sbcall_sifgetsreg_arg_t *arg);
 int sbcall_sifgetdatatable(void);
 int sbcall_sifsetsyscmdbuffer(tge_sbcall_sifsetsyscmdbuffer_arg_t *arg);
 
+/* sifrpc.c */
+int sbcall_sifinitrpc(void);
+int sbcall_sifbindrpc(tge_sbcall_sifbindrpc_arg_t *arg);
+int sbcall_sifcallrpc(tge_sbcall_sifcallrpc_arg_t *arg);
+
+/* iopheap.c */
+int sbcall_iopheapinit(tge_sbcall_rpc_arg_t *carg);
+int sbcall_iopaheapalloc(tge_sbcall_rpc_arg_t *carg);
+int sbcall_iopheapfree(tge_sbcall_rpc_arg_t *carg);
+
 #endif /* TGE_SBCALLS_H */

@@ -2,7 +2,7 @@ PROGRAM = loader
 include ../config.mk
 
 EE_BIN = $(PROGRAM).elf
-EE_OBJS = $(PROGRAM).o main.o iopmem.o jump.o entry.o exception.o interrupts.o graphic.o cache.o
+EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit
 ifneq ($(LIBJPG),)
 EE_LIBS += -L$(LIBJPG)/lib -ljpg
@@ -12,7 +12,14 @@ EE_LIBS += -L$(LIBTIFF) -ltiff
 endif
 EE_LIBS += -lm -ldebug
 EE_CFLAGS = -g -I$(PS2DEV)/gsKit/include
-EE_CFLAGS += -D$(TYPE)
+EE_CFLAGS += -D$(TYPE) -Wall -W -Werror-implicit-function-declaration -Wimplicit-int
+ifeq ($(SHARED_MEM_DEBUG),yes)
+EE_CFLAGS += -DSHARED_MEM_DEBUG
+EE_OBJS += iopmem.o
+endif
+ifeq ($(LOAD_PS2LINK),yes)
+EE_CFLAGS += -DPS2LINK
+endif
 
 MODULES = ioptrap.irx iomanX.irx ps2dev9.irx ps2ip.irx ps2smap.irx poweroff.irx \
 	ps2link.irx

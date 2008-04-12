@@ -61,7 +61,8 @@ sh # make test
 
 You should see the output of example kernel on ps2link output. The kernel
 tries to emulate the original PS2 kernel and start a graphic demo. SIFRPC
-is not yet working correctly in this kernel. Only IOP reset is working.
+is working correctly in this kernel. All IOP hardware should work. Only
+single thread and a interrupt handler is supported.
 
 Now you should compile the linux kernel. Run menu config and deactivate
 old bootinfo support.
@@ -99,6 +100,8 @@ sh # make test
 Maximum size of kernel is 5 MB.
 The loader sets maximum "initrd.gz" decompressed size to 16 MB (using
 "ramdisk_size=16384").
+The linux kernel should start. USB keyboard is working. Other hardware
+support will follow in a short time.
 
 Remarks:
 ########
@@ -107,3 +110,4 @@ You can select the SBIOS type by changing variable TYPE in config.mk
 from "TGE" to "RTE".  Then you need to put in the original PS2 linux
 DVD disc 1. The SBIOS will be automatically extracted. Linux will not
 start with this version, but my test kernel will work.
+USB is only working when ps2link modules are not loaded (see config.mk).

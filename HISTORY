@@ -1,3 +1,10 @@
+0.7
+- SIFRPC is working with linux (but code is incomplete).
+- iopheap RPC is working with linux (complete).
+- Fixed interrupt handling.
+- USB is working with linux when ps2link and the network modules are
+  deactivated.
+- Default configuration is a working USB linux.
 0.6
 - Get SIFRPC working in emulated ps2 kernel.
 - Added support for negative syscalls (syscalls with first letter "i", which can

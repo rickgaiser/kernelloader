@@ -9,14 +9,12 @@
 #ifndef TGE_SIF_H
 #define TGE_SIF_H
 
-#include "tge_sifdma.h"
+#include "sifdma.h"
 
-int sif_set_dma(tge_sifdma_transfer_t *dmat, u32 tcount);
+u32 SifSetDma(SifDmaTransfer_t *sdd, s32 len);
+u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len);
 
 void sif_set_dchain(void);
-
-u32 sif_set_reg(u32 reg, u32 val);
-u32 sif_get_reg(u32 reg);
 
 int sif_cmd_init(void);
 int sif_cmd_exit(void);
@@ -25,5 +23,8 @@ u32 sif_cmd_send(u32 fid, u32 flags, void *packet, u32 packet_size, void *src, v
 
 void sif_cmd_add_handler(u32 fid, void *handler, void *harg);
 u32 sif_cmd_get_sreg(u32 reg);
+
+u32 SifSetReg(u32 reg, u32 val);
+u32 SifGetReg(u32 reg);
 
 #endif /* TGE_SIF_H */

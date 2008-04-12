@@ -13,11 +13,15 @@
 #include "tge_sbios.h"
 #include "tge_sifdma.h"
 
+#include "sifdma.h"
+#include "sifcmd.h"
+
 #include "sbcalls.h"
 #include "sif.h"
 #include "hwreg.h"
 #include "core.h"
 #include "iopmem.h"
+#include "stdio.h"
 
 /** Maximum packet data size when calling sif_cmd_send(). */
 #define CMD_PACKET_DATA_MAX 112
@@ -37,8 +41,10 @@
 #define D5_QWC 0x1000C020
 #define D5_TADR 0x1000C030
 
+#define CMD_HANDLER_MAX 32
+
 typedef struct {
-	void *handler;
+	void (*handler)( void *a, void *b);
 	void *harg;
 } sifCmdHandler_t;
 
@@ -93,15 +99,9 @@ static u8 pktbuf[128] __attribute__((aligned(64)));		/* 0x80009480 */
 static u8 cmdbuf[64] __attribute__((aligned(64))); /* 0x80009500 */
 static u32 sifCmdInitPkt[5] __attribute__((aligned(64))); /* 0x80009540 */
 cmd_data_t _sif_cmd_data; /* 0x80009554 */
-static sifCmdHandler_t *sifCmdHandlerTable1; /* 0x80009560 */
-static u32 sifCmdHandlerTable1size;
-static sifCmdHandler_t *sifCmdHandlerTable2; /* 0x80009568 */
-static u32 sifCmdHandlerTable2size;
-static sifCmdHandler_t sifCmdSysBuffer[32]; /* 0x80009578 */
+static sifCmdHandler_t sifCmdSysBuffer[CMD_HANDLER_MAX]; /* 0x80009578 */
 static u32 sregs[32]; /* 0x80009678 - 0x800096f4 */
 sr_pkt_t testSr __attribute__((aligned(64)));
-
-static u32 internal_sif_cmd_send(u32 fid, void *packet, u32 packet_size, void *src, void *dest, u32 size);
 
 void dmac5_debug(void)
 {
@@ -147,7 +147,7 @@ u32 sif_cmd_send(u32 fid, u32 flags, void *packet, u32 packet_size, void *src, v
 		header->dest = dest;
 		header->size = packet_size | (size << 8);
 		if (flags & 4) {
-			core_dcache_writeback(src, size);
+			SifWriteBackDCache(src, size);
 		}
 		transfer[count].src = src;
 		transfer[count].dest = dest;
@@ -163,30 +163,74 @@ u32 sif_cmd_send(u32 fid, u32 flags, void *packet, u32 packet_size, void *src, v
 	transfer[count].attr = TGE_SIFDMA_ATTR_ERT | TGE_SIFDMA_ATTR_INT_O;
 	count++;
 
-	core_dcache_writeback(packet, packet_size);
-	return sif_set_dma(transfer, count);
+	SifWriteBackDCache(packet, packet_size);
+	return SifSetDma(transfer, count);
 }
 
 static void sif_cmd_interrupt()
 {
+	u128 packet[8];
+	u128 *pktbuf;
+	cmd_data_t *cmd_data = &_sif_cmd_data;
+	tge_sifcmd_header_t *header;
+	sifCmdHandler_t *cmd_handlers = NULL;
+	int size, pktquads, id, i = 0;
+
+	header = (tge_sifcmd_header_t *)cmd_data->pktbuf;
+
+	if (!(size = (header->size & 0xff)))
+		goto out;
+
+	/* TODO: Don't copy anything extra */
+	pktquads = (size + 30) >> 4;
+	header->size = 0;
+	if (pktquads) {
+		pktbuf = (u128 *)cmd_data->pktbuf;
+		while (pktquads--) {
+			packet[i] = pktbuf[i];
+			i++;
+		}
+	}
+
+	sbcall_sifsetdchain();
+
+	header = (SifCmdHeader_t *)packet;
+	/* Get the command handler id and determine which handler list to
+	   dispatch from.  */
+#if 0
+	printf("fid 0x%x\n", header->fid);
+#endif
+	id = header->fid & ~SYSTEM_CMD;
+
+	if (header->fid & SYSTEM_CMD) {
+		if (id < _sif_cmd_data.nr_sys_handlers) {
+			cmd_handlers = cmd_data->sys_cmd_handlers;
+		}
+	} else {
+		if (id < _sif_cmd_data.nr_usr_handlers) {
+			cmd_handlers = cmd_data->usr_cmd_handlers;
+		}
+	}
+
+	if ((cmd_handlers != NULL) && (cmd_handlers[id].handler != NULL)) {
+		cmd_handlers[id].handler(packet, cmd_handlers[id].harg);
+	}
+
+out:
+	__asm__ volatile ("sync");
 }
 
 /* Function is not implemented in RTE. */
-static u32 sif_cmd_set_sreg(u32 reg, u32 val)
+int	SifSetSreg(int reg, u32 val)
 {
-	_sif_cmd_data.sregs[reg] = val;
+	_sif_cmd_data.sregs[(u32) reg] = val;
 	return 0;
 }
 
 /* Function is not implemented in RTE. */
-u32 sif_cmd_get_sreg(u32 reg)
+int	SifGetSreg(int reg)
 {
-	iop_prints("sif_cmd_get_sreg 0x");
-	iop_printx(reg);
-	iop_prints(" = 0x");
-	iop_printx(_sif_cmd_data.sregs[reg]);
-	iop_prints("\nx");
-	return _sif_cmd_data.sregs[reg];
+	return _sif_cmd_data.sregs[(u32) reg];
 }
 
 /* Function is same as RTE. */
@@ -212,30 +256,29 @@ static void change_addr(void *packet, void *harg)
 	cmd_data->iopbuf = pkt->buf;
 }
 
-int sif_cmd_init()
+/* TGE function has a return value of 0. */
+void SifInitCmd(void)
 {
 	u32 status;
 	int i;
 
-	iop_prints("sif_cmd_init()\n");
-
 	core_save_disable(&status);
 	if (initialized) {
 		core_restore(status);
-		return 0;
+		return;
 	}
 	initialized = 1;
 
 	_sif_cmd_data.pktbuf = KSEG1ADDR((u32 *)pktbuf);
 	_sif_cmd_data.cmdbuf = KSEG1ADDR((u32 *)cmdbuf);
 	_sif_cmd_data.iopbuf = 0;
-	sifCmdHandlerTable1 = sifCmdSysBuffer;
-	sifCmdHandlerTable1size = 32;
-	sifCmdHandlerTable2 = NULL;
-	sifCmdHandlerTable2size = 0;
+	_sif_cmd_data.sys_cmd_handlers = sifCmdSysBuffer;
+	_sif_cmd_data.nr_sys_handlers = 32;
+	_sif_cmd_data.usr_cmd_handlers = NULL;
+	_sif_cmd_data.nr_usr_handlers = 0;
 	_sif_cmd_data.sregs = sregs;
 
-	for(i = 0; i < 32; i++) {
+	for(i = 0; i < CMD_HANDLER_MAX; i++) {
 		sifCmdSysBuffer[i].handler = NULL;
 		sifCmdSysBuffer[i].harg = NULL;
 	}
@@ -253,61 +296,54 @@ int sif_cmd_init()
 	/* No check here if IOP is alredy initialized. Assumption is that it is
 	 * already initialized
 	 */
-	/* give it our new receive address. */
-	dmac5_debug();
-	iop_prints("Send command 0x80000000\n");
 
+	/* give it our new receive address. */
 	_sif_cmd_data.iopbuf = (void *) sbios_iopaddr; /* XXX: inserted for test. */
 	((ca_pkt_t *)(sifCmdInitPkt))->buf = (void *) PHYSADDR((u32 *)_sif_cmd_data.pktbuf);
-	internal_sif_cmd_send(SIF_CMD_CHANGE_SADDR, sifCmdInitPkt, sizeof(ca_pkt_t), NULL, NULL, 0);
-	iop_prints("Back from sending.\n");
-	dmac5_debug();
+	SifSendCmd(SIF_CMD_CHANGE_SADDR, sifCmdInitPkt, sizeof(ca_pkt_t), NULL, NULL, 0);
 
 #if 0
 	/* RTE does the following: */
-	sif_set_reg(0x80000000, sbios_iopaddr);
-	sif_set_reg(0x80000001, sbios_iopaddr);
+	SifSetReg(0x80000000, sbios_iopaddr);
+	SifSetReg(0x80000001, sbios_iopaddr);
 #else
 	/* XXX: PS2SDK code looks better: */
-	sif_set_reg(0x80000000, (uint32_t) _sif_cmd_data.iopbuf);
-	sif_set_reg(0x80000001, (uint32_t) &_sif_cmd_data);
+	SifSetReg(0x80000000, (uint32_t) _sif_cmd_data.iopbuf);
+	SifSetReg(0x80000001, (uint32_t) &_sif_cmd_data);
 #endif
-#if 0
-	iop_prints("test sreg 31\n");
-	testSr.sreg = 31;
-	testSr.val = 234;
-	internal_sif_cmd_send(SIF_CMD_SET_SREG, &testSr, sizeof(testSr), NULL, NULL, 0);
-	iop_prints("Command send.\n");
-	dmac5_debug();
-#endif
-	return 0;
 }
 
-static u32 internal_sif_cmd_send(u32 fid, void *packet, u32 packet_size, void *src, void *dest, u32 size)
+u32	SifSendCmd(int fid, void *packet, int packet_size, void *src, void *dest, int size)
 {
 	return sif_cmd_send(fid, 0, packet, packet_size, src,
 			dest, size);
 }
 
-/* Functions is same as RTE. */
-int sif_cmd_exit()
+u32	iSifSendCmd(int fid, void *packet, int packet_size, void *src, void *dest, int size)
+{
+	return sif_cmd_send(fid, 0, packet, packet_size, src,
+			dest, size);
+}
+
+/* Functions in RTE returns 0. */
+void SifExitCmd(void)
 {
 	initialized = 0;
-	return 0;
+	return;
 }
 
 /* Functions is same as RTE. */
-void sif_cmd_add_handler(u32 fid, void *handler, void *harg)
+void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 {
-	if (fid & 0x80000000)
+	if (((u32) fid) & 0x80000000)
 	{
-		sifCmdHandlerTable1[fid & 0x7FFFFFFF].handler = handler;
-		sifCmdHandlerTable1[fid & 0x7FFFFFFF].harg = harg;
+		_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].handler = handler;
+		_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].harg = harg;
 	}
 	else
 	{
-		sifCmdHandlerTable2[fid].handler = handler;
-		sifCmdHandlerTable2[fid].harg = harg;
+		_sif_cmd_data.usr_cmd_handlers[(u32) fid].handler = handler;
+		_sif_cmd_data.usr_cmd_handlers[(u32) fid].harg = harg;
 	}
 }
 
@@ -316,11 +352,11 @@ static void sif_cmd_del_handler(u32 fid)
 {
 	if (fid & 0x80000000)
 	{
-		sifCmdHandlerTable1[fid & 0x7FFFFFFF].handler = NULL;
+		_sif_cmd_data.sys_cmd_handlers[fid & 0x7FFFFFFF].handler = NULL;
 	}
 	else
 	{
-		sifCmdHandlerTable2[fid].handler = NULL;
+		_sif_cmd_data.usr_cmd_handlers[fid].handler = NULL;
 	}
 }
 
@@ -329,10 +365,10 @@ static void *sif_cmd_set_buffer(void *buf, u32 size)
 {
 	void *old;
 
-	old = sifCmdHandlerTable2;
+	old = _sif_cmd_data.usr_cmd_handlers;
 
-	sifCmdHandlerTable2 = buf;
-	sifCmdHandlerTable2size = size;
+	_sif_cmd_data.usr_cmd_handlers = buf;
+	_sif_cmd_data.nr_usr_handlers = size;
 
 	return old;
 }
@@ -342,10 +378,10 @@ static void *sif_cmd_set_sys_buffer(void *buf, u32 size)
 {
 	void *old;
 
-	old = sifCmdHandlerTable1;
+	old = _sif_cmd_data.sys_cmd_handlers;
 
-	sifCmdHandlerTable1 = buf;
-	sifCmdHandlerTable1size = size;
+	_sif_cmd_data.sys_cmd_handlers = buf;
+	_sif_cmd_data.nr_sys_handlers = size;
 
 	return old;
 }
@@ -353,12 +389,14 @@ static void *sif_cmd_set_sys_buffer(void *buf, u32 size)
 /* SBIOS interface.  */
 int sbcall_sifinitcmd()
 {
-	return sif_cmd_init();
+	SifInitCmd();
+	return 0;
 }
 
 int sbcall_sifexitcmd()
 {
-	return sif_cmd_exit();
+	SifExitCmd();
+	return 0;
 }
 
 int sbcall_sifsendcmd(tge_sbcall_sifsendcmd_arg_t *arg)
@@ -375,7 +413,7 @@ int sbcall_sifcmdintrhdlr()
 
 int sbcall_sifaddcmdhandler(tge_sbcall_sifaddcmdhandler_arg_t *arg)
 {
-	sif_cmd_add_handler(arg->fid, arg->handler, arg->harg);
+	SifAddCmdHandler(arg->fid, arg->handler, arg->harg);
 	return 0;
 }
 
@@ -392,12 +430,12 @@ int sbcall_sifsetcmdbuffer(tge_sbcall_sifsetcmdbuffer_arg_t *arg)
 
 int sbcall_sifsetsreg(tge_sbcall_sifsetsreg_arg_t *arg)
 {
-	return sif_cmd_set_sreg(arg->reg, arg->val);
+	return SifSetSreg(arg->reg, arg->val);
 }
 
 int sbcall_sifgetsreg(tge_sbcall_sifgetsreg_arg_t *arg)
 {
-	return sif_cmd_get_sreg(arg->reg);
+	return SifGetSreg(arg->reg);
 }
 
 int sbcall_sifgetdatatable()

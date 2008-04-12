@@ -1,14 +1,19 @@
+include ../../config.mk
 EE_PREFIX = ee-
 EE_CC = $(EE_PREFIX)gcc
 EE_OBJCOPY = $(EE_PREFIX)objcopy
 
 EE_INCS = -I. -I../include
-EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS)
+EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS) -Wall -W -Werror-implicit-function-declaration -Wimplicit-int
 
 SBIOS_ADDR = 0x80001000
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
 
-EE_OBJS = prologue.o sbios.o misc.o sifdma.o core.o sifcmd.o iopmem.o
+EE_OBJS = prologue.o sbios.o misc.o sifdma.o core.o sifcmd.o sifrpc.o iopheap.o
+ifeq ($(SHARED_MEM_DEBUG),yes)
+EE_CFLAGS += -DSHARED_MEM_DEBUG
+EE_OBJS += iopmem.o printf.o snprintf.o
+endif
 
 install: all
 	cp sbios.elf ../../loader/

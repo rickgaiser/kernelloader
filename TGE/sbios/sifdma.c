@@ -11,6 +11,8 @@
 
 #include "tge_sbios.h"
 #include "tge_sifdma.h"
+#include "sifdma.h"
+#include "iopmem.h"
 
 #include "sbcalls.h"
 #include "sif.h"
@@ -73,7 +75,7 @@ int sbcall_sifexit()
 	return 0;
 }
 
-/** Function is same in RTE. */
+/** Function is same in RTE. Reenable DMAC channel. */
 int sbcall_sifsetdchain()
 {
 	u32 status;
@@ -247,14 +249,14 @@ static void sif_dma_setup_tag(u32 index)
  * @param tcount Number of transfers to do.
  * @return ID, describing the DMA transfers.
  */
-int sif_set_dma(tge_sifdma_transfer_t *transfer, u32 tcount)
+u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
 {
-	tge_sifdma_transfer_t *t;
+	SifDmaTransfer_t *t;
 	u32 status, index, i, ntags, start, count;
 	int id = 0;
 
 #if 0
-	iop_prints("sif_set_dma() called with command 0x");
+	iop_prints("SifSetDma() called with command 0x");
 	iop_printx(((u32 *) transfer[tcount - 1].src)[2]);
 	iop_prints("\n");
 #endif
@@ -302,6 +304,11 @@ int sif_set_dma(tge_sifdma_transfer_t *transfer, u32 tcount)
 	return id;
 }
 
+u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len)
+{
+	return SifSetDma(sdd, len);
+}
+
 /* XXX: Figure out the logic of this routine and finish it.  */
 int sif_dma_stat(int id)
 {
@@ -337,7 +344,7 @@ int sif_dma_stat(int id)
 /* Function is same as RTE. */
 int sbcall_sifsetdma(tge_sbcall_sifsetdma_arg_t *arg)
 {
-	return sif_set_dma(arg->transfer, arg->tcount);
+	return SifSetDma(arg->transfer, arg->tcount);
 }
 
 int sbcall_sifdmastat(tge_sbcall_sifdmastat_arg_t *arg)
@@ -388,7 +395,7 @@ static u32 sif_set_smflag(u32 val)
 	return sif_get_smflag();
 }
 
-u32 sif_set_reg(u32 reg, u32 val)
+u32 SifSetReg(u32 reg, u32 val)
 {
 	switch (reg) {
 		case 1:
@@ -410,7 +417,7 @@ u32 sif_set_reg(u32 reg, u32 val)
 	return 0;
 }
 
-u32 sif_get_reg(u32 reg)
+u32 SifGetReg(u32 reg)
 {
 	switch (reg) {
 		case 1:
@@ -435,10 +442,10 @@ u32 sif_get_reg(u32 reg)
 
 u32 sbcall_sifsetreg(tge_sbcall_sifsetreg_arg_t *arg)
 {
-	return sif_set_reg(arg->reg, arg->val);
+	return SifSetReg(arg->reg, arg->val);
 }
 
 u32 sbcall_sifgetreg(tge_sbcall_sifgetreg_arg_t *arg)
 {
-	return sif_get_reg(arg->reg);
+	return SifGetReg(arg->reg);
 }

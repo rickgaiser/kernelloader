@@ -8,16 +8,16 @@
 
 #include "regs.h"
 
-	.globl	core_dcache_writeback
+	.globl	SifWriteBackDCache
 
 	.text
 	.set	noreorder
 	.p2align 3
 
-	.type	core_dcache_writeback,@function
-	.ent	core_dcache_writeback, 0
+	.type	SifWriteBackDCache,@function
+	.ent	SifWriteBackDCache, 0
 
-core_dcache_writeback:
+SifWriteBackDCache:
 
 	lui	t9, 0xffff
 	ori	t9, t9, 0xffc0
@@ -68,5 +68,5 @@ last:
 	jr	$31
 	nop
 
-	.end	core_dcache_writeback
-	.size	core_dcache_writeback, .-core_dcache_writeback
+	.end	SifWriteBackDCache
+	.size	SifWriteBackDCache, .-SifWriteBackDCache

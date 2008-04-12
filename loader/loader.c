@@ -23,6 +23,7 @@
 #include "graphic.h"
 #include "smem.h"
 #include "smod.h"
+#include "usb.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -43,11 +44,6 @@
 #define BARRIER() \
 	/* Barrier. */ \
 	__asm__ __volatile__("sync.p"::);
-
-/** UB OHCI register base address. */
-#define USB_OHCI_REGBASE 0xBF801600
-#define USB_REG_UNKNOWN1570 ((volatile uint32_t *) 0xbf801570)
-#define USB_REG_UNKNOWN1680 ((volatile uint16_t *) 0xbf801680)
 
 
 /** Debug print. */
@@ -191,6 +187,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+#ifdef PS2LINK
 	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
@@ -221,12 +218,15 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
+#ifdef SHARED_MEM_DEBUG
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
 #ifdef TGE
 	{
 		.path = "host:intrelay.irx",
@@ -717,7 +717,6 @@ int loader(graphic_mode_t mode)
 		sbios = (char *) (((unsigned int) sbios) | KSEG0_MASK);
 	}
 	FlushCache(0);
-	
 	buffer = load_file("host:kernel.elf", NULL);
 	if (buffer != NULL) {
 		/* Access data from kernel space, because TLB misses can't be handled here. */
@@ -911,10 +910,7 @@ int loader(graphic_mode_t mode)
 #endif
 
 			/* Setup USB. */
-			*USB_REG_UNKNOWN1570 = *USB_REG_UNKNOWN1570 | 0x08000000;
-			*USB_REG_UNKNOWN1680 = 1;
-
-			/* XXX: Need to make USB reset. */
+			initUSB();
 
 			iop_prints(U2K("Jump to kernel!\n"));
 			ret = entry(0 /* unused */, NULL /* unused */, (char **) ((u32) bootinfo | KSEG0_MASK), NULL /* unsused */);

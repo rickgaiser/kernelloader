@@ -18,6 +18,7 @@
 /* Convert a pointer to an address in KSEG0 or KSEG1.  */
 #define KSEG0ADDR(addr)		((__typeof__(addr))(PHYSADDR(addr) | K0BASE))
 #define KSEG1ADDR(addr)		((__typeof__(addr))(PHYSADDR(addr) | K1BASE))
+#define UNCACHED_SEG(addr) KSEG1ADDR(addr)
 
 /* Disable interrupts and save the previous contents of COP0 Status.  */
 static inline void core_save_disable(u32 *status)
@@ -54,6 +55,6 @@ static inline void core_restore(u32 status)
 	: : "r" (status) : "$8", "$9", "memory");
 }
 
-extern void core_dcache_writeback(void *d, u32 size);
+void SifWriteBackDCache(void *ptr, int size);
 
 #endif /* TGE_CORE_H */

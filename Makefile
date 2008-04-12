@@ -4,7 +4,9 @@ all:
 	make -C ps2tut_01
 	make -C hello
 	make -C kernel
+ifeq ($(SHARED_MEM_DEBUG),yes)
 	make -C sharedmem
+endif
 	make -C $(TYPE)
 	make -C loader
 

@@ -13,9 +13,15 @@ OBJ_DIR = obj
 CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G0 -O0 -mips3 -nostdlib -DPS2_EE
 CFLAGS += -D$(TYPE)
 
-SRC = start $(PROGRAM) iopmem rtesif printf snprintf strlen strncpy \
+SRC = start $(PROGRAM) rtesif strlen strncpy \
 	cache timers irq interrupts panic mmu demo loader syscall \
 	entry graphic time string exception memory thread intc dmac
+
+ifeq ($(SHARED_MEM_DEBUG),yes)
+CFLAGS += -DSHARED_MEM_DEBUG
+SRC += iopmem printf snprintf
+endif
+
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(SRC)))
 

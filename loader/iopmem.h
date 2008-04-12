@@ -5,6 +5,7 @@
 #include "kernel.h"
 #include "stdint.h"
 
+#ifdef SHARED_MEM_DEBUG
 #ifdef USER_SPACE_SUPPORT
 /** iopmem module need to be informed when in kernel mode, to handle it correctly. */
 void iop_kmode_enter(void);
@@ -21,5 +22,15 @@ void iop_prints(const char *text);
 int iop_printf(const char *format, ...);
 /** Print 32-bit value as hexadecimal. */
 void iop_printx(uint32_t val);
+#else
+/** Do nothing. */
+#define iop_putc(c)
+/** Do nothing. */
+#define iop_prints(text)
+/** Do nothing. */
+#define iop_printf(args...)
+/** Do nothing. */
+#define iop_printx(val)
+#endif
 
 #endif /* _IOPMEM_H_ */
