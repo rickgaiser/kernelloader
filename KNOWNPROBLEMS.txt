@@ -1,6 +1,8 @@
 PR#1
 Fix initialisation of ATA/Network/PCI in loader. Currently PS2SDK code is
 copied. Network frames can be send, but  not received. Hard disc is not working.
+-
+Update: Hard disc is now working slowly without interrupts.
 
 PR#2
 Function sbcall_cdvdtrayrequestStage2() is sometimes not called after RPC Call.
@@ -13,22 +15,34 @@ PR#3
 Reset is not working when loaded by ps2link.
 
 PR#4
-Memory card is not working when new module is loaded from ROM.
+Memory card is not working when new modules are loaded from ROM.
 
 PR#5
 CDVD driver version is not detected by TGE SBIOS.
+-
+You need to choose SBOS version in kernelloader menu.
 
 PR#6
 PAD driver version is not detected by TGE SBIOS.
+-
+You need to choose SBOS version in kernelloader menu.
 
 PR#7
 Initrd must be loaded to low memory address.
+-
+Uodate: This is automatically done. But if loading fails and you try it again, it
+is possible that initrd is loaded to higher address (see PR#10).
 
 PR#8
 Network can only send, but not receive.
+-
+Network is at least working with SCPH-10350.
+DMA is currently not supported. Linux 2.4.17 driver binds to different RPC server.
 
 PR#9
 Hard disc can't be used.
+-
+Update: Hard disc is too slow, interrupts are not working.
 
 PR#10
 When loading of Linux failed, because file names where wrong and this is fixed
@@ -38,3 +52,7 @@ leads to segmentation faults when starting system later.
 PR#11
 New ROM modules and TGE version with support for it leads to linux panic:
 Scheduling in interrupt.
+
+PR#12
+It is possible that USB is not working with V14/V15 slim PS2 console. This was
+reported in ps2dev forums. I don't have a slim PS2, so I can't test it.

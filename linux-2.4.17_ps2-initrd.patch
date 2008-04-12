@@ -1,3 +1,16 @@
+LINUX INITRD
+############
+
+Patch to support initrd loaded by kernelloader.
+
+Kernel configuration for initrd support:
+Deactivate "Machine selection"  ---> "Support for old style boot information"
+Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
+Activate "Block devices" ---> "Initial RAM disk (initrd) support"
+
+You should also activate a file system:
+Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
+
 diff -ur --exclude .depend linux-2.4.17_ps2.orig/arch/mips/Makefile linux-2.4.17_ps2/arch/mips/Makefile
 --- linux-2.4.17_ps2.orig/arch/mips/Makefile	2002-11-20 13:14:52.000000000 +0100
 +++ linux-2.4.17_ps2/arch/mips/Makefile	2006-08-16 00:26:22.000000000 +0200

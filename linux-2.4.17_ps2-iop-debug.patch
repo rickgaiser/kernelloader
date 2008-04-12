@@ -1,0 +1,140 @@
+IOP DEBUG - EE DEBUG
+####################
+
+RPC CMD ID: 0x10
+Buffer limit: 4kByte
+
+This linux kernel patch creates "/proc/ps2iopdebug".
+IOP debug output is redirected to "/proc/ps2iopdebug" if patch is applied and
+module "eedebug.irx" is loaded.
+For direct output on linux console:
+Enable printk in following patch marked with "DEBUG" and disable call
+"dmesg -n 1" in "etc/sysinit" (no buffer limit).
+
+Module "eedebug.irx" redirects all printf on IOP to EE. A RPC message is used
+for this. EE message has function id 0x10 (fid/cid). Data is described by
+structure "iop_text_data_t". Attribute "text" is a zero terminated string.
+Maximum string size is 80 characters. "eedebug.irx" will collect data and
+have a timeout of 1 ms until data is send to EE.
+
+Linux can only receive messages after initialisation of SIF RPC and enabling
+interrupts. Messages printed while bootling linux can be lost. Message
+buffer has limited size. Receiving of message will stop if buffer "iopbuffer"
+is full.
+
+--- linux-2.4.17_ps2/arch/mips/ps2/sbcall.c	2008-01-20 16:44:31.000000000 +0100
++++ linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c	2008-01-20 22:30:22.000000000 +0100
+@@ -42,6 +42,19 @@
+ EXPORT_SYMBOL(ps2sif_removerpc);
+ EXPORT_SYMBOL(ps2sif_removerpcqueue);
+ 
++typedef struct t_SifCmdHeader
++{
++	u32 size;
++	void *dest;
++	int cid;
++	u32 unknown;
++} SifCmdHeader_t;
++
++typedef struct {
++	struct t_SifCmdHeader    sifcmd;
++	char text[80];
++} iop_text_data_t;
++
+ /*
+  *  SIF DMA functions
+  */
+@@ -319,6 +332,22 @@
+     spin_unlock(&ps2sif_dma_lock);
+ }
+ 
++#define IOP_BUFFER_SIZE 4096
++
++char iopbuffer[IOP_BUFFER_SIZE];
++int ioppos = 0;
++uint32_t usrCmdHandler[64];
++
++void handleEEDebug(iop_text_data_t *data, void *arg)
++{
++	int remaining;
++
++	remaining = IOP_BUFFER_SIZE - ioppos;
++	if (remaining > 0) {
++		ioppos += snprintf(&iopbuffer[ioppos], remaining, "%s", data->text);
++	}
++	// DEBUG: printk("%s", data->text);
++}
+ 
+ /*
+  *  Initialize
+@@ -326,8 +355,19 @@
+ 
+ int __init ps2sif_init(void)
+ {
++	struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
++	struct sb_sifsetcmdbuffer_arg setcmdhandlerbufferparam;
+     init_waitqueue_head(&ps2sif_dma_waitq);
+ 
++    setcmdhandlerbufferparam.db = usrCmdHandler;
++    setcmdhandlerbufferparam.size = sizeof(usrCmdHandler) / 8;
++
++	addcmdhandlerparam.fid = 0x10;
++	addcmdhandlerparam.func = handleEEDebug;
++	addcmdhandlerparam.data = NULL;
++
++	iopbuffer[0] = 0;
++
+     if (sbios(SB_SIFINIT, 0) < 0)
+ 	return -1;
+     if (sbios(SB_SIFINITCMD, 0) < 0)
+@@ -336,6 +376,13 @@
+ 	return -1;
+     if (request_irq(IRQ_DMAC_6, sif1_dma_handler, SA_INTERRUPT, "SIF1 DMA", NULL))
+ 	return -1;
++	if (sbios(SB_SIFSETCMDBUFFER, &setcmdhandlerbufferparam) < 0) {
++		printk("Failed to initialize EEDEBUG handler (1).\n");
++	} else {
++		if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++			printk("Failed to initialize EEDEBUG handler (2).\n");
++		}
++	}
+     if (sbios(SB_SIFINITRPC, 0) < 0)
+ 	return -1;
+ 
+--- linux-2.4.17_ps2/drivers/ps2/sysproc.c	2002-10-03 08:07:11.000000000 +0200
++++ linux-2.4.17_ps2.orig/drivers/ps2/sysproc.c	2008-02-03 23:29:59.000000000 +0100
+@@ -101,6 +101,18 @@
+ 	return proc_calc_metrics(page, start, off, count, eof, len);
+ }
+ 
++int get_ps2iopdebug(char *page, char **start, off_t off,
++				 int count, int *eof, void *data)
++{
++	int len;
++	extern char iopbuffer[];
++
++	sprintf(page, "%s", iopbuffer);
++
++	len = strlen(page);
++	return proc_calc_metrics(page, start, off, count, eof, len);
++}
++
+ 
+ int __init ps2sysproc_init(void)
+ {
+@@ -108,6 +120,7 @@
+ #ifdef CONFIG_PROC_FS
+ 	create_proc_read_entry("ps2sysvers", 0, 0, get_ps2sysvers, NULL);
+ 	create_proc_read_entry("ps2sysconf", 0, 0, get_ps2sysconf, NULL);
++	create_proc_read_entry("ps2iopdebug", 0, 0, get_ps2iopdebug, NULL);
+ 	init_flags |= INIT_PROC;
+ #endif
+ 	return 0;
+@@ -120,6 +133,7 @@
+ 	if (init_flags & INIT_PROC)
+ 		remove_proc_entry("ps2sysvers", NULL);
+ 		remove_proc_entry("ps2sysconf", NULL);
++		remove_proc_entry("ps2iopdebug", NULL);
+ 	init_flags &= ~INIT_PROC;
+ #endif
+ }

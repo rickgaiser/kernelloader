@@ -1,3 +1,29 @@
+SHARED MEM PRINTK
+#################
+
+ONLY FOR DEBUGGING.
+
+This patch activates printk support for "sharedmem.irx". Everything printed using
+printk is also printed on IOP.
+
+This patch is only usable if you activate "ps2link" in kernelloader or when you
+have serial line connected to the PS2 (soldering is required).
+
+You _must_ load module "sharedmem.irx". Not loading this module will lead to a
+deadlock and a black screen (Nothing will work).
+
+If you don't use this patch you don't need to load "sharedmem.irx".
+
+The address 0x001ff000 in IOP memory has been choosen for communication
+between IOP and EE. I don't know if this address could be used by any other
+module. I believe that a normal memory allocation can return this address.
+When this happens everything could crash.
+
+Communication is simple. First byte at address 0x001ff000 is used as a semaphore.
+0x00 -> EE is owner, IOP has printed out previous character.
+0xFF -> IOP is owner, EE has written a character to print.
+EE write to the second byte the character that should be printed.
+
 --- linux-2.4.17_ps2.orig/kernel/iopmem.c	1970-01-01 01:00:00.000000000 +0100
 +++ linux-2.4.17_ps2.test1/kernel/iopmem.c	2007-07-21 23:54:07.000000000 +0200
 @@ -0,0 +1,52 @@

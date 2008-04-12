@@ -116,3 +116,5 @@ bf801600
 .code serial_putc
 01011d28
 .code serial_puts
+01000dd8
+.code get_DEV9_R_1462

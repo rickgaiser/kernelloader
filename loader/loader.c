@@ -1333,12 +1333,21 @@ int loader(void *arg)
 		if (loaderConfig.enableDev9) {
 			/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
 			if (ps2dev9_init() == 0) {
+				const char *pcicType;
+
 				/* Activate hard disc. */
 				ata_setup();
 
 				/* Tell Linux to activate HDD and Network. */
 				bootinfo->pccard_type = 0x0100;
-				bootinfo->pcic_type = pcic_get_cardtype();
+				pcicType = getPcicType();
+				if (strlen(pcicType) > 0) {
+					/* User configured calue in menu. */
+					bootinfo->pcic_type = atoi(pcicType);
+				} else {
+					/* Auto detect type. */
+					bootinfo->pcic_type = pcic_get_cardtype();
+				}
 			}
 		}
 

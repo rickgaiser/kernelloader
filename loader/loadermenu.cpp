@@ -1,5 +1,11 @@
 /* Copyright (c) 2007 Mega Man */
 #include <gsKit.h>
+#include <loadfile.h>
+#include <kernel.h>
+#include <sifrpc.h>
+#include <iopcontrol.h>
+#include <iopheap.h>
+#include <iopcontrol.h>
 
 #include "config.h"
 #include "graphic.h"
@@ -7,6 +13,7 @@
 #include "modules.h"
 #include "fileXio_rpc.h"
 #include "configuration.h"
+#include "pad.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -265,10 +272,15 @@ const char commandline_ntsc[] = "crtmode=ntsc ramdisk_size=16384";
 
 char kernelParameter[MAX_INPUT_LEN];
 
+char pcicType[MAX_INPUT_LEN];
+
 static char ps2linkParams[3 * MAX_INPUT_LEN];
 static char myIP[MAX_INPUT_LEN];
 static char netmask[MAX_INPUT_LEN];
 static char gatewayIP[MAX_INPUT_LEN];
+
+/** Parameter for IOP reset. */
+static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
 
 /** Current graphic mode. */
 graphic_mode_t graphicMode;
@@ -313,6 +325,31 @@ int poweroff(void *arg)
 	while(1) {
 		graphic_paint();
 	}
+}
+
+int reboot(void *arg)
+{
+	printf("Try to reboot.\n");
+	graphic_paint();
+
+	padEnd();
+
+	SifExitIopHeap();
+	SifLoadFileExit();
+	SifExitRpc();
+	SifStopDma();
+
+	SifIopReset(s_pUDNL, 0);
+
+	while (SifIopSync());
+
+	SifInitRpc(0);
+	SifLoadModule("rom0:SIO2MAN", 0, NULL);
+	SifExitRpc();
+	SifStopDma();
+
+	/* Return to the PS2 browser. */
+	LoadExecPS2("", 0, NULL);
 }
 
 int fsFile(void *arg)
@@ -659,6 +696,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	strcpy(myIP, "192.168.0.10");
 	strcpy(netmask, "255.255.255.0");
 	strcpy(gatewayIP, "192.168.0.1");
+	strcpy(pcicType, "");
 
 	addConfigTextItem("KernelParameter", kernelParameter, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
@@ -784,6 +822,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	configMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	configMenu->addItem("Edit Kernel Parameter", editString, kernelParameter);
+	configMenu->addItem("Edit PCIC Type", editString, pcicType);
 	configMenu->addItem("Default Kernel Parameter", setDefaultKernelParameterMenu, kernelParameter);
 	loaderConfig.newModules = 0;
 	configMenu->addCheckItem("New Modules", &loaderConfig.newModules);
@@ -853,6 +892,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		error_printf("Not enough memory.");
 	}
 	menu->addItem("Power off", poweroff, NULL);
+	menu->addItem("Reboot", reboot, NULL);
 
 	/* PS2LINK debug entries. */
 	Menu *ps2linkMenu = configMenu->addSubMenu("PS2LINK Options");
@@ -919,5 +959,10 @@ extern "C" {
 		*len += strlen(&ps2linkParams[*len]) + 1;
 
 		return ps2linkParams;
+	}
+
+	const char *getPcicType(void)
+	{
+		return pcicType;
 	}
 }

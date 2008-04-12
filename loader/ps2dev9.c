@@ -397,10 +397,10 @@ int pcic_get_cardtype()
 	USE_DEV9_REGS;
 	u16 val = DEV9_REG(DEV9_R_1462) & 0x03;
 
-	if (!val)
-		return 1;	/* 16-bit */
+	if (val == 0)
+		return 3; /* 16-bit */
 	else if (val != 3)
-		return 2;	/* CardBus */
+		return val; /* CardBus */
 	return 0;
 }
 
