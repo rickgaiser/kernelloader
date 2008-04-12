@@ -149,7 +149,7 @@ typedef struct
 //			MC_TYPE_XMC = use XMCSERV/XMCMAN
 // returns:	0   = successful
 //			< 0 = error
-int mcInit(int type, tge_sbcall_rpc_arg_t *carg);
+int mcInit(tge_sbcall_rpc_arg_t *carg);
 
 #ifdef __cplusplus
 }

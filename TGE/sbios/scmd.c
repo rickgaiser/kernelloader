@@ -113,7 +113,7 @@ int sbcall_cdvdreadrtc(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_READCLOCK, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 16, cdvdreadrtcStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -134,7 +134,7 @@ int sbcall_cdvdwritertc(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_WRITECLOCK, SIF_RPC_M_NOWAIT, sCmdSendBuff, 8, sCmdRecvBuff, 16, cdvdreadrtcStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -157,7 +157,7 @@ int sbcall_cdvdgettype(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_GETDISCTYPE, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -172,7 +172,7 @@ int sbcall_cdvdgeterror(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_GETERROR, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -207,7 +207,7 @@ int sbcall_cdvdtrayrequest(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_TRAYREQ, SIF_RPC_M_NOWAIT, sCmdSendBuff, 4, sCmdRecvBuff, 8, cdvdtrayrequestStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -237,7 +237,7 @@ s32 cdApplySCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 	if (SifCallRpc(&clientSCmd, CD_SCMD_SCMD, 0, sCmdSendBuff, 20, sCmdRecvBuff, 16, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (outBuff)
@@ -259,7 +259,7 @@ s32 cdStatus(void)
 	if (SifCallRpc(&clientSCmd, CD_SCMD_STATUS, 0, 0, 0, sCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return -1;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (cdDebug >= 2) {
@@ -284,7 +284,7 @@ s32 cdBreak(void)
 	if (SifCallRpc(&clientSCmd, CD_SCMD_BREAK, 0, 0, 0, sCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(sCmdSemaId);
@@ -308,7 +308,7 @@ s32 cdCancelPowerOff(u32 * result)
 	if (SifCallRpc(&clientSCmd, CD_SCMD_CANCELPOWEROFF, 0, 0, 0, sCmdRecvBuff, 8, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	*result = *(u32 *) UNCACHED_SEG(sCmdRecvBuff + 4);
@@ -337,7 +337,7 @@ s32 cdBlueLedCtrl(u8 control, u32 * result)
 	if (SifCallRpc(&clientSCmd, CD_SCMD_BLUELEDCTRL, 0, sCmdSendBuff, 4, sCmdRecvBuff, 8, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	*result = *(u32 *) UNCACHED_SEG(sCmdRecvBuff + 4);
@@ -361,7 +361,7 @@ s32 cdPowerOff(u32 * result)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_POWEROFF, 0, 0, 0, sCmdRecvBuff, 8, 0, 0) < 0) {
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	*result = *(u32 *) UNCACHED_SEG(sCmdRecvBuff + 4);
@@ -390,7 +390,7 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_MMODE, SIF_RPC_M_NOWAIT, sCmdSendBuff, 4, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
 		CDVD_UNLOCKS();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 #else
@@ -420,7 +420,7 @@ s32 cdChangeThreadPriority(u32 priority)
 	if (SifCallRpc(&clientSCmd, CD_SCMD_SETTHREADPRI, 0, sCmdSendBuff, 4, sCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
 		CDVD_UNLOCKS();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(sCmdSemaId);

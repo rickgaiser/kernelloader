@@ -23,7 +23,8 @@ FILEIO_DEBUG = no
 # Use new ROM modules in loader.
 NEW_ROM_MODULES = no
 
-SCREENSHOT = no
+# Press button "R1" to get a screenshot on "host:" or "mass0:".
+SCREENSHOT = yes
 
 # Activate debug for SBIOS.
 SBIOS_DEBUG = no

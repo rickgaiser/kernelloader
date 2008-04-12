@@ -71,18 +71,10 @@ struct _fio_read_data {
 	u8	buf2[16];
 };
 
-extern int _iop_reboot_count;
-extern SifRpcClientData_t _fio_cd;
-extern int _fio_init;
-extern int _fio_block_mode;
-extern int _fio_completion_sema;
-extern int _fio_recv_data[512];
-extern int _fio_intr_data[32];
-
 void _fio_read_intr(struct _fio_read_data *);
 void _fio_intr();
 
-SifRpcClientData_t _fio_cd;
+SifRpcClientData_t _fio_cd __attribute__ ((aligned(64)));
 int _fio_recv_data[512] __attribute__((aligned(64)));
 int _fio_intr_data[32] __attribute__((aligned(64)));
 int _fio_init = 0;

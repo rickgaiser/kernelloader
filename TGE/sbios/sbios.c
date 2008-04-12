@@ -490,10 +490,26 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 	int (*sbfunc)(void *) = dispatch[sbcall];
 #ifdef SBIOS_DEBUG
 	const char *description = "unknown";
+#if 0 /* NetBSD */
+	uint32_t old;
+#endif
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {
 		description = sbiosDescription[sbcall];
 	}
+#if 0 /* NetBSD */
+	/* NetBSD disables floating point. */
+	__asm__ __volatile__(
+		"mfc0 %0, $12\n"
+		"sync.p":"=r" (old):);
+
+	__asm__ __volatile__(
+		"mtc0 %0, $12\n"
+		"sync.p\n"
+		::"r" (
+		old | (1<<29) /* Activate COP1: FPU -> used by compiler and functions like printf. */
+		));
+#endif
 
 	printf("sbios call %s %s\n", description, (sbfunc) ? "implemented" : "not implemented");
 #endif
@@ -506,6 +522,13 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 
 #ifdef SBIOS_DEBUG
 	printf("result of sbios call %d\n", ret);
+
+#if 0 /* NetBSD */
+	__asm__ __volatile__(
+		"mtc0 %0, $12\n"
+		"sync.p\n"
+		::"r" (old));
+#endif
 #endif
 	return ret;
 }

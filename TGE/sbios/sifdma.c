@@ -282,6 +282,7 @@ static void sif_dma_setup_tag(u32 freetags)
  * @param transfer Pointer array of sturctures describing the transfers.
  * @param tcount Number of transfers to do.
  * @return ID, describing the DMA transfers.
+ * @retval 0 on error, no DMA tag available (-> retry later).
  */
 u32 SifSetDma(tge_sifdma_transfer_t *transfer, s32 tcount)
 {

@@ -4,7 +4,7 @@
 
 #include "stdint.h"
 
-#define LOADER_VERSION "1.6"
+#define LOADER_VERSION "1.7"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +44,8 @@ extern "C" {
 		int allocated;
 		/** True, if ps2smap module. */
 		int ps2smap;
+		/** True, if eedebug.irx, IOP debug output is required. */
+		int eedebug;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -69,6 +71,7 @@ extern "C" {
 	char *getKernelParameter(void);
 	void waitForUser(void);
 	const char *getPS2MAPParameter(int *len);
+	const char *getGraphicMode(void);
 	void printAllModules(void);
 	void DelayThread(int delay);
 	const char *getPcicType(void);

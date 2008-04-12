@@ -306,14 +306,14 @@ int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
 
 		if (SifBindRpc(&padsif[0], PAD_BIND_RPC_ID1, SIF_RPC_M_NOWAIT,
 			padInitCallback, carg) < 0) {
-			return -1;
+			return -SIF_RPCE_SENDP;
 		}
 		break;
 
 	case 1:
 		if (SifBindRpc(&padsif[1], PAD_BIND_RPC_ID2, SIF_RPC_M_NOWAIT,
 				padInitCallback, carg) < 0) {
-			return -3;
+			return -SIF_RPCE_SENDP;
 		}
 		break;
 
@@ -325,7 +325,7 @@ int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
 		if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128,
 			padInitCallback, carg) < 0) {
 			iop_prints("Failed padGetModVersion\n");
-			return -5;
+			return -SIF_RPCE_SENDP;
 		}
 		break;
 
@@ -333,7 +333,7 @@ int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
 		*(u32 *) (&buffer[0]) = PAD_RPCCMD_INIT;
 		if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128,
 			padInitCallback, carg) < 0) {
-			return -7;
+			return -SIF_RPCE_SENDP;
 		}
 		break;
 #endif
@@ -380,8 +380,9 @@ int sbcall_padend(tge_sbcall_rpc_arg_t *carg)
 {
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_END;
 
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padEndCallback, carg) < 0)
-		return -1;
+	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padEndCallback, carg) < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return 0;
 }
@@ -438,7 +439,7 @@ int sbcall_padportopen(tge_sbcall_rpc_arg_t *carg)
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padPortOpenCallback, carg);
 	if (ret < 0) {
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 			PadState[arg->port][arg->slot].open = 1;
 	PadState[arg->port][arg->slot].padData = arg->addr;
@@ -461,9 +462,9 @@ int sbcall_padportclose(tge_sbcall_rpc_arg_t *carg)
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padCallback, carg);
 
-	if (ret < 0)
-		return ret;
-	else {
+	if (ret < 0) {
+		return -SIF_RPCE_SENDP;
+	} else {
 		PadState[arg->port][arg->slot].open = 0;
 		return 0;
 	}
@@ -564,7 +565,7 @@ int padGetPortMax(void)
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_GET_PORTMAX;
 
 	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, 0, 0) < 0)
-		return -1;
+		return -SIF_RPCE_SENDP;
 
 	return *(int *) (&buffer[12]);
 }
@@ -581,7 +582,7 @@ int padGetSlotMax(int port)
 	*(u32 *) (&buffer[4]) = port;
 
 	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, 0, 0) < 0)
-		return -1;
+		return -SIF_RPCE_SENDP;
 
 	return *(int *) (&buffer[12]);
 }
@@ -605,8 +606,10 @@ int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg)
 	*(u32 *) (&buffer[16]) = arg->offset;
 
 	/* XXX: Check if this is working without SIF_RPC_M_NOWAIT. */
-	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0)
+	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0) {
+		/** XXX: Which return code to use if this failing? */
 		return 0;
+	}
 
 	if (*(int *) (&buffer[20]) == 1) {
 		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
@@ -694,8 +697,9 @@ int sbcall_padsetmainmode(tge_sbcall_rpc_arg_t *carg)
 	*(u32 *) (&buffer[16]) = arg->lock;
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetMainModeCallback, carg);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return 0;
 }
@@ -748,8 +752,9 @@ int sbcall_padinfopressmode(tge_sbcall_rpc_arg_t *carg)
 	*(u32 *) (&buffer[8]) = arg->slot;
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padInfoPressModeCallback, carg);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return 0;
 }
@@ -783,8 +788,9 @@ int padSetButtonInfo(tge_sbcall_rpc_arg_t *carg, int buttonInfo)
 	*(u32 *) (&buffer[12]) = buttonInfo;
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetButtonInfoCallback, carg);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return 0;
 }
@@ -805,8 +811,10 @@ int sbcall_padinfoact(tge_sbcall_padinfoact_arg_t *arg)
 	*(u32 *) (&buffer[16]) = arg->term;
 
 	/* XXX: Check if this is working without SIF_RPC_M_NOWAIT. */
-	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0)
+	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0) {
+		/* XXX: Which return code to use if this is failing? */
 		return 0;
+	}
 
 	if (*(int *) (&buffer[20]) == 1) {
 		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
@@ -869,8 +877,9 @@ int sbcall_padsetactalign(tge_sbcall_rpc_arg_t *carg)
 		ptr[i] = actAlign[i];
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetActAlignCallback, carg);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 	return 0;
 }
 
@@ -906,7 +915,7 @@ int sbcall_padsetactdirect(tge_sbcall_rpc_arg_t *carg)
 
 	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetActDirectCallback, carg);
 	if (ret < 0) {
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 
 	return 0;
@@ -931,8 +940,9 @@ int padGetConnection(int port, int slot)
 	*(u32 *) (&buffer[4]) = port;
 	*(u32 *) (&buffer[8]) = slot;
 
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, 0, 0) < 0)
-		return -1;
+	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, 0, 0) < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return *(int *) (&buffer[12]);
 #endif

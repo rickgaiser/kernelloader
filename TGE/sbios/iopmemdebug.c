@@ -60,5 +60,6 @@ int puts(const char *s)
 		iop_putc(*s);
 		s++;
 	}
+	iop_putc('\n');
 	return 0;
 }

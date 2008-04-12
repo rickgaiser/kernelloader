@@ -31,6 +31,7 @@
 #include "pad.h"
 #include "rom.h"
 #include "eedebug.h"
+#include "kernelgraphic.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -75,8 +76,6 @@
 /** Base address for SBIOS. */
 #define SBIOS_START_ADDRESS 0x80001000
 
-typedef short int16_t;
-
 /** Definition of kernel entry function. */
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 
@@ -100,7 +99,8 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = LOAD_ON_NOT_PS2LINK,
 		.ps2link = 1,
-		.debug = 1
+		.debug = 1,
+		.eedebug = 1
 	},
 #ifdef RTE
 	{
@@ -369,9 +369,11 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+#if 0 /* Module is broken. */
 		.load = LOAD_ON_NOT_PS2LINK,
 		.ps2link = 1,
 		.tge = 1
+#endif
 	},
 #ifdef RTE
 	{
@@ -1193,6 +1195,7 @@ int loader(void *arg)
 	uint32_t *initrd_header = NULL;
 	uint32_t initrd_start = 0;
 	uint32_t initrd_size = 0;
+	const char *gmode = NULL;
 
 	arg = arg;
 
@@ -1438,6 +1441,13 @@ int loader(void *arg)
 #ifdef USER_SPACE_SUPPORT
 		iop_kmode_enter();
 #endif
+		gmode = getGraphicMode();
+		if (gmode[0] != 0) {
+			int mode = atoi(gmode);
+
+			iop_printf("Setting graphic mode %d.\n", mode);
+			setGraphicMode(mode);
+		}
 
 		/* Disable performance counters. */
 		SET_PCCR(0);

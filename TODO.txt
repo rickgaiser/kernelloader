@@ -3,4 +3,6 @@ patched jump must be also a nop.
 
 Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd() is not correctly checked.
 
-Check that all aligned stuff is 64, because of cache aliasing problems and size must be a multiple of 64 bytes.
+Support for packed vmlinux kernel files.
+
+Mount USB device at startup not working. Need to debug it.

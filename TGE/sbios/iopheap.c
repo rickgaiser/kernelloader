@@ -41,7 +41,7 @@ typedef union {
 
 extern SifRpcClientData_t _ih_cd;
 
-SifRpcClientData_t _ih_cd;
+SifRpcClientData_t _ih_cd __attribute__ ((aligned(64)));
 int _ih_caps = 0;
 static sbios_mutex_t iopHeapMutex = SBIOS_MUTEX_INIT;
 
@@ -85,7 +85,7 @@ int sbcall_iopheapinit(tge_sbcall_rpc_arg_t *carg)
 	res = SifBindRpc(&_ih_cd, 0x80000003, SIF_RPC_M_NOWAIT, iopHeapInitCallback, carg);
 	if (res != 0) {
 		sbios_unlock(&iopHeapMutex);
-		return -E_SIF_RPC_BIND;
+		return -SIF_RPCE_SENDP;
 	}
 
 	return 0;
@@ -128,7 +128,7 @@ int sbcall_iopaheapalloc(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&_ih_cd, 1, SIF_RPC_M_NOWAIT, iopheap_pkt, 4, iopheap_pkt, 4, iopHeapCallback, carg) < 0) {
 		sbios_unlock(&iopHeapMutex);
-		return -1;
+		return -SIF_RPCE_SENDP;
 	}
 
 	return 0;
@@ -155,7 +155,7 @@ int sbcall_iopheapfree(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&_ih_cd, 2, SIF_RPC_M_NOWAIT, iopheap_pkt, 4, iopheap_pkt, 4, iopHeapCallback, carg) < 0) {
 		sbios_unlock(&iopHeapMutex);
-		return -E_SIF_RPC_CALL;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -181,8 +181,9 @@ int SifLoadIopHeap(const char *path, void *addr, SifRpcEndFunc_t endfunc, void *
 	strncpy(arg.path, path, LIH_PATH_MAX - 1);
 	arg.path[LIH_PATH_MAX - 1] = 0;
 
-	if (SifCallRpc(&_ih_cd, 3, 0, &arg, sizeof arg, &arg, 4, endfunc, efarg) < 0)
-		return -E_SIF_RPC_CALL;
+	if (SifCallRpc(&_ih_cd, 3, 0, &arg, sizeof arg, &arg, 4, endfunc, efarg) < 0) {
+		return -SIF_RPCE_SENDP;
+	}
 
 	return arg.p.result;
 }

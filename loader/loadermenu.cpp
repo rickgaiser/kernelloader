@@ -278,6 +278,7 @@ static char ps2linkParams[3 * MAX_INPUT_LEN];
 static char myIP[MAX_INPUT_LEN];
 static char netmask[MAX_INPUT_LEN];
 static char gatewayIP[MAX_INPUT_LEN];
+static char kernelGraphicMode[MAX_INPUT_LEN];
 
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
@@ -420,7 +421,12 @@ void checkTGEandDebug(moduleEntry_t * module)
 	}
 	if (loaderConfig.enableDebug) {
 		if (module->debug) {
-			module->load = 1;
+			if (module->eedebug && !loaderConfig.enableEEDebug) {
+				/* System will hang PR#17. */
+				module->load = 0;
+			} else {
+				module->load = 1;
+			}
 		}
 	} else {
 		if (module->debug) {
@@ -529,8 +535,12 @@ int defaultSBIOSCalls(void *arg)
 
 	for (i = 0; i < numberOfSbiosCalls; i++) {
 		if ((i >= 176) && (i <= 195)) {
-			/* Disable CDVD, because of some problems. */
-			sbiosCallEnabled[i] = 0;
+			if (loaderConfig.enableSBIOSTGE) {
+				/* Disable CDVD, because of some problems. */
+				sbiosCallEnabled[i] = 0;
+			} else {
+				sbiosCallEnabled[i] = 1;
+			}
 		} else {
 			sbiosCallEnabled[i] = 1;
 		}
@@ -723,11 +733,13 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	strcpy(netmask, "255.255.255.0");
 	strcpy(gatewayIP, "192.168.0.1");
 	strcpy(pcicType, "");
+	strcpy(kernelGraphicMode, "");
 
 	addConfigTextItem("KernelParameter", kernelParameter, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkNetmask", netmask, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkGatewayIP", gatewayIP, MAX_INPUT_LEN);
+	addConfigTextItem("ps2graphicMode", kernelGraphicMode, MAX_INPUT_LEN);
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, (void *) mode);
@@ -848,13 +860,19 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	configMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	configMenu->addItem("Edit Kernel Parameter", editString, kernelParameter);
-	configMenu->addItem("Edit PCIC Type", editString, pcicType);
 	configMenu->addItem("Default Kernel Parameter", setDefaultKernelParameterMenu, kernelParameter);
+	configMenu->addItem("Edit PCIC Type", editString, pcicType);
+
+	/* Module Config Menu */
+	Menu *moduleConfigMenu;
+	moduleConfigMenu = configMenu->addSubMenu("Module Configuration");
+	moduleConfigMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
+		getTexBack());
 	loaderConfig.newModules = 0;
-	configMenu->addCheckItem("New Modules", &loaderConfig.newModules);
+	moduleConfigMenu->addCheckItem("New Modules", &loaderConfig.newModules);
 	loaderConfig.enableTGE = 1;
 #ifdef RTE
-	configMenu->addCheckItem("Enable TGE (disable RTE)",
+	moduleConfigMenu->addCheckItem("Enable TGE (disable RTE)",
 		&loaderConfig.enableTGE);
 #endif
 #ifdef PS2LINK
@@ -862,28 +880,17 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 #else
 	loaderConfig.enablePS2LINK = 0;
 #endif
-	configMenu->addCheckItem("Enable PS2LINK (debug)",
+	moduleConfigMenu->addCheckItem("Enable PS2LINK (debug)",
 		&loaderConfig.enablePS2LINK);
 	loaderConfig.enableDebug = 1;
-	configMenu->addCheckItem("Enable debug modules", &loaderConfig.enableDebug);
-	configMenu->addItem("Submit above config", submitConfiguration, NULL);
-	loaderConfig.enableSBIOSTGE = 1;
-#ifdef RTE
-	configMenu->addCheckItem("Use SBIOS from TGE (ow RTE)",
-		&loaderConfig.enableSBIOSTGE);
-#endif
-	loaderConfig.newModulesInTGE = 0;
-	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
-	loaderConfig.enableDev9 = 1;
-	configMenu->addCheckItem("Enable hard disc and network",
-		&loaderConfig.enableDev9);
-	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);
+	moduleConfigMenu->addCheckItem("Enable debug modules", &loaderConfig.enableDebug);
+	moduleConfigMenu->addItem("Submit above config", submitConfiguration, NULL);
 
 	/* Module Menu */
 	Menu *moduleMenu;
 
-	moduleMenu = configMenu->addSubMenu("Module List");
-	moduleMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
+	moduleMenu = moduleConfigMenu->addSubMenu("Module List");
+	moduleMenu->addItem(moduleConfigMenu->getTitle(), setCurrentMenu, moduleConfigMenu,
 		getTexBack());
 	moduleMenu->addItem("Enable all modules", enableAllModules, NULL);
 	moduleMenu->addItem("Disable all modules", disableAllModules, NULL);
@@ -897,6 +904,18 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		moduleMenu->addCheckItem(module->path, &module->load);
 	}
 
+	loaderConfig.enableSBIOSTGE = 1;
+#ifdef RTE
+	configMenu->addCheckItem("Use SBIOS from TGE (ow RTE)",
+		&loaderConfig.enableSBIOSTGE);
+#endif
+	loaderConfig.newModulesInTGE = 0;
+	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
+	loaderConfig.enableDev9 = 1;
+	configMenu->addCheckItem("Enable hard disc and network",
+		&loaderConfig.enableDev9);
+	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);
+
 	/* SBIOS Calls Menu */
 	sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
 	if (sbiosCallEnabled != NULL) {
@@ -908,7 +927,9 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		sbiosCallsMenu->addItem("Enable all Calls", enableAllSBIOSCalls, NULL);
 		sbiosCallsMenu->addItem("Disable all Calls", disableAllSBIOSCalls,
 			NULL);
+#ifdef RTE
 		sbiosCallsMenu->addItem("Set default", defaultSBIOSCalls, NULL);
+#endif
 		defaultSBIOSCalls(NULL);
 		for (i = 0; i < numberOfSbiosCalls; i++) {
 			sbiosCallsMenu->addCheckItem(sbiosDescription[i],
@@ -927,6 +948,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	ps2linkMenu->addItem("Set IP address", editString, myIP);
 	ps2linkMenu->addItem("Set Netmask", editString, netmask);
 	ps2linkMenu->addItem("Set Gateway IP address", editString, gatewayIP);
+
+	configMenu->addItem("Set Graphic Mode", editString, kernelGraphicMode);
 }
 
 extern "C" {
@@ -985,6 +1008,10 @@ extern "C" {
 		*len += strlen(&ps2linkParams[*len]) + 1;
 
 		return ps2linkParams;
+	}
+
+	const char *getGraphicMode(void) {
+		return kernelGraphicMode;
 	}
 
 	const char *getPcicType(void)

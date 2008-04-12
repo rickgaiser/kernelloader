@@ -1,3 +1,12 @@
+1.7
+- Enabled screenshot feature. Screenshot in kernelloader can be done by
+  pressing button "R1". Screenshot is saved on USB memory stick.
+- Allow only one RPC call at the same time. This fixed CDVD bug.
+- Allow to set graphic mode. Implementation of function setdve is still missing.
+- Fixed memory hole when SifSetDma() is currently not possible in
+  SifCallRpc() and SifbindRpc().
+- Cleanup return codes when SBIOS call need to be retried later.
+
 1.6
 - Initrd is now supported even if kernel is not patched.
 - Initrd is now in protected memory area and can't get overwritten.

@@ -174,7 +174,7 @@ int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 	if (SifCallRpc(&clientNCmd, CD_NCMD_READ, SIF_RPC_M_NOWAIT, readData, 24, 0, 0,
 				(void *) cdAlignReadBuffer, carg) < 0) {
 		CDVD_UNLOCKN();
-		return -3;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (cdDebug > 0) {
@@ -211,7 +211,7 @@ int cdDvdRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -260,7 +260,7 @@ int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -311,7 +311,7 @@ int sbcall_cdvdgettoc(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_GETTOC, SIF_RPC_M_NOWAIT, getTocSendBuff, 12, nCmdRecvBuff, 8, cdGetTocStage2, carg) < 0) {
 		CDVD_UNLOCKN();
-		return -2;
+		return -SIF_RPCE_SENDP;
 	}
 	return 0;
 }
@@ -341,7 +341,7 @@ s32 cdSeek(u32 sectorLoc)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -369,7 +369,7 @@ s32 cdStandby(void)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -402,7 +402,7 @@ int sbcall_cdvdstop(tge_sbcall_rpc_arg_t *carg)
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_STOP, SIF_RPC_M_NOWAIT, 0, 0, 0, 0, NCmdCallback, carg) < 0) {
 		CDVD_UNLOCKN();
-		return -1;
+		return -SIF_RPCE_SENDP;
 	}
 
 	return 0;
@@ -428,7 +428,7 @@ s32 cdPause(void)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -463,7 +463,7 @@ s32 cdApplyNCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 	if (SifCallRpc(&clientNCmd, CD_NCMD_NCMD, 0, nCmdRecvBuff, 20, nCmdRecvBuff, 16, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (outBuff)
@@ -507,7 +507,7 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (cdDebug > 0) {
@@ -534,7 +534,7 @@ s32 cdNCmdDiskReady(void)
 	if (SifCallRpc(&clientNCmd, CD_NCMD_DISKREADY, 0, 0, 0, &nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	SignalSema(nCmdSemaId);
@@ -624,7 +624,7 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (cdDebug > 0) {
@@ -819,7 +819,7 @@ int cdStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode_t *
 	if (SifCallRpc(&clientNCmd, CD_NCMD_STREAM, 0, readStreamData, 20, nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return 0;
+		return -SIF_RPCE_SENDP;
 	}
 
 	if (cdDebug > 0) {
@@ -857,7 +857,8 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 	if (SifCallRpc(&clientNCmd, CD_NCMD_CDDASTREAM, 0, readStreamData, 20, nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
 		CDVD_UNLOCKN();
-		return cmd < CDVD_ST_CMD_INIT ? -1 : 0;
+		return -SIF_RPCE_SENDP;
+		// XXX: return cmd < CDVD_ST_CMD_INIT ? -1 : 0;
 	}
 
 	SignalSema(nCmdSemaId);

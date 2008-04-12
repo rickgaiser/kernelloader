@@ -35,6 +35,8 @@
 
 //#define MC_DEBUG
 
+#define MC_INITIALIZED 2
+
 #ifdef MC_DEBUG
 #include <stdio.h>
 #endif
@@ -144,13 +146,13 @@ static struct {		// size = 48
 static unsigned int mcInfoCmd[12] __attribute__((aligned(64)));
 
 // whether or not mc lib has been inited
-static int mclibInited = 0;
+static int mcInitializeCounter = 0;
 
 // stores last command executed
 static unsigned int lastCmd = 0;
 
 // specifies whether using MCSERV or XMCSERV modules
-static int mcType = MC_TYPE_MC;
+static int mcType = -1;
 
 static void mcCallback(void* rarg)
 {
@@ -256,88 +258,67 @@ static void mcStoreDir(volatile int* rarg)
 }
 #endif
 
-void mcInitStage3(void *rarg)
+void mcInitCallback(void *rarg)
 {
 	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
-	int ret=1;
 
-	if(mcType == MC_TYPE_XMC)
-	{
-		// check if old version of mcserv loaded
-		if(*(s32*)UNCACHED_SEG(rdata+4) < 0x205)
+	switch(mcInitializeCounter) {
+	case 0:
+		if (cdata.server == NULL) {
+			/* Failed. */
+			carg->result = -1;
+			break;
+		}
+		mcInitializeCounter++;
+		carg->result = 0;
+
+		// for some reason calling this init sif function with 'mcserv' makes all other
+		// functions not work properly. although NOT calling it means that detecting
+		// whether or not cards are formatted doesnt seem to work :P
+		if(mcType == MC_TYPE_MC)
 		{
 #ifdef MC_DEBUG
-			printf("libmc: mcserv is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+4));
+			printf("libmc: using MCMAN & MCSERV\n");
 #endif
-			mclibInited = 0;
-			carg->result = -120;
-			carg->endfunc(carg->efarg, carg->result);
-			return;
+		} else {
+			break;
 		}
+
+	case 1:
+		if(mcType == MC_TYPE_XMC)
+		{
+			// check if old version of mcserv loaded
+			if(*(s32*)UNCACHED_SEG(rdata+4) < 0x205)
+			{
+#ifdef MC_DEBUG
+				printf("libmc: mcserv is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+4));
+#endif
+				carg->result = -120;
+				carg->endfunc(carg->efarg, carg->result);
+				return;
+			}
 		
-		// check if old version of mcman loaded
-		if(*(s32*)UNCACHED_SEG(rdata+8) < 0x206)
-		{
+			// check if old version of mcman loaded
+			if(*(s32*)UNCACHED_SEG(rdata+8) < 0x206)
+			{
 #ifdef MC_DEBUG
-			printf("libmc: mcman is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+8));
+				printf("libmc: mcman is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+8));
 #endif
-			mclibInited = 0;
-			carg->result = -121;
-			carg->endfunc(carg->efarg, carg->result);
-			return;
+				carg->result = -121;
+				carg->endfunc(carg->efarg, carg->result);
+				return;
+			}
+			carg->result = *(s32*)UNCACHED_SEG(rdata+0);
+		} else {
+			carg->result = 1;
 		}
-		ret = *(s32*)UNCACHED_SEG(rdata+0);
+		// successfully inited
+		lastCmd = 0;
+		mcInitializeCounter++;
+		break;
+
 	}
-	// successfully inited
-	mclibInited = 1;
-	lastCmd = 0;
-	carg->result = ret;
 	carg->endfunc(carg->efarg, carg->result);
-}
-
-void mcInitStage2(void *rarg)
-{
-	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
-	int ret=0;
-
-	if (cdata.server == NULL) {
-		/* Failed. */
-		carg->result = -1;
-
-		carg->endfunc(carg->efarg, carg->result);
-		return;
-	}
-
-	// for some reason calling this init sif function with 'mcserv' makes all other
-	// functions not work properly. although NOT calling it means that detecting
-	// whether or not cards are formatted doesnt seem to work :P
-	if(mcType == MC_TYPE_MC)
-	{
-#ifdef MC_DEBUG
-		printf("libmc: using MCMAN & MCSERV\n");
-#endif
-		mcInitStage3(carg);
-	}
-	else if(mcType == MC_TYPE_XMC)
-	{
-#ifdef MC_DEBUG
-		printf("libmc: using XMCMAN & XMCSERV\n");
-#endif		
-		
-		// call init function
-		if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_INIT], SIF_RPC_M_NOWAIT, &mcCmd, 48, rdata, 12, mcInitStage3, carg)) < 0)
-		{
-			// init error
-#ifdef MC_DEBUG
-			printf("libmc: initialisation error\n");
-#endif
-			mclibInited = 0;
-			carg->result = ret - 100;
-			carg->endfunc(carg->efarg, carg->result);
-			return;
-		}
-		
-	}
 }
 
 // init memcard lib
@@ -346,32 +327,57 @@ void mcInitStage2(void *rarg)
 //			MC_TYPE_XMC = use XMCSERV/XMCMAN
 // returns:	0   = successful
 //			< 0 = error
-int mcInit(int type, tge_sbcall_rpc_arg_t *carg)
+int mcInit(tge_sbcall_rpc_arg_t *carg)
 {
 	int ret=0;
 
-	if	(type == MC_TYPE_RESET)
+#if 0
+	if	(mcType == MC_TYPE_RESET)
 	{
 		mclibInited = 0;
 		cdata.server = NULL;
 		return 0;
 	}
+#endif
 
-	if(mclibInited)
-		return -1;
+	switch(mcInitializeCounter) {
+	case 0:
+		// bind to mc rpc on iop
+		if((ret=SifBindRpc(&cdata, 0x80000400, SIF_RPC_M_NOWAIT, mcInitCallback, carg)) < 0)
+		{
+#ifdef MC_DEBUG
+				printf("libmc: bind error\n");
+#endif
+			
+			return -SIF_RPCE_SENDP;
+		}
+		break;
 
-	// set which modules to use
-	mcType = type;
-	
-	// bind to mc rpc on iop
-	if((ret=SifBindRpc(&cdata, 0x80000400, SIF_RPC_M_NOWAIT, mcInitStage2, carg)) < 0)
-	{
-		#ifdef MC_DEBUG
-			printf("libmc: bind error\n");
-		#endif
+	case 1:
+		if(mcType == MC_TYPE_XMC)
+		{
+#ifdef MC_DEBUG
+			printf("libmc: using XMCMAN & XMCSERV\n");
+#endif		
+			// call init function
+			if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_INIT], SIF_RPC_M_NOWAIT, &mcCmd, 48, rdata, 12, mcInitCallback, carg)) < 0)
+			{
+				// init error
+#ifdef MC_DEBUG
+				printf("libmc: initialisation error\n");
+#endif
+				return -SIF_RPCE_SENDP;
+			}
+		}
+		break;
 		
-		return ret;
+	default:
+		//printf("mcInit: already initialized.\n");
+		carg->result = 0;
+		carg->endfunc(carg->efarg, carg->result);
+		break;
 	}
+	
 	
 	return ret;
 }
@@ -393,13 +399,20 @@ int sbcall_mcgetinfo(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcgetinfo_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_GET_INFO;
+	core_restore(status);
 	
 	// set global variables
 	if(mcType == MC_TYPE_MC)
@@ -425,11 +438,10 @@ int sbcall_mcgetinfo(tge_sbcall_rpc_arg_t *carg)
 	formatAddr	= arg->format;
 	SifWriteBackDCache(endParameter,192);
 
-	lastCmd = MC_FUNC_GET_INFO;
 	// send sif command
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_INFO], 1, mcInfoCmd, 48, rdata, 4, mcGetInfoApdx, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -448,13 +460,20 @@ int sbcall_mcopen(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcopen_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_OPEN;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port		= arg->port;
@@ -464,10 +483,9 @@ int sbcall_mcopen(tge_sbcall_rpc_arg_t *carg)
 	mcCmd.name[1023] = 0;
 	
 	// send sif command
-	lastCmd = MC_FUNC_OPEN;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_OPEN], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -483,22 +501,28 @@ int sbcall_mcclose(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcclose_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_CLOSE;
+	core_restore(status);
 	
 	// set global variables
 	mcFileCmd.fd	= arg->fd;
 	
 	// send sif command
-	lastCmd = MC_FUNC_CLOSE;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CLOSE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -516,13 +540,20 @@ int sbcall_mcseek(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcseek_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_SEEK;
+	core_restore(status);
 	
 	// set global variables
 	mcFileCmd.fd		= arg->fd;
@@ -530,10 +561,9 @@ int sbcall_mcseek(tge_sbcall_rpc_arg_t *carg)
 	mcFileCmd.origin	= arg->whence;
 	
 	// send sif command
-	lastCmd = MC_FUNC_SEEK;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SEEK], 1, &mcFileCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -551,13 +581,20 @@ int sbcall_mcread(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcread_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_READ;
+	core_restore(status);
 	
 	// set global variables
 	mcFileCmd.fd	= arg->fd;
@@ -568,10 +605,9 @@ int sbcall_mcread(tge_sbcall_rpc_arg_t *carg)
 	SifWriteBackDCache(endParameter,192);
 	
 	// send sif command
-	lastCmd = MC_FUNC_READ;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_READ], 1, &mcFileCmd, 48, rdata, 4, mcReadFixAlign, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -588,13 +624,20 @@ int sbcall_mcwrite(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcwrite_arg_t *arg = carg->sbarg;
 	int i, ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_WRITE;
+	core_restore(status);
 	
 	// set global variables
 	mcFileCmd.fd	= arg->fd;
@@ -617,10 +660,9 @@ int sbcall_mcwrite(tge_sbcall_rpc_arg_t *carg)
 	FlushCache(0);
 	
 	// send sif command
-	lastCmd = MC_FUNC_WRITE;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_WRITE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -636,22 +678,28 @@ int sbcall_mcflush(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcflush_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_FLUSH;
+	core_restore(status);
 	
 	// set global variables
 	mcFileCmd.fd	= arg->fd;
 	
 	// send sif command
-	lastCmd = MC_FUNC_FLUSH;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FLUSH], 1, &mcFileCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -669,13 +717,20 @@ int sbcall_mcmkdir(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcmkdir_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_MK_DIR;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port		= arg->port;
@@ -685,10 +740,9 @@ int sbcall_mcmkdir(tge_sbcall_rpc_arg_t *carg)
 	mcCmd.name[1023] = 0;
 	
 	// send sif command
-	lastCmd = MC_FUNC_MK_DIR;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_OPEN], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -708,13 +762,20 @@ int sbcall_mcmkdir(tge_sbcall_rpc_arg_t *carg)
 int mcChdir(int port, int slot, const char* newDir, char* currentDir, SifRpcEndFunc_t endfunc, void *efarg, int *result)
 {
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_CH_DIR;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port		= port;
@@ -726,10 +787,9 @@ int mcChdir(int port, int slot, const char* newDir, char* currentDir, SifRpcEndF
 	
 	// send sif command
 	data.optArg = currentDir;
-	lastCmd = MC_FUNC_CH_DIR;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CH_DIR], 1, &mcCmd, 0x414, rdata, 4, (SifRpcEndFunc_t)mcStoreDir, &data)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -752,13 +812,20 @@ int sbcall_mcgetdir(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcgetdir_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_GET_DIR;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port		= arg->port;
@@ -771,10 +838,9 @@ int sbcall_mcgetdir(tge_sbcall_rpc_arg_t *carg)
 	SifWriteBackDCache(arg->dirents, arg->max_entries * sizeof(mcTable));
 	
 	// send sif command
-	lastCmd = MC_FUNC_GET_DIR;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_DIR], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
    	return ret;
 }
@@ -794,13 +860,20 @@ int sbcall_mcsetfileinfo(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcsetfileinfo_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
 	// check mc lib is inited
-	if(!mclibInited)
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_SET_INFO;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port		= arg->port;
@@ -816,10 +889,9 @@ int sbcall_mcsetfileinfo(tge_sbcall_rpc_arg_t *carg)
 	FlushCache(0);
 	
 	// send sif command
-	lastCmd = MC_FUNC_SET_INFO;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -837,13 +909,20 @@ int sbcall_mcdelete(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcdelete_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_DELETE;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port = arg->port;
@@ -853,10 +932,9 @@ int sbcall_mcdelete(tge_sbcall_rpc_arg_t *carg)
 	mcCmd.name[1023] = 0;
 	
 	// call delete function
-	lastCmd = MC_FUNC_DELETE;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_DELETE], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
    	return ret;
 }
@@ -873,23 +951,29 @@ int sbcall_mcformat(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcformat_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_FORMAT;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port = arg->port;
 	mcCmd.slot = arg->slot;
 	
 	// call format function
-	lastCmd = MC_FUNC_FORMAT;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -906,23 +990,29 @@ int sbcall_mcunformat(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcunformat_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_UNFORMAT;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port = arg->port;
 	mcCmd.slot = arg->slot;
 	
 	// call unformat function
-	lastCmd = MC_FUNC_UNFORMAT;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_UNFORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -940,13 +1030,20 @@ int sbcall_mcgetentspace(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcgetentspace_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_GET_ENT;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port = arg->port;
@@ -955,10 +1052,9 @@ int sbcall_mcgetentspace(tge_sbcall_rpc_arg_t *carg)
 	mcCmd.name[1023] = 0;
 	
 	// call sif function
-	lastCmd = MC_FUNC_GET_ENT;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_GET_ENT], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -977,13 +1073,20 @@ int sbcall_mcrename(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_mcrename_arg_t *arg = carg->sbarg;
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_RENAME;
+	core_restore(status);
 	
 	// set global variables
 	mcCmd.port = arg->port;
@@ -997,10 +1100,9 @@ int sbcall_mcrename(tge_sbcall_rpc_arg_t *carg)
 	FlushCache(0);
 	
 	// call sif function
-	lastCmd = MC_FUNC_RENAME;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, carg)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -1016,22 +1118,28 @@ int sbcall_mcrename(tge_sbcall_rpc_arg_t *carg)
 int mcChangeThreadPriority(int level)
 {
 	int ret;
+	u32 status;
 	
-	// check lib is inited
-	if(!mclibInited)
+	// check mc lib is inited
+	if(mcInitializeCounter != MC_INITIALIZED) {
 		return -1;
+	}
 	// check nothing else is processing
-	if(lastCmd != 0)
-		return lastCmd;
+	core_save_disable(&status);
+	if(lastCmd != 0) {
+		core_restore(status);
+		return -SIF_RPCE_SENDP;
+	}
+	lastCmd = MC_FUNC_CHG_PRITY;
+	core_restore(status);
 	
 	// set global variables
 	*(u32*)mcCmd.name = level;
 	
 	// call sif function
-	lastCmd = MC_FUNC_CHG_PRITY;
 	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_CHG_PRITY], 1, &mcCmd, 48, rdata, 4, 0, 0)) != 0) {
 		lastCmd = 0;
-		return ret;
+		return -SIF_RPCE_SENDP;
 	}
 	return ret;
 }
@@ -1092,27 +1200,28 @@ int mcSync(int mode, int *cmd, int *result)
 
 int sbcall_mcinit(tge_sbcall_rpc_arg_t *carg)
 {
-	smod_mod_info_t mod;
+	int rv;
 
-	/* Detect module loaded on IOP. */
-	if (smod_get_mod_by_name("mcserv", &mod) > 0) {
-		int type;
-		int rv;
+	if (mcType < 0) {
+		smod_mod_info_t mod;
 
-		if ((mod.version >> 8) > 1) {
-			printf("MCSERV new version 0x%x.\n", mod.version);
-			type = MC_TYPE_XMC;
+		/* Detect module loaded on IOP. */
+		if (smod_get_mod_by_name("mcserv", &mod) > 0) {
+			if ((mod.version >> 8) > 1) {
+				printf("MCSERV new version 0x%x.\n", mod.version);
+				mcType = MC_TYPE_XMC;
+			} else {
+				printf("MCSERV old version 0x%x.\n", mod.version);
+				mcType = MC_TYPE_MC;
+			}
 		} else {
-			printf("MCSERV old version 0x%x.\n", mod.version);
-			type = MC_TYPE_MC;
+			printf("Error: MCSERV not loaded.\n");
+			return -1;
 		}
-		rv = mcInit(type, carg);
-
-		printf("mcInit() result %d.\n", rv);
-		return rv;
-	} else {
-		printf("Error: MCSERV not loaded.\n");
-		return -1;
 	}
+	rv = mcInit(carg);
+
+	printf("mcInit() result %d.\n", rv);
+	return rv;
 }
 

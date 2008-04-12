@@ -136,6 +136,7 @@ typedef struct t_SifRpcClientData
    SifRpcEndFunc_t 		end_function;	/* 07 	11 */
    void				*end_param;	/* 08 	12*/
    struct t_SifRpcServerData	*server;	/* 09 	13 */
+   u32    reserved[6];			/* Required, because of cache alisaing effects. */
 } SifRpcClientData_t;
 
 typedef struct t_SifRpcReceiveData

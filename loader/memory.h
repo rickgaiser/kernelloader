@@ -4,8 +4,12 @@
 
 /** Mask to get kseg0 address from physical address. */
 #define KSEG0_MASK 0x80000000
+/** Mask to get kseg0 address from physical address. */
+#define KSEG1_MASK 0xA0000000
 /** Address of KSEG0. */
 #define KSEG0 0x80000000
+/** Address of KSEG0. */
+#define KSEG1 0xA0000000
 /** Size of a memory page (TLB). */
 #define PAGE_SIZE 0x1000
 /** Size of data cache. */

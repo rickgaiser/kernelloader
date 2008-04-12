@@ -57,8 +57,12 @@ struct rpc_data {
 
 extern struct rpc_data _sif_rpc_data;
 
+/** Only one rpc call is possible at the same time. */
+int rpc_call_active = 0;
+
 void *_rpc_get_packet(struct rpc_data *rpc_data);
 void *_rpc_get_fpacket(struct rpc_data *rpc_data);
+static void rpc_packet_free(void *packet);
 
 void *_rpc_get_packet(struct rpc_data *rpc_data)
 {
@@ -115,18 +119,18 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 	SifRpcBindPkt_t *bind;
 
 	bind = (SifRpcBindPkt_t *)_rpc_get_packet(&_sif_rpc_data);
-	if (!bind)
+	if (!bind) {
 		return -E_SIF_PKT_ALLOC;
+	}
 
+	/* Callback is required by linux. */
+	cd->end_function  = endfunc;
+	cd->end_param     = efarg;
 	cd->command      = 0;
 	cd->server       = NULL;
 	cd->hdr.pkt_addr = bind;
 	cd->hdr.rpc_id   = bind->rpc_id;
 	cd->hdr.sema_id  = 0;
-
-	/* Callback is required by linux. */
-	cd->end_function  = endfunc;
-	cd->end_param     = efarg;
 
 	bind->sid        = sid;
 	bind->pkt_addr   = bind;
@@ -134,15 +138,15 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 
 	if (mode & SIF_RPC_M_NOWAIT) {
 		if (!SifSendCmd(0x80000009, bind, RPC_PACKET_SIZE, NULL, NULL, 0)) {
+			rpc_packet_free(bind);
 			return -E_SIF_PKT_SEND;
 		}
 		return 0;
 	}
 
 	/* The following code is normally not executed. */
-	cd->hdr.sema_id = 0;
-
 	if (!SifSendCmd(0x80000009, bind, RPC_PACKET_SIZE, NULL, NULL, 0)) {
+		rpc_packet_free(bind);
 		return -E_SIF_PKT_SEND;
 	}
 
@@ -159,16 +163,28 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 		SifRpcEndFunc_t endfunc, void *efarg)
 {
 	SifRpcCallPkt_t *call;
+	u32 status;
+
+	core_save_disable(&status);
+	if (rpc_call_active) {
+		core_restore(status);
+
+		/* Client already in use. */
+		return -E_SIF_PKT_ALLOC;
+	}
+	rpc_call_active = 1;
+	core_restore(status);
 
 	call = (SifRpcCallPkt_t *)_rpc_get_packet(&_sif_rpc_data);
-	if (!call)
+	if (!call) {
 		return -E_SIF_PKT_ALLOC;
+	}
 
+	cd->end_function  = endfunc;
+	cd->end_param     = efarg;
 	cd->hdr.pkt_addr  = call;
 	cd->hdr.rpc_id    = call->rpc_id;
 	cd->hdr.sema_id   = 0;
-	cd->end_function  = endfunc;
-	cd->end_param     = efarg;
 
 	call->rpc_number  = rpc_number;
 	call->send_size   = ssize;
@@ -197,6 +213,7 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 
 		if (!SifSendCmd(0x8000000a, call, RPC_PACKET_SIZE, sendbuf,
 					cd->buff, ssize)) {
+			rpc_packet_free(call);
 			return -E_SIF_PKT_SEND;
 		}
 
@@ -204,11 +221,11 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 	}
 
 	/* The following code is normally not executed. */
-	cd->hdr.sema_id = 0;
-
 	if (!SifSendCmd(0x8000000a, call, RPC_PACKET_SIZE, sendbuf,
-				cd->buff, ssize))
+				cd->buff, ssize)) {
+		rpc_packet_free(call);
 		return -E_SIF_PKT_SEND;
+	}
 
 	while(cd->hdr.sema_id == 0) {
 		/* Wait until something is received. */
@@ -282,10 +299,14 @@ static int init = 0;
 
 static void rpc_packet_free(void *packet)
 {
+	u32 status;
 	SifRpcRendPkt_t *rendpkt = (SifRpcRendPkt_t *)packet;
 
+	core_save_disable(&status);
 	rendpkt->rpc_id = 0;
 	rendpkt->rec_id &= (~PACKET_F_ALLOC);
+
+	core_restore(status);
 }
 
 /* Command 0x80000008 */
@@ -298,16 +319,17 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 
 	pkt_addr = client->hdr.pkt_addr;
 #ifdef SBIOS_DEBUG
-	printf("cid 0x%x pkt_addr 0x%x\n", request->cid, pkt_addr);
+	printf("cid 0x%x pkt_addr 0x%x\n", (uint32_t) request->cid, (uint32_t) pkt_addr);
 #endif
 	if (request->cid == 0x8000000a) {
 		/* Response to RPC call. */
 		if (client->end_function) {
 #ifdef SBIOS_DEBUG
-			printf("Calling 0x%x\n", client->end_function);
+			printf("Calling 0x%x\n", (uint32_t) client->end_function);
 #endif
 			client->end_function(client->end_param);
 		}
+		rpc_call_active = 0;
 	} else if (request->cid == 0x80000009) {
 		client->server = request->server;
 		client->buff   = request->buff;
@@ -315,10 +337,9 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 		/* Callback is not part of PS2SDK, but is required for linux. */
 		if (client->end_function) {
 #ifdef SBIOS_DEBUG
-			printf("Calling 0x%x\n", client->end_function);
+			printf("Calling 0x%x\n", (uint32_t) client->end_function);
 #endif
 			client->end_function(client->end_param);
-		} else {
 		}
 	}
 

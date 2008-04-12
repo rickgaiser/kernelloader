@@ -5,6 +5,7 @@ include ../config.mk
 EE_BIN = $(PROGRAM).elf
 EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o ps2dev9.o
 EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o hdd.o
+EE_OBJS += kernelgraphic.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
 EE_LIBS += -lmc -lfileXio -lkbd
 ifneq ($(LIBJPG),)

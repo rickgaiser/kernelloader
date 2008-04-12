@@ -8,19 +8,26 @@ Update: Network is now working.
 -
 Update: Hard disc is now working fast with interrupts.
 -
-Update: IRX modules need to be loaded when hard disc shoul work.
+Update: IRX modules need to be loaded before when hard disc should work.
+-
+Update: IRX modules are automatically loaded when kernelloader starts.
 
-PR#2
+PR#2 - Solved by workaround
 Function sbcall_cdvdtrayrequestStage2() is sometimes not called after RPC Call.
 (When linux is working without debug then second RPC trayreq call leads to
 deadlock.) RPC call message is transfered to IOP, when I replace the handler
 with sceSifAddCmdHandler(0x8000000A, ...); the moment before, my handler is
 executed. It seems that message is lost in RPC or CDVD module.
+-
+Update: Changed SBIOS to allow maximum 1 rpc call or bind at the same time.
+Working with old ROM module, not working with new one.
 
-PR#3
+PR#3 - Solved
 Reset is not working when loaded by ps2link.
 -
 Problem is based on old ps2link version.
+-
+Update: poweroff.irx is now loaded by kernelloader. Power off is working.
 
 PR#4
 Memory card is not working when new modules are loaded from ROM.
@@ -59,6 +66,8 @@ Update: Hard disc is now working without DMA. But it seems that Sony never
 delivered any responsible IOP module.
 -
 Update: Some IRX modules (ps2link)  need to be loaded once before.
+-
+Update: IRX modules are now loaded by kernelloader.
 
 PR#10 - Solved
 When loading of Linux failed, because file names where wrong and this is fixed
@@ -77,9 +86,12 @@ Module padman is responsible for this. You need to disable padman or need to use
 padman.irx from RTE.
 -
 IOP heap bug fixed solved some problems, but it is not yet working.
+-
+Only working if XMCMAN.IRX, XMCSERV.IRX and XPADMAN.IRX is not loaded.
+At least padman.irx from RTE is working.
 
 PR#12
-It is possible that USB is not working with V14/V15 slim PS2 console. This was
+USB is not working with V12 and higher slim PSTwo console. This was
 reported in ps2dev forums. I don't have a slim PS2, so I can't test it.
 
 PR#13
@@ -95,3 +107,24 @@ Update: Power off is now working.
 
 PR#15
 When you insert a USB device while booting before Linux kernel starts, the system crashs.
+
+PR#16
+NetBSD graphic is not working
+-
+You need to set in the kernelloader menu the graphic mode to 4. The function setdve is
+not finished. NetBSD can only work in VGA mode, but VGA mode is not supported.
+
+PR#17 - Solved by workaround
+Linux is not starting when eedebug.irx is loaded.
+-
+You need also to activate IOP debug output or disable the module.
+
+PR#18
+After mounting CD or DVD the shutdown is not working
+
+PR#19
+pad: sbcall_padinfomode and sbcall_padinfoact make RPC calls when old rom modules used.
+This can lead to a failure and system can be blocked.
+
+PR#20
+Sometimes hard disc interrupts are lost (hard disc will do nothing for some seconds).

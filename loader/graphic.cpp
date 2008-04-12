@@ -229,7 +229,7 @@ void graphic_paint(void)
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"25.02.2008"
+		"21.03.2008"
 #ifdef RTE
 		" RTE"
 #endif
@@ -683,6 +683,9 @@ extern "C" {
 		ps2_screenshot_file(text, gsGlobal->ScreenBuffer[gsGlobal->ActiveBuffer & 1],
 			gsGlobal->Width, gsGlobal->Height / 2, gsGlobal->PSM);
 		screenshotCounter++;
+
+		/* Fix deadlock in gsKit. */
+		gsGlobal->FirstFrame = GS_SETTING_ON;
 	}
 }
 

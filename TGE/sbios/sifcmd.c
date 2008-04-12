@@ -206,7 +206,7 @@ static void sif_cmd_interrupt()
 
 	if ((cmd_handlers != NULL) && (cmd_handlers[id].handler != NULL)) {
 #ifdef SBIOS_DEBUG
-		printf("Callback 0x%x\n", cmd_handlers[id].handler);
+		printf("Callback 0x%x\n", (uint32_t) cmd_handlers[id].handler);
 #endif
 		cmd_handlers[id].handler(packet, cmd_handlers[id].harg);
 	}

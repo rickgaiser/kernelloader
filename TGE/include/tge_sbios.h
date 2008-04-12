@@ -15,6 +15,12 @@
 
 #define TGE_SBIOS_VERSION	0x666
 
+/* Return values for SBIOS calls. */
+/** Fail to get packet data (-> retry later). */
+#define SIF_RPCE_GETP 1
+/** Fail to send dma packet (-> abort). */
+#define SIF_RPCE_SENDP 2
+
 /* Calls dispatched through tge_sbios().  */
 typedef enum {
 	/* Misc. calls.  */
