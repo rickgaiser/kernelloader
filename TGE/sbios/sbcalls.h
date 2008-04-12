@@ -53,4 +53,22 @@ int sbcall_iopheapinit(tge_sbcall_rpc_arg_t *carg);
 int sbcall_iopaheapalloc(tge_sbcall_rpc_arg_t *carg);
 int sbcall_iopheapfree(tge_sbcall_rpc_arg_t *carg);
 
+/* mc.c */
+int sbcall_mcinit(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcgetinfo(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcgetdir(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcopen(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcclose(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcseek(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcread(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcwrite(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcflush(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcmkdir(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcsetfileinfo(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcdelete(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcformat(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcunformat(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcgetentspace(tge_sbcall_rpc_arg_t *carg);
+int sbcall_mcrename(tge_sbcall_rpc_arg_t *carg);
+
 #endif /* TGE_SBCALLS_H */

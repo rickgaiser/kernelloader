@@ -614,7 +614,6 @@ void SifRpcLoop(SifRpcDataQueue_t *qd)
 }
 #endif
 
-#ifdef F_SifCheckStatRpc
 int SifCheckStatRpc(SifRpcClientData_t *cd)
 {
 	SifRpcPktHeader_t *packet = (SifRpcPktHeader_t *)cd->hdr.pkt_addr;
@@ -630,7 +629,6 @@ int SifCheckStatRpc(SifRpcClientData_t *cd)
 
 	return 1;
 }
-#endif
 
 int sbcall_sifinitrpc(void)
 {

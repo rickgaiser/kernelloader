@@ -14,6 +14,9 @@
 
 #include "hwreg.h"
 
+#include "cache.h"
+#include "iopmem.h"
+
 int sbcall_getver()
 {
 	return TGE_SBIOS_VERSION;
@@ -68,4 +71,28 @@ int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
 int sbcall_setrgbyc(tge_sbcall_setrgbyc_arg_t *arg)
 {
 	return 0;
+}
+
+void FlushCache(int operation)
+{
+	switch(operation)
+	{
+		case 0:
+			/* Writeback DCache .*/
+			flushDCacheAll();
+			break;
+		case 1:
+			/* Invalidate DCache. */
+			iop_prints("Invalidate DCache not supported (1).\n");
+			break;
+		case 2:
+			/* Invalidate ICache. */
+			invalidateICacheAll();
+			break;
+		case 3:
+			/* Invalidate Cache. */
+			invalidateICacheAll();
+			iop_prints("Invalidate DCache not supported (3).\n");
+			break;
+	}
 }

@@ -317,8 +317,106 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	0, 0, 0, 0,
 	/* 64 */
 	sbcall_iopheapinit,
+	/* 65 */
 	sbcall_iopaheapalloc,
-	sbcall_iopheapfree
+	/* 66 */
+	sbcall_iopheapfree,
+	/* 67 */
+	sbcall_mcinit,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 80 */
+	0, /* PAD init */
+	/* 81 */
+	0,
+	/* 82 */
+	0,
+	/* 83 */
+	0,
+	/* 84 */
+	0,
+	/* 85 */
+	0,
+	/* 86 */
+	0,
+	/* 87 */
+	0,
+	/* 88 */
+	0,
+	/* 89 */
+	0,
+	/* 90 */
+	0,
+	/* 91 */
+	0,
+	/* 92 */
+	0,
+	/* 93 */
+	0,
+	/* 94 */
+	0,
+	/* 95 */
+	0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 112 */
+	0, /* Sound init. */
+	/* 113 */
+	0,
+	/* 114 */
+	0,
+	/* 115 */
+	0,
+	/* 116 */
+	0,
+	/* 117 */
+	0,
+	/* 118 */
+	0,
+	/* 119 */
+	0,
+	/* 120 */
+	0,
+	/* 121 */
+	0,
+	/* 122 */
+	0,
+	/* 123 */
+	0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 144 */
+	sbcall_mcinit,
+	/* 145 */
+	sbcall_mcopen,
+	/* 146 */
+	sbcall_mcmkdir,
+	/* 147 */
+	sbcall_mcclose,
+	/* 148 */
+	sbcall_mcseek,
+	/* 149 */
+	sbcall_mcread,
+	/* 150 */
+	sbcall_mcwrite,
+	/* 151 */
+	sbcall_mcgetinfo,
+	/* 152 */
+	sbcall_mcgetdir,
+	/* 153 */
+	sbcall_mcformat,
+	/* 154 */
+	sbcall_mcdelete,
+	/* 155 */
+	sbcall_mcflush,
+	/* 156 */
+	sbcall_mcsetfileinfo,
+	/* 157 */
+	sbcall_mcrename,
+	/* 158 */
+	sbcall_mcunformat,
+	/* 159 */
+	sbcall_mcgetentspace,
+	/* 160 */
+	0 /* MC_CALL, What is this? */
+
 };
 
 int sbios(tge_sbcall_t sbcall, void *arg)

@@ -56,5 +56,6 @@ static inline void core_restore(u32 status)
 }
 
 void SifWriteBackDCache(void *ptr, int size);
+void FlushCache(int operation);
 
 #endif /* TGE_CORE_H */

@@ -63,26 +63,33 @@ int _start(int argc, char *argv[])
 {
 	iop_thread_t thread;
 	int res;
+	int locked = 0;
 
 	if ((res = RegisterIntrHandler(IOP_IRQ_DEV9, 1, intr_dev9_handler, NULL))) {
 		printf("intr 0x%02x, error %d\n", IOP_IRQ_DEV9, res);
-		return -1;
+		locked |= 1 << IOP_IRQ_DEV9;
 	}
 
 	if ((res = RegisterIntrHandler(IOP_IRQ_USB, 1, intr_usb_handler, NULL))) {
 		printf("intr 0x%02x, error %d\n", IOP_IRQ_USB, res);
-		return -1;
+		locked |= 1 << IOP_IRQ_USB;
 	}
 
 	if ((res = RegisterIntrHandler(IOP_IRQ_ILINK, 1, intr_ilink_handler, NULL))) {
 		printf("intr 0x%02x, error %d\n", IOP_IRQ_ILINK, res);
-		return -1;
+		locked |= 1 << IOP_IRQ_ILINK;
 	}
 
 	CpuEnableIntr();
-	EnableIntr(IOP_IRQ_DEV9);
-	EnableIntr(IOP_IRQ_USB);
-	EnableIntr(IOP_IRQ_ILINK);
+	if (!(locked & (1 << IOP_IRQ_DEV9))) {
+		EnableIntr(IOP_IRQ_DEV9);
+	}
+	if (!(locked & (1 << IOP_IRQ_USB))) {
+		EnableIntr(IOP_IRQ_USB);
+	}
+	if (!(locked & (1 << IOP_IRQ_ILINK))) {
+		EnableIntr(IOP_IRQ_ILINK);
+	}
 
 	thread.attr = TH_C;
 	thread.option = 0;
