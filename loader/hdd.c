@@ -9,6 +9,7 @@
 #include "iopmem.h"
 #include "loader.h"
 #include "hdd.h"
+#include "ps2dev9.h"
 
 /* 0x80 for busy, 0x88 for bus busy.  */
 static int ata_wait_busy(int bits)
@@ -88,4 +89,6 @@ void ata_setup(void)
 		iop_printf("Failed ata_reset_devices().\n");
 		return;
 	}
+	dev9IntrEnable(SPD_INTR_ATA0);
+	dev9IntrEnable(SPD_INTR_ATA1);
 }

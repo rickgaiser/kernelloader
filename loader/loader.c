@@ -314,14 +314,25 @@ moduleEntry_t modules[] = {
 	},
 #endif
 	{
-		.path = "host:TGE/intrelay.irx",
+		/* Interrupt relay when DEV9 is not loaded. */
+		.path = "host:TGE/intrelay-direct.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = LOAD_ON_NOT_PS2LINK,
-#if 0 /* Only USB is working. */
+		/* Everything is working when ps2link is not loaded. */
 		.ps2link = 1,
-#endif
+		.tge = 1
+	},
+	{
+		/* Interrupt relay when DEV9 is loaded. */
+		.path = "host:TGE/intrelay-dev9.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		/* Only hard disc and USB is working. */
+		.ps2link = -1,
 		.tge = 1
 	},
 #ifdef RTE
@@ -1279,7 +1290,7 @@ int loader(void *arg)
 		FlushCache(0);
 
 		PS2KbdClose();
-		padEnd();
+		deinitializeController();
 
 		SifExitIopHeap();
 		SifLoadFileExit();

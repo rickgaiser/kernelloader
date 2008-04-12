@@ -207,7 +207,7 @@ void graphic_paint(void)
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"04.02.2008");
+		"09.02.2008");
 
 	if (statusMessage != NULL) {
 		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,

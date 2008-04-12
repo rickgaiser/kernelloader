@@ -35,8 +35,8 @@ int main(int argc, char **argv)
 		mode = MODE_PAL;
 	}
 
-	/* Enable debug output at startup. */
-	loaderConfig.enableEEDebug = 1;
+	/* Disable debug output at startup. */
+	loaderConfig.enableEEDebug = 0;
 
 	/* Setup graphic screen. */
 	menu = graphic_main(mode);
@@ -248,7 +248,7 @@ extern "C" {
 			} while (!(new_pad & PAD_CROSS));
 	
 			clearInfoBuffer();
-			padEnd();
+			deinitializeController();
 		} else {
 			int i;
 			int lastScrollPos;

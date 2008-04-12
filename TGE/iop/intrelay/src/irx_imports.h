@@ -12,6 +12,9 @@
 #include "irx.h"
 
 /* Please keep these in alphabetical order!  */
+#ifdef DEV9_SUPPORT
+#include "dev9.h"
+#endif
 #include "intrman.h"
 #include "loadcore.h"
 #include "sifman.h"

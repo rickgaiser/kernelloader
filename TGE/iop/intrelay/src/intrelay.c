@@ -14,6 +14,11 @@
 #include "thbase.h"
 #include "stdio.h"
 
+#ifdef DEV9_SUPPORT
+#include "speedregs.h"
+#include "dev9.h"
+#endif
+
 #include "tge_hwdefs.h"
 
 IRX_ID("intrelay", 1, 1);
@@ -68,6 +73,15 @@ int _start(int argc, char *argv[])
 	if ((res = RegisterIntrHandler(IOP_IRQ_DEV9, 1, intr_dev9_handler, NULL))) {
 		printf("intr 0x%02x, error %d\n", IOP_IRQ_DEV9, res);
 		locked |= 1 << IOP_IRQ_DEV9;
+
+#ifdef DEV9_SUPPORT
+		/* ps2dev9 seems to be running use other way to get interrupts. */
+		dev9RegisterIntrCb(1, intr_dev9_handler);
+		dev9RegisterIntrCb(0, intr_dev9_handler);
+
+		dev9IntrEnable(SPD_INTR_ATA0);
+		dev9IntrEnable(SPD_INTR_ATA1);
+#endif
 	}
 
 	if ((res = RegisterIntrHandler(IOP_IRQ_USB, 1, intr_usb_handler, NULL))) {

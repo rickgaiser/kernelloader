@@ -61,7 +61,8 @@ ROM_FILES = \
 	usb_mass.irx \
 	ps2kbd.irx \
 	TGE/dmarelay.irx \
-	TGE/intrelay.irx \
+	TGE/intrelay-direct.irx \
+	TGE/intrelay-dev9.irx \
 	TGE/sbios_old.elf \
 	TGE/sbios_new.elf \
 	kernel.elf \
@@ -114,7 +115,7 @@ reset: $(PROGRAM).elf
 
 clean:
 	rm -f $(EE_BIN) *.o
-	rm -f kernel.elf sharedmem.irx $(MODULES) intrelay.irx dmarelay.irx iopintr.irx cdvdman.irx cdvdfsv.irx
+	rm -f kernel.elf $(MODULES)
 	rm -f romfilelist.h romdefinitions.h rominitialize.h
 	rm -f $(RGB_HEADERS) $(RGB_FILES)
 	rm -f $(PACKEDFILE)
@@ -132,19 +133,19 @@ romfilelist.h: $(RGB_HEADERS) $(RGB_FILES)
 
 romdefinitions.h:
 	rm -f romdefinitions.h
-	for file in $(subst .,_,$(subst /,_,$(ROM_FILES))); do \
+	for file in $(subst -,_,$(subst .,_,$(subst /,_,$(ROM_FILES)))); do \
 		echo "extern unsigned char $$file[];" >> romdefinitions.h; \
 		echo "extern int size_$$file;" >> romdefinitions.h; \
 	done
 
 rominitialize.h: $(RGBFILES)
 	rm -f rominitialize.h
-	for file in $(subst .,_,$(subst /,_,$(ROM_FILES))); do \
+	for file in $(subst -,_,$(subst .,_,$(subst /,_,$(ROM_FILES)))); do \
 		if [ "$${file: -3:3}" = "rgb" ]; then \
 			echo "#include \"$${file}\"" | sed -e "s/_rgb\"/\.h\"/g" >> rominitialize.h; \
 		fi; \
 	done
-	for file in $(subst .,_,$(subst /,_,$(ROM_FILES))); do \
+	for file in $(subst -,_,$(subst .,_,$(subst /,_,$(ROM_FILES)))); do \
 		echo "rom_files[i].start = $$file;" >> rominitialize.h; \
 		echo "rom_files[i].size = size_$$file;" >> rominitialize.h; \
 		if [ "$${file: -3:3}" = "rgb" ]; then \
@@ -159,17 +160,17 @@ rominitialize.h: $(RGBFILES)
 %_irx.s: %.irx
 	rm -f $@.tmp
 	rm -f $@
-	bin2s $^ $@.tmp $(subst /,_,$*)_irx
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_irx
 	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
 	rm -f $@.tmp
 
 %_elf.s: %.elf
-	bin2s $^ $@ $(subst /,_,$*)_elf
+	bin2s $^ $@ $(subst -,_,$(subst /,_,$*))_elf
 
 %_rgb.s: %.rgb
 	rm -f $@.tmp
 	rm -f $@
-	bin2s $^ $@.tmp $(subst /,_,$*)_rgb
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_rgb
 	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
 	rm -f $@.tmp
 

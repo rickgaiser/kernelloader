@@ -34,15 +34,19 @@ typedef struct
 	const char *args;
 	/** True, if ps2smap. */
 	int ps2smap;
+	/** True, if configuration should be loaded. */
+	int loadCfg;
 } moduleLoaderEntry_t;
 
 
 static moduleLoaderEntry_t moduleList[] = {
+#ifndef PS2LINK
 	{
 		.path = "eedebug.irx",
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
 #ifdef RESET_IOP
 	{
 		.path = "rom0:" MODPREFIX "SIO2MAN",
@@ -63,7 +67,8 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "rom0:" MODPREFIX "PADMAN",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.loadCfg = -1 /* MC modules are loaded before this entry. */
 	},
 #ifdef RESET_IOP
 	{
@@ -174,17 +179,11 @@ int loadLoaderModules(void)
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {
 		rom_entry_t *romfile;
-#ifdef RESET_IOP
-		/* Load configuration after mc modules loaded. */
-		if (i == 4) {
+
+		/* Load configuration when necessary modules are loaded. */
+		if (moduleList[i].loadCfg) {
 			loadConfiguration();
 		}
-#else
-		/* Load configuration after eedebug. */
-		if (i == 1) {
-			loadConfiguration();
-		}
-#endif
 		graphic_setStatusMessage(moduleList[i].path);
 		printf("Loading module %s)\n", moduleList[i].path);
 

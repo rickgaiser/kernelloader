@@ -32,8 +32,8 @@ sh # cd usr/src/linux-2.4.17_ps2
 
 There is no patch required to start linux.
 
-The patch adds support for initrd in linux, currently hard discs are not
-supported, so you will need it:
+The patch adds support for initrd in linux, you can use this to install
+linux on your hard disc.
 
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-initrd.patch
 
@@ -50,8 +50,9 @@ sh # ./setup-ps2
 
 Status: Kerneloader has a on screen menu. Debug information is
 printed using ps2link, when it is enabled in config.mk. Kernel is starting,
-most stuff is working. Hard disc, network, sound and some configuration
-stuff is not working. CD/DVD access is unstable and incomplete.
+most stuff is working including graphic, USB, hard disc and network.
+Sound and some configuration stuff is not working. CD/DVD access is
+unstable and incomplete.
 
 INSTALL:
 First you need to compile ps2smap and ps2link from ps2dev svn and copy the
@@ -192,6 +193,12 @@ Save configuration and then run:
 
 sh # make dep
 sh # make
+
+You need to strip it, because if the file is bigger, the initrd is loaded
+to a higher address (The kernel can't handle this and it is possible that
+you see some strange exceptions).
+sh # /usr/local/ps2/bin/ee-strip vmlinux
+
 You need to copy the file "linux-2.4.17_ps2/vmlinux" on a ps2 memroy card
 or a USB memroy stick and insert it into your PS2.
 
@@ -253,3 +260,97 @@ kernel exceptions.
 
 Files with prefix "host:" a first searched in a kloader.elf embedded
 files system.
+
+Module Information
+##################
+
+You can select which IOP modules are loaded in kernelloader. Module names
+prefixed with "rom0:X" are the new rom modules. Module names without the
+"X" are the old ones. Each playstation has the same version of the old modules.
+ps2link is only for debugging. It's purpose in this project is to print debug
+messages over network. The messages can be seen on the host using ps2client.
+The new modules can be different. Here is more information about the modules:
+
+eedebug.irx
+Required: No
+Patch: linux-2.4.17_ps2-iop-debug.patch
+Module send all output of IOP processor to host. Linux patch is required
+to see this information at "/proc/ps2iopdebug".
+
+SIO2MAN
+XSIO2MAN
+Required: Yes
+System module. Required to start other modules.
+
+MCMAN
+XMCMAN
+Required: Yes, or accessing memroy cards.
+Access to PS2 memory cards on IOP.
+
+MCSERV
+XMCSERV
+Required: Yes, or accessing memroy cards.
+RPC server for MCMAN. Linux will call the RPC server.
+
+PADMAN
+XPADMAN
+Required: Yes, for accessing playstation game controllers.
+Driver and RPC server to access gamecontrollers by EE.
+
+iomanX.irx
+Required: No, only for ps2link.
+File IO driver on IOP.
+
+poweroff.irx
+Required: No, only for ps2link.
+To get poweroff button working when hard disc is used (DEV9, ps2link).
+
+ps2dev9.irx
+Required: No, only for ps2link.
+Driver for DEV9 (hardware interface to expansion bay or PCMCIA).
+Grants access to network and hard disc.
+
+ps2ip.irx
+Reuqired: No, only for ps2link.
+TCP/IP network stack on IOP processor.
+
+ps2smap.irx
+Required: No, only for ps2link.
+Network driver on IOP processor. Linux has it's own driver. When
+this driver is used and Linux driver is activated. Linux driver will
+deactivate this one. When IOP tries to use the network the system will hang.
+
+ps2link.irx
+Required: No, only for ps2link.
+ps2link is a IOP module which helps debugging.
+
+sharedmem.irx
+Required: No, only for ps2link or if you applied the patch.
+Patch: linux-2.4.17_ps2-printk.patch
+This module is only for debugging and is easier than the RPC interface. Its
+purpose is to get a easy way to print messages on EE. If you applied the patch
+linux will only start if you load the module.
+
+iopintr.irx
+intrelay-direct.irx
+intrelay-dev9.irx
+Required: Yes
+Redirects interrupts from IOP to EE.
+You need only one module. The normal module is "intrelay-direct.irx". If you
+use ps2link or ps2dev9 you need to load "intrelay-dev9.irx". System can hang if
+you try to use network from IOP and EE!
+
+dmarelay.irx
+Required: No
+Redirects DMA from EE to IOP and backwards. There is no linux driver using it
+correctly. Its purpose is to speed up network and hard disc.
+
+CDVDMAN
+XCDVDMAN
+Required: Yes
+Reading CDs and DVDs.
+
+CDVDFSV
+XCDVDFSV
+Required: No
+I believe it is not required by Linux.

@@ -1,3 +1,8 @@
+1.5
+- Enabled hard disc interrupts. Hard disc access is fast.
+- Changed default configuration: Enable hard disc and network
+  Disable IOP debug output.
+
 1.4
 - Added menu entry for reboot to enter PS2 browser.
 - Fixed auto detect of PCIC type for SCPH-10350.

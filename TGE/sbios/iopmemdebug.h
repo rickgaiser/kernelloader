@@ -1,6 +1,8 @@
 #ifndef _IOPMEMDEBUG_H_
 #define _IOPMEMDEBUG_H_
 
+#include "stdint.h"
+
 #ifdef SHARED_MEM_DEBUG
 /** Print string using iop memory (for debugging). */
 void iop_prints(const char *text);

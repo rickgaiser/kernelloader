@@ -4,7 +4,14 @@
 
 #include <libpad.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void initializeController();
+void deinitializeController(void);
 int readPad(int port);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __PAD_H__ */

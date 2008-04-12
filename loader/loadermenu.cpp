@@ -714,7 +714,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	kernelFilename[0] = 0;
 	addConfigTextItem("KernelFileName", kernelFilename, MAX_PATH_LEN);
-	linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
+	//linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
 	linuxMenu->addItem("Edit Filename", editString, (void *) &kernelFilename);
 	linuxMenu->addItem("Example Kernel", unsetFilename, (void *) &kernelFilename);
 
@@ -768,7 +768,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	initrdMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	initrdFilename[0] = 0;
 	addConfigTextItem("InitrdFileName", initrdFilename, MAX_PATH_LEN);
-	initrdMenu->addItem("Show Filename", showFilename, (void *) &initrdFilename);
+	//initrdMenu->addItem("Show Filename", showFilename, (void *) &initrdFilename);
 	initrdMenu->addItem("Edit Filename", editString, (void *) &initrdFilename);
 	initrdMenu->addItem("Disable Initrd", unsetFilename, (void *) &initrdFilename);
 
@@ -848,7 +848,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 #endif
 	loaderConfig.newModulesInTGE = 0;
 	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
-	loaderConfig.enableDev9 = 0;
+	loaderConfig.enableDev9 = 1;
 	configMenu->addCheckItem("Enable hard disc and network",
 		&loaderConfig.enableDev9);
 	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);

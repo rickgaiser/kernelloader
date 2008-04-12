@@ -1,5 +1,6 @@
 #include "iopmemdebug.h"
 #include "iopmem.h"
+#include "core.h"
 
 #define SBIOS_DEBUG 1
 
@@ -10,7 +11,7 @@ static void iop_putc(unsigned char c)
 {
 #ifdef SBIOS_DEBUG
 	char buf[2];
-	u32 status;
+	uint32_t status;
 
 	core_save_disable(&status);
 	do {

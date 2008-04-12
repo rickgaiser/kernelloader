@@ -166,17 +166,15 @@ void dev9Shutdown()
 	SleepThread();
 }
 
-#if 0
 void dev9IntrEnable(int mask)
 {
 	USE_SPD_REGS;
 	int flags;
 
-	CpuSuspendIntr(&flags);
+	//CpuSuspendIntr(&flags);
 	SPD_REG16(SPD_R_INTR_MASK) = SPD_REG16(SPD_R_INTR_MASK) | mask;
-	CpuResumeIntr(flags);
+	//CpuResumeIntr(flags);
 }
-#endif
 
 void dev9IntrDisable(int mask)
 {

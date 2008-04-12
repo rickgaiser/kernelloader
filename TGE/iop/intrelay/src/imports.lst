@@ -13,3 +13,10 @@ thbase_IMPORTS_end
 stdio_IMPORTS_start
 I_printf
 stdio_IMPORTS_end
+
+#ifdef DEV9_SUPPORT
+dev9_IMPORTS_start
+I_dev9RegisterIntrCb
+I_dev9IntrEnable
+dev9_IMPORTS_end
+#endif
