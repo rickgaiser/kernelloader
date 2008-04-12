@@ -1,6 +1,20 @@
 # Mapping for PS2 kernel from ROM Version 0190EC20030623.
+80000000
+.code V_TLB_REFILL
+80000080
+.code V_COUNTER
+80000100
+.code V_DEBUG
+80000180
+.code V_COMMON
+80000200
+.code V_INTERRUPT
 80000280
 .code SyscallException
+80000380
+.code INTCException
+800004c0
+.code DMACException
 80014f40
 .word syscallTable[0]
 .word syscallTable[1]
@@ -8,5 +22,153 @@
 .word syscallTable[3]
 .word syscallTable[4]
 .word syscallTable[5]
+.word syscallTable[6]
+.word syscallTable[7]
+.word syscallTable[8]
+.word syscallTable[9]
+.word syscallTable[10]
+.word syscallTable[11]
+.word syscallTable[12]
+.word syscallTable[13]
+.word syscallTable[14]
+.word syscallTable[15]
+.word syscallTable[16]
+.word syscallTable[17]
+.word syscallTable[18]
+.word syscallTable[19]
+.word syscallTable[20]
+.word syscallTable[21]
+.word syscallTable[22]
+.word syscallTable[23]
+.word syscallTable[24]
+.word syscallTable[25]
+.word syscallTable[26]
+.word syscallTable[27]
+.word syscallTable[28]
+.word syscallTable[29]
+.word syscallTable[30]
+.word syscallTable[31]
+.word syscallTable[32]
+.word syscallTable[33]
+.word syscallTable[34]
+.word syscallTable[35]
+.word syscallTable[36]
+.word syscallTable[37]
+.word syscallTable[38]
+.word syscallTable[39]
+.word syscallTable[40]
+.word syscallTable[41]
+.word syscallTable[42]
+.word syscallTable[43]
+.word syscallTable[44]
+.word syscallTable[45]
+.word syscallTable[46]
+.word syscallTable[47]
+.word syscallTable[48]
+.word syscallTable[49]
+.word syscallTable[50]
+.word syscallTable[51]
+.word syscallTable[52]
+.word syscallTable[53]
+.word syscallTable[54]
+.word syscallTable[55]
+.word syscallTable[56]
+.word syscallTable[57]
+.word syscallTable[58]
+.word syscallTable[59]
+.word syscallTable[60]
+.word syscallTable[61]
+.word syscallTable[62]
+.word syscallTable[63]
+.word syscallTable[64]
+.word syscallTable[65]
+.word syscallTable[66]
+.word syscallTable[67]
+.word syscallTable[68]
+.word syscallTable[69]
+.word syscallTable[70]
+.word syscallTable[71]
+.word syscallTable[72]
+.word syscallTable[73]
+.word syscallTable[74]
+.word syscallTable[75]
+.word syscallTable[76]
+.word syscallTable[77]
+.word syscallTable[78]
+.word syscallTable[79]
+.word syscallTable[80]
+.word syscallTable[81]
+.word syscallTable[82]
+.word syscallTable[83]
+.word syscallTable[84]
+.word syscallTable[85]
+.word syscallTable[86]
+.word syscallTable[87]
+.word syscallTable[88]
+.word syscallTable[89]
+.word syscallTable[90]
+.word syscallTable[91]
+.word syscallTable[92]
+.word syscallTable[93]
+.word syscallTable[94]
+.word syscallTable[95]
+.word syscallTable[96]
+.word syscallTable[97]
+.word syscallTable[98]
+.word syscallTable[99]
+.word syscallTable[100]
+.word syscallTable[101]
+.word syscallTable[102]
+.word syscallTable[103]
+.word syscallTable[104]
+.word syscallTable[105]
+.word syscallTable[106]
+.word syscallTable[107]
+.word syscallTable[108]
+.word syscallTable[109]
+.word syscallTable[110]
+.word syscallTable[111]
+.word syscallTable[112]
+.word syscallTable[113]
+.word syscallTable[114]
+.word syscallTable[115]
+.word syscallTable[116]
+.word syscallTable[117]
+.word syscallTable[118]
+.word syscallTable[119]
+.word syscallTable[120]
+.word syscallTable[121]
+.word syscallTable[122]
+.word syscallTable[123]
+.word syscallTable[124]
+.word syscallTable[125]
+.word syscallTable[126]
+.word syscallTable[127]
+80001564
+.code RFU000
+8000d9b8
+.code ResetEE
 8000bd58
 .code gs_set_crtc
+80000d80
+.code Exit
+80002880
+.code RFU005
+80005598
+.code LoadPS2Exe
+80002f80
+.code ExecPS2
+80005bc8
+.code RFU009
+80001e78
+.code AddSbusIntcHandler
+80001ed0
+.code RemoveSbusIntcHandler
+80001f70
+.code Interrupt2Iop
+800009c0
+.code SetVTLBRefillHandler
+80000a00
+.code SetVCommonHandler
+80000a40
+.code SetVInterruptHandler

@@ -19,6 +19,7 @@ int main()
 	init_scr();
 	scr_printf("Hello world!\n");
 	printf("Hello world!\n");
+	printf("This a simple text output in user space using SIF RPC.\n");
     
 	return 0;
 }

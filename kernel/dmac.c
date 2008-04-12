@@ -8,7 +8,7 @@
 
 #define DMAC_STAT 0xb000e010
 #define DMAC_MASK 0xb000e010
-#define DMAC_NUMBER_OF_HANDLERS (DMAC_MEIM + 1)
+#define DMAC_NUMBER_OF_HANDLERS (DMAC_BEIS + 1)
 
 static uint64_t saved_dmac_mask;
 
@@ -22,29 +22,35 @@ static dmac_useg_handler_t *dmac_useg_handler[DMAC_NUMBER_OF_HANDLERS];
 
 void dmac_enable_irq(unsigned int irq_nr)
 {
+	irq_nr += DMAC_CIM0;
 	if (!(saved_dmac_mask & (1 << irq_nr))) {
 		saved_dmac_mask |= 1 << irq_nr;
-		*dmac_mask |= 1 << irq_nr;
+		*dmac_mask = 1 << irq_nr;
 	}
 }
 
 void dmac_disable_irq(unsigned int irq_nr)
 {
+	irq_nr += DMAC_CIM0;
 	if (saved_dmac_mask & (1 << irq_nr)) {
 		saved_dmac_mask &= ~(1 << irq_nr);
-		*dmac_mask |= 1 << irq_nr;
+		*dmac_mask = 1 << irq_nr;
 	}
 }
 
 void dmac_interrupt(uint32_t * regs)
 {
-	uint64_t mask;
+	uint32_t mask;
+	uint32_t status;
 	int i;
 
-	mask = *dmac_mask;
+	/* Only lower 32 bit needed. */
+	status = (uint32_t) *dmac_mask;
+	DBG("DSTAT 0x%x\n", status);
+	mask = saved_dmac_mask >> 16;
 	for (i = 0; i < DMAC_NUMBER_OF_HANDLERS; i++) {
 		/* Check if interrupt is enabled and pending. */
-		if ((mask & saved_dmac_mask) & (1 << i)) {
+		if ((status & mask) & (1 << i)) {
 			//printf("DMAC interrupt %d pending.\n", i);
 			/* Acknowledge interrupt. */
 			*dmac_stat = 1 << i;
@@ -56,12 +62,21 @@ void dmac_interrupt(uint32_t * regs)
 					dmac_handler[i] (regs);
 				}
 				if (dmac_useg_handler[i] != NULL) {
-					printf("Calling DMAC user space handler at 0x%08x\n", dmac_handler[i]);
+					uint32_t old;
+					DBG("Calling DMAC user space handler at 0x%x\n", dmac_useg_handler[i]);
 					/* dispatch interrupt */
 					/* XXX; Don't know if this is a good idea, direct call from
 					 * kernel in exception handler.
 					 */
-					dmac_handler[i](i - DMAC_CIM0);
+					CP0_GET_STATUS(old);
+					/* Change to kernel mode and switch off interrupts. */
+					CP0_SET_STATUS(old & (~0x1f));
+
+					dmac_useg_handler[i](i - DMAC_CIS0);
+
+					/* Switch back to exception mode. */
+					CP0_SET_STATUS(old);
+					DBG("Back from handler.\n");
 				}
 			}
 		}
@@ -103,12 +118,12 @@ irq_handler_t *dmac_register_handler(unsigned int nr, irq_handler_t * handler)
 
 int32_t syscallAddDmacHandler(uint32_t channel, dmac_useg_handler_t *handler, int32_t next)
 {
-	printf("syscallAddDmacHandler(%d, 0x%x, %d)\n", channel, handler, next);
+	DBG("syscallAddDmacHandler(%d, 0x%x, %d)\n", channel, handler, next);
 
-	if (channel > (DMAC_CIM9 - DMAC_CIM0)) {
+	if (channel > DMAC_CIS9) {
 		return -1;
 	}
-	dmac_useg_handler[channel + DMAC_CIM0] = handler;
+	dmac_useg_handler[channel + DMAC_CIS0] = handler;
 
 	return channel;
 }
@@ -117,9 +132,9 @@ int32_t syscallEnableDmac(uint32_t channel)
 {
 	int irq_nr;
 
-	printf("syscallEnableDmac(%d)\n", channel);
+	DBG("syscallEnableDmac(%d)\n", channel);
 
-	irq_nr = channel + DMAC_CIM0;
+	irq_nr = channel + DMAC_CIS0;
 	if (!(saved_dmac_mask & (1 << irq_nr))) {
 		return 0;
 	}

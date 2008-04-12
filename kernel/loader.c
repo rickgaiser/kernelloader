@@ -163,7 +163,7 @@ int loader(void)
 		/* Set stack pointer, to get syscall working. */
 		/* Set a0 for function return value. */
 		__asm__ __volatile__("li $29, 0x01e00000\n"
-			"li $4, 0x00400000\n"
+			"li $4, 0x00000000\n"
 			"eret\n"
 			"nop\n":::"memory");
 	} else {

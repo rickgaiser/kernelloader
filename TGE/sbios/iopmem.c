@@ -3,9 +3,11 @@
 /** IOP RAM is mysteriously mapped into EE HW space at this address. */
 #define SUB_VIRT_MEM    0xbc000000
 
+#define SBIOS_DEBUG 1
+
 static unsigned char *sharedMem = (unsigned char *) 0x001ff000;
 
-#if 0
+#ifdef SBIOS_DEBUG
 /** Memory copy function like in libc. */
 static void memcpy(unsigned char *dst, unsigned char *src, unsigned int size)
 {
@@ -36,7 +38,7 @@ static unsigned int iop_write(void *addr, void *buf, unsigned int size)
 /** Print one character. */
 static void iop_putc(unsigned char c)
 {
-#if 0
+#ifdef SBIOS_DEBUG
 	char buf[2];
 
 	do {

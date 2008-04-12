@@ -1,3 +1,10 @@
+0.6
+- Get SIFRPC working in emulated ps2 kernel.
+- Added support for negative syscalls (syscalls with first letter "i", which can
+  be safely called in interrupt routines).
+- Added support for semaphores in single thread environment including
+  interrupts.
+- Configured "Hello World!" as default example for emulated ps2 kernel.
 0.5
 - Added graphic support in loader using gsKit.
 - Added configure option in config.mk for selecting SBIOS type RTE or TGE.

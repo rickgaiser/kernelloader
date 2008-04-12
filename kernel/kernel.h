@@ -4,6 +4,12 @@
 
 #include "stdint.h"
 
+#if 0
+#define DBG printf
+#else
+#define DBG(args...)
+#endif
+
 /** Interface for creating. */
 typedef struct t_ee_sema
 {
@@ -32,6 +38,12 @@ int32_t syscallCreateSema(ee_sema_t *sema);
 
 /** Delete semaphore. */
 int32_t iDeleteSema(int32_t sema_id);
+
+/** Wait on semaphore. */
+int32_t WaitSema(uint32_t sid);
+
+/** Signal semaphore. */
+int32_t iSignalSema(int32_t sid);
 
 /** Exit current thread. */
 uint32_t syscallExit(void);

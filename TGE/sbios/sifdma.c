@@ -32,7 +32,7 @@ typedef struct {
 	u128	data[7];	/* 7 qwords of data.  */
 } iop_dmatag_t ALIGNED(16);
 
-static iop_dmatag_t iop_dmatags[32];
+static iop_dmatag_t iop_dmatags[32] ALIGNED(64);
 
 static void sif_dma_init(void);
 
@@ -85,6 +85,14 @@ int sbcall_sifsetdchain()
 	_sw(0, EE_DMAC_SIF0_QWC);
 
 	/* Chain mode; enable tag interrupt; start DMA.  */
+	/*
+	 * dir: 0 -> to _memory
+	 * mod: 01 -> chain.
+	 * asp: 00 -> no address pushed by call tag
+	 * tte: 0 -> does not transfer DMAtag itself
+	 * tie: 1 -> enables IRQ bit of DMAtag
+	 * str: 1 -> Starts DMA. Maintains 1 while operating.
+	 */
 	_sw(0x184, EE_DMAC_SIF0_CHCR);
 	_lw(EE_DMAC_SIF0_CHCR);
 
@@ -112,10 +120,15 @@ static void sif_dma_init()
 	   it's never touched again by us.  */
 	tag = KSEG1ADDR(&sif1_dmatags[31]);
 	tag->id_qwc = EE_DMATAG_ID(EE_DMATAG_ID_NEXT);
+	/* Pointer to next (first) DMAtag. */
 	tag->addr = PHYSADDR(&sif1_dmatags);
-
+	/* Set number of quad words to copy to 0. */
 	_sw(0, EE_DMAC_SIF1_QWC);
+	/* Set as start DMAtag. */
 	_sw(PHYSADDR(&sif1_dmatags), EE_DMAC_SIF1_TADR);
+	iop_prints("sif1_dmatag 0x");
+	iop_printx(&sif1_dmatags);
+	iop_prints("\n");
 }
 
 #define SET_NEXT_DMATAG()			\
@@ -127,6 +140,19 @@ static void sif_dma_init()
 		}				\
 	}
 
+/**
+ * Transfer data from EE to IOP by using SIF1 DMA channel 6.
+ * @param src Data to be transfered (located in EE memory).
+ * @param dest Where to copy the data in IOP memory.
+ * @param size Size in bytes to transfer.
+ * @param attr Flags:
+ *   TGE_SIFDMA_ATTR_INT_I to enable interrupt in last DMAtag.
+ *   TGE_SIFDMA_ATTR_DMATAG Transfer IOP DMAtag without any data.
+ *   TGE_SIFDMA_ATTR_INT_O ???
+ *   TGE_SIFDMA_ATTR_ERT ???
+ * @param id DMAtag id used for last DMAtag (should be EE_DMATAG_ID_REF or to
+ * stopt after, use EE_DMATAG_ID_REFE)
+ */
 static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmatag_id_t id)
 {
 	ee_dmatag_t *tag;
@@ -215,16 +241,29 @@ static void sif_dma_setup_tag(u32 index)
 	}
 }
 
+/**
+ * Transfer data from EE to IOP memory.
+ * @param transfer Pointer array of sturctures describing the transfers.
+ * @param tcount Number of transfers to do.
+ * @return ID, describing the DMA transfers.
+ */
 int sif_set_dma(tge_sifdma_transfer_t *transfer, u32 tcount)
 {
 	tge_sifdma_transfer_t *t;
 	u32 status, index, i, ntags, start, count;
 	int id = 0;
 
+#if 0
+	iop_prints("sif_set_dma() called with command 0x");
+	iop_printx(((u32 *) transfer[tcount - 1].src)[2]);
+	iop_prints("\n");
+#endif
+
 	core_save_disable(&status);
 
 	/* Suspend all DMA to stop any active SIF1 transfers.  */
 	_sw(_lw(EE_DMAC_ENABLER) | EE_DMAC_CPND, EE_DMAC_ENABLEW);
+	/* Stop SIF1 DMA channel. */
 	_sw(0, EE_DMAC_SIF1_CHCR);
 	_lw(EE_DMAC_SIF1_CHCR);
 	_sw(_lw(EE_DMAC_ENABLER) & ~EE_DMAC_CPND, EE_DMAC_ENABLEW);

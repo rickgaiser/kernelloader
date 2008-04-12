@@ -73,9 +73,11 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 {
 	int (*sbfunc)(void *) = dispatch[sbcall];
 
+#if 0
 	iop_prints("sbios ");
 	iop_printx(sbcall);
 	iop_prints("\n");
+#endif
 
 	if (!sbfunc)
 		return -1;

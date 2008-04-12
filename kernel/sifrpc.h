@@ -22,8 +22,10 @@ extern "C" {
 #include "sifcmd.h"
 
 /* Modes for bind() and call() */
-#define SIF_RPC_M_NOWAIT	0x01 /* Don't wait for end function */
-#define SIF_RPC_M_NOWBDC	0x02 /* Don't write back the D cache */
+/** Don't wait for end function. */
+#define SIF_RPC_M_NOWAIT	0x01
+/** Don't write back the D cache. */
+#define SIF_RPC_M_NOWBDC	0x02
 
 typedef void * (*SifRpcFunc_t)(int, void *, int);
 typedef void (*SifRpcEndFunc_t)(void *);

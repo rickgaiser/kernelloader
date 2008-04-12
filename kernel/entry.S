@@ -70,15 +70,20 @@ commonExceptionHandler:
 	eret
 
 callSyscallHandler:
-#if 0 /* for debugging kernel exceptions. */
+	/* for debugging kernel exceptions. */
+#if 0
 	mfc0	k0, $12
 	sync.p
 	/* Switch to kernel mode and disable EXL. */
-	ori	k0, k0, 0x1a
+	ori		k0, k0, 0x1a
 	xori	k0, k0, 0x1a
 	mtc0	k0, $12
 	sync.p
 #endif
+	bltzl	v1, negative_syscall
+	/* Make v1 positive. */
+	negu	v1, v1
+negative_syscall:
 
 	addiu	sp, -0x10
 	sw	ra, 0(sp)
@@ -91,7 +96,7 @@ callSyscallHandler:
 	sync.p
 
 	/* Check for last syscall number. */
-	slti	k0, v1, 130
+	sltiu	k0, v1, 130
 	blez	k0, undefinedSyscall
 	nop
 

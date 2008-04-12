@@ -45,7 +45,7 @@ void irq_interrupt(uint32_t *regs)
 {
 	uint32_t cause;
 
-	//printf("Interrupt happend.\n");
+	//iop_prints("Interrupt happend.\n");
 
 	CP0_GET_CAUSE(cause);
 

@@ -2,7 +2,7 @@
 #include "stdio.h"
 #include "kernel.h"
 
-uint32_t unknownSyscall(uint32_t nr)
+uint32_t unknownSyscall(int nr)
 {
 	uint32_t epc;
 
@@ -25,7 +25,7 @@ uint32_t syscallTable[130] = {
 	/* 50 */
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 60 */
-	syscallRFU60, syscallRFU61, 0, 0, syscallCreateSema, 0, 0, 0, 0, 0,
+	syscallRFU60, syscallRFU61, 0, 0, syscallCreateSema, iDeleteSema, iSignalSema, iSignalSema, WaitSema, 0,
 	/* 70 */
 	0, 0, 0, iDeleteSema, 0, 0, 0, 0, 0, 0,
 	/* 80 */

@@ -2,6 +2,8 @@
 #include "kernel.h"
 #include "stdio.h"
 #include "memory.h"
+#include "cp0register.h"
+#include "interrupts.h"
 
 #define NUMBER_OF_SEMAPHORES 32
 
@@ -36,7 +38,7 @@ int32_t syscallCreateSema(ee_sema_t *sema)
 		return -1;
 	}
 	semaphoreListHead = s->next;
-	s->count = sema->count;
+	s->count = sema->init_count;
 	s->max_count = sema->max_count;
 	s->wait_threads = sema->wait_threads;
 	s->attr = sema->attr;
@@ -71,13 +73,58 @@ int32_t iDeleteSema(int32_t sema_id)
 	return sema_id;
 }
 
+int32_t iWaitSema(uint32_t sid)
+{
+	if ((sid >= NUMBER_OF_SEMAPHORES) ||
+		(semaphoreArray[sid].count < 0)) {
+		return -1;
+	}
+	if (semaphoreArray[sid].count > 0) {
+		semaphoreArray[sid].count--;
+		return sid;
+	}
+
+	/* XXX: Put thread into wait queue. */
+	return -2;
+}
+
+int32_t WaitSema(uint32_t sid)
+{
+	int ret;
+	uint32_t old;
+
+	CP0_GET_STATUS(old);
+	/* Change to kernel mode and switch off interrupts. */
+	CP0_SET_STATUS(old & (~0x1f));
+
+	ret = iWaitSema(sid);
+	while (ret == -2) {
+		enableInterrupts();
+		disableInterrupts();
+		/* XXX: Make thread scheduling instead. */
+		ret = iWaitSema(sid);
+	}
+	CP0_SET_STATUS(old);
+	return ret;
+}
+
+int32_t iSignalSema(int32_t sid)
+{
+	if ((sid >= NUMBER_OF_SEMAPHORES) ||
+		(semaphoreArray[sid].count < 0)) {
+		return -1;
+	}
+	/* XXX: Wakeup threaqd. */
+	semaphoreArray[sid].count++;
+}
+
 uint32_t syscallExit(void)
 {
 	printf("Program exited.\n");
 	while(1);
 }
 
-void init_seamphores(void)
+void init_semaphores(void)
 {
 	int i;
 
@@ -97,5 +144,5 @@ void init_seamphores(void)
 
 void init_thread_module(void)
 {
-	init_seamphores();
+	init_semaphores();
 }

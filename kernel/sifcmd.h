@@ -19,15 +19,22 @@
 extern "C" {
 #endif
 
-
 #define SYSTEM_CMD	0x80000000
+#define SIF_CMD_CHANGE_SADDR (SYSTEM_CMD | 0x00)
+#define SIF_CMD_SET_SREG (SYSTEM_CMD | 0x01)
+#define SIF_CMD_INIT_CMD (SYSTEM_CMD | 0x02)
+#define SIF_CMD_RESET_CMD (SYSTEM_CMD | 0x03)
 
 typedef struct t_SifCmdHeader
 {
-   uint32_t			size;
-   void				*dest;
-   int				cid;
-   uint32_t			unknown;
+	/** Packet size (8 bit) + additional data size (24 Bit). */
+	uint32_t size;
+	/** Pointer to additional data. */
+	void *dest;
+	/** Command identifier. */
+	int cid;
+	/** Not used. */
+	uint32_t unused;
 } SifCmdHeader_t;
 
 typedef struct t_SifCmdHandlerData

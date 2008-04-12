@@ -40,10 +40,22 @@ int _start(int argc, char **argv)
 
 static void ioThread(void *param)
 {
+#if 0
+	int c;
+
+	c = 0;
+#endif
 	printf("Started io thread\n");
 	while(1) {
 		/* Wait until something has been received. */
 		while(sharedMem[0] == 0) {
+#if 0
+			c++;
+			if (c == 500) {
+				c = 0;
+				printf("sharedmem SifReg 31 %d\n", sceSifGetSreg(31));
+			}
+#endif
 			DelayThread(1000);
 		}
 		/* Print received character. */

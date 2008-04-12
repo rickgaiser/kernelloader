@@ -134,9 +134,6 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 
 	iop_prints("Calling sbios\n");
 	version = sbios(0, NULL);
-	iop_prints("Version 0x");
-	iop_printx(version);
-	iop_prints("\n");
 	printf("Version %d\n", version);
 
 	mmu_init_module();
@@ -164,27 +161,24 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	iop_prints("sif_init\n");
 	sif_init();
 
+#if 1
+	/* Simulate a program using RPC was already started,
+	 * because we RPC is already initialized on IOP side
+	 * and we will not receive Sreg 0. Otherwise SifInitRpc
+	 * will hang.
+	 */ 
+	sif_reg_set(0x80000002, 1);
+#else
+	reset_iop();
+#endif
+
 	/* Enable interrupts */
 	enableInterrupts();
 
-#if 0
-	printf("Waiting for interrupts.\n");
-	while (1) {
-	}
-#endif
-#if 0
-	sif_init();
-	if (sbios(SB_SIFINITCMD, 0) < 0) {
-		printf("SB_SIFINITCMD failed.\n");
-		return -1;
-	}
-#else
-	//reset_iop();
-
+	/* Load user space application and start it. */
 	loader();
-#endif
 
-
-	iop_prints("still running\n");
+	/* Should never be reached. */
+	iop_prints("Kernel exit\n");
 	return (42);
 }

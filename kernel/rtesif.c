@@ -17,12 +17,19 @@
 #include "sifrpc.h"
 #include "cache.h"
 #include "dmac.h"
+#include "kernel.h"
 
 #define SBIOS_BASE	0x80001000
 #define SBIOS_MAGIC	0x80001004
 #define SBIOS_MAGICVAL	0x62325350
 #define D5_CHCR 0x1000C000
+#define D5_MADR 0x1000C010
 #define D5_QWC 0x1000C020
+#define D5_TADR 0x1000C030
+#define D6_CHCR 0x1000C400
+#define D6_MADR 0x1000C410
+#define D6_QWC 0x1000C420
+#define D6_TADR 0x1000C430
 
 static int (*_sbios)(int, void *) = NULL;
 
@@ -113,12 +120,32 @@ int sif_dma_request(void *dmareq, int count)
 
 void dmac5_handler(uint32_t *regs)
 {
-	iop_prints("Got DMAC5 interrupt.\n");
+	volatile uint32_t *d5_chcr = KSEG1ADDR(D5_CHCR);
+	volatile uint32_t *d5_qwc = KSEG1ADDR(D5_QWC);
+	volatile uint32_t *d5_madr = KSEG1ADDR(D5_MADR);
+
+	DBG("Got DMAC5 interrupt (SIF0: EE <- IOP transfer).\n");
+#if 0
+	printf("D5_CHCR 0x%x\n", *d5_chcr);
+	printf("D5_MADR 0x%x\n", *d5_madr);
+	printf("D5_QWC  0x%x\n", *d5_qwc);
+#endif
 }
 
 void dmac6_handler(uint32_t *regs)
 {
-	iop_prints("Got DMAC6 interrupt.\n");
+	volatile uint32_t *d6_chcr = KSEG1ADDR(D6_CHCR);
+	volatile uint32_t *d6_madr = KSEG1ADDR(D6_MADR);
+	volatile uint32_t *d6_qwc = KSEG1ADDR(D6_QWC);
+	volatile uint32_t *d6_tadr = KSEG1ADDR(D6_TADR);
+
+	DBG("Got DMAC6 interrupt (SIF1: EE -> IOP transfer).\n");
+#if 0
+	printf("D6_CHCR 0x%x\n", *d6_chcr);
+	printf("D6_MADR 0x%x\n", *d6_madr);
+	printf("D6_QWC  0x%x\n", *d6_qwc);
+	printf("D6_TADR 0x%x\n", *d6_tadr);
+#endif
 }
 
 void sif_init(void)
@@ -129,12 +156,12 @@ void sif_init(void)
 	_sbios(16, NULL);
 
 	/* sif0 dma handler */
-	dmac_register_handler(DMAC_CIM5, dmac5_handler);
-	dmac_enable_irq(DMAC_CIM5);
+	dmac_register_handler(DMAC_CIS5, dmac5_handler);
+	dmac_enable_irq(DMAC_CIS5);
 
 	/* sif1 dma handler */
-	dmac_register_handler(DMAC_CIM6, dmac6_handler);
-	dmac_enable_irq(DMAC_CIM6);
+	dmac_register_handler(DMAC_CIS6, dmac6_handler);
+	dmac_enable_irq(DMAC_CIS6);
 }
 
 void sif_set_dchain(void)
@@ -234,26 +261,26 @@ void syscallSifSetDChain(void)
 	*d5_chcr = 0x184;
 	*d5_chcr;
 #else
-	printf("syscallSifSetDChain()\n");
+	DBG("syscallSifSetDChain()\n");
 	sif_set_dchain();
 #endif
 }
 
 int syscallSifGetReg(uint32_t register_num)
 {
-	printf("syscallSifGetReg(0x%x)\n", register_num);
+	DBG("syscallSifGetReg(0x%x)\n", register_num);
 	return sif_reg_get(register_num);
 }
 
 int syscallSifSetReg(uint32_t register_num, uint32_t register_value)
 {
-	printf("syscallSifSetReg(0x%x, 0x%x)\n", register_num, register_value);
+	DBG("syscallSifSetReg(0x%x, 0x%x)\n", register_num, register_value);
 	return sif_reg_set(register_num, register_value);
 }
 
 uint32_t syscallSifSetDma(void *sdd, int32_t len)
 {
 	flushDCacheAll();
-	printf("syscallSifSetDma(0x%x, %d)\n", sdd, len);
+	DBG("syscallSifSetDma(0x%x, %d)\n", sdd, len);
 	return sif_dma_request(KSEG0ADDR(sdd), len);
 }
