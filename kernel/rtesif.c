@@ -46,7 +46,7 @@ static inline int sbios(int func, void *arg)
 	if (!_sbios) {
 		volatile uint32_t *sbios_magic;
 
-		sbios_magic = SBIOS_MAGIC;
+		sbios_magic = (uint32_t *) SBIOS_MAGIC;
 		if (*sbios_magic == SBIOS_MAGICVAL)
 			_sbios = *(int (**)(int, void *))(SBIOS_BASE);
 		else
@@ -108,9 +108,9 @@ int sif_dma_request(void *dmareq, int count)
 
 void dmac5_handler(uint32_t *regs)
 {
-	volatile uint32_t *d5_chcr = KSEG1ADDR(D5_CHCR);
-	volatile uint32_t *d5_qwc = KSEG1ADDR(D5_QWC);
-	volatile uint32_t *d5_madr = KSEG1ADDR(D5_MADR);
+	volatile uint32_t *d5_chcr = (uint32_t *) KSEG1ADDR(D5_CHCR);
+	volatile uint32_t *d5_qwc = (uint32_t *) KSEG1ADDR(D5_QWC);
+	volatile uint32_t *d5_madr = (uint32_t *) KSEG1ADDR(D5_MADR);
 
 	DBG("Got DMAC5 interrupt (SIF0: EE <- IOP transfer).\n");
 #if 0
@@ -122,10 +122,10 @@ void dmac5_handler(uint32_t *regs)
 
 void dmac6_handler(uint32_t *regs)
 {
-	volatile uint32_t *d6_chcr = KSEG1ADDR(D6_CHCR);
-	volatile uint32_t *d6_madr = KSEG1ADDR(D6_MADR);
-	volatile uint32_t *d6_qwc = KSEG1ADDR(D6_QWC);
-	volatile uint32_t *d6_tadr = KSEG1ADDR(D6_TADR);
+	volatile uint32_t *d6_chcr = (uint32_t *) KSEG1ADDR(D6_CHCR);
+	volatile uint32_t *d6_madr = (uint32_t *) KSEG1ADDR(D6_MADR);
+	volatile uint32_t *d6_qwc = (uint32_t *) KSEG1ADDR(D6_QWC);
+	volatile uint32_t *d6_tadr = (uint32_t *) KSEG1ADDR(D6_TADR);
 
 	DBG("Got DMAC6 interrupt (SIF1: EE -> IOP transfer).\n");
 #if 0
@@ -201,7 +201,7 @@ int SifBindRpc(SifRpcClientData_t *client, int rpc_number, int mode)
 	arg.command = rpc_number;
 	arg.mode = mode;
 	arg.func = rpcendNotify;
-	arg.para = rpc_number;
+	arg.para = (void *) rpc_number;
 	return sbios(SB_SIFBINDRPC, &arg);
 }
 
@@ -219,7 +219,7 @@ int SifCallRpc(SifRpcClientData_t *client, int rpc_number, int mode,
 	arg.receive = receive;
 	arg.rsize = rsize;
 	arg.func = rpcendNotify;
-	arg.para = rpc_number;
+	arg.para = (void *) rpc_number;
 
 	return sbios(SB_SIFCALLRPC, &arg);
 }

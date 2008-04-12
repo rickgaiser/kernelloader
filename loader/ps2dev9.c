@@ -34,7 +34,7 @@
 
 
 static int dev9type = -1;	/* 0 for PCMCIA, 1 for expansion bay */
-static int using_aif = 0;	/* 1 if using AIF on a T10K */
+//static int using_aif = 0;	/* 1 if using AIF on a T10K */
 
 static int pcic_cardtype;	/* Translated value of bits 0-1 of 0xbf801462 */
 static int pcic_voltage;	/* Translated value of bits 2-3 of 0xbf801462 */
@@ -46,7 +46,7 @@ static s16 eeprom_data[5];	/* 2-byte EEPROM status (0/-1 = invalid, 1 = valid),
 #endif
 
 static void smap_set_stat(int stat);
-static int read_eeprom_data(void);
+//static int read_eeprom_data(void);
 
 static int smap_device_probe(void);
 static int smap_device_reset(void);
@@ -169,21 +169,15 @@ void dev9Shutdown()
 void dev9IntrEnable(int mask)
 {
 	USE_SPD_REGS;
-	int flags;
 
-	//CpuSuspendIntr(&flags);
 	SPD_REG16(SPD_R_INTR_MASK) = SPD_REG16(SPD_R_INTR_MASK) | mask;
-	//CpuResumeIntr(flags);
 }
 
 void dev9IntrDisable(int mask)
 {
 	USE_SPD_REGS;
-	int flags;
 
-	//CpuSuspendIntr(&flags);
 	SPD_REG16(SPD_R_INTR_MASK) = SPD_REG16(SPD_R_INTR_MASK) & ~mask;
-	//CpuResumeIntr(flags);
 }
 
 #if 0
@@ -319,8 +313,8 @@ void dev9LEDCtl(int ctl)
 
 static int smap_subsys_init(void)
 {
-	int i, stat, flags;
-	volatile u32 *dpcr2 = 0xbf801570;
+	//int i, stat, flags;
+	volatile u32 *dpcr2 = (u32 *) 0xbf801570;
 
 	//DisableIntr(IOP_IRQ_DMA_DEV9, &stat);
 	//CpuSuspendIntr(&flags);
@@ -637,14 +631,14 @@ static int pcmcia_init(void)
 #if 0
 	int *mode;
 #endif
-	int flags;
+	//int flags;
 	u16 cstc1, cstc2;
 
 	_sw(0x51011, SSBUS_R_1420);
 	_sw(0x1a00bb, SSBUS_R_1418);
 	_sw(0xef1a3043, SSBUS_R_141c);
 
-#if 0 /* XXX: Can@t be done on EE, must be done on IOP. */
+#if 0 /* XXX: Can't be done on EE, must be done on IOP. */
 	/* If we are a T10K, then we go through AIF.  */
 	if ((mode = QueryBootMode(6)) != NULL) {
 		if ((*(u16 *)mode & 0xfe) == 0x60) {
@@ -738,7 +732,6 @@ static int expbay_intr(void *unused)
 static int expbay_init(void)
 {
 	USE_DEV9_REGS;
-	int flags;
 
 	_sw(0x51011, SSBUS_R_1420);
 	_sw(0xe01a3043, SSBUS_R_1418);

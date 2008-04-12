@@ -64,7 +64,7 @@ typedef struct {
 /** Initialize USB for later use and reset OHCI chip. */
 void initUSB(void)
 {
-	volatile OhciRegs_t *ohciRegs = USB_OHCI_REGBASE;
+	volatile OhciRegs_t *ohciRegs = (OhciRegs_t *) USB_OHCI_REGBASE;
 
 	iop_prints(U2K("Host Controller...\n"));
 	ohciRegs->HcInterruptDisable = ~0;

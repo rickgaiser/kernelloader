@@ -2,6 +2,7 @@
  * core.h - TGE EE Core utilities header file
  *
  * Copyright (c) 2003 Marcus R. Brown <mrbrown@0xd6.org>
+ * Copyright (c) 2008 Mega Man
  *
  * See the file LICENSE, located within this directory, for licensing terms.
  */

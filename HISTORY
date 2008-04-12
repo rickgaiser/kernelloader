@@ -1,3 +1,18 @@
+1.6
+- Initrd is now supported even if kernel is not patched.
+- Initrd is now in protected memory area and can't get overwritten.
+- Clean up pad.c.
+- Code cleanup.
+- IOP heap bug fix.
+- Remove compiler warnings.
+- Add power off support.
+- Add mutex for some functions, to be sure that functions are called correctly.
+- Better initialisation of CDVD.
+- Fixed too short assembler loops.
+- Added SBIOS_DEBUG in config.mk for debugging SBIOS.
+- Removed redundant SIF DMA and SIF RPC structures.
+- Fixed lost instructions when debug is off (printf-if-combination).
+
 1.5
 - Enabled hard disc interrupts. Hard disc access is fast.
 - Changed default configuration: Enable hard disc and network

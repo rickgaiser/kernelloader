@@ -2,6 +2,7 @@
  * sbios.c - SBIOS entrypoint and dispatch table.
  *
  * Copyright (c) 2003 Marcus R. Brown <mrbrown@0xd6.org>
+ * Copyright (c) 2008 Mega Man
  *
  * See the file LICENSE, located within this directory, for licensing terms.
  */
@@ -12,6 +13,7 @@
 
 #define SBCALL_MAX	256
 
+#ifdef SBIOS_DEBUG
 static const char *sbiosDescription[] = {
 	"SB_GETVER",
 	"SB_HALT",
@@ -233,6 +235,7 @@ static const char *sbiosDescription[] = {
 	"SB_REMOCON2_READ",
 	"SBR_REMOCON2_IRFEATURE"
 };
+#endif
 
 static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 0 */
@@ -485,7 +488,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 {
 	int ret;
 	int (*sbfunc)(void *) = dispatch[sbcall];
-#if 0
+#ifdef SBIOS_DEBUG
 	const char *description = "unknown";
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {
@@ -501,7 +504,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 
 	ret = sbfunc(arg);
 
-#if 0
+#ifdef SBIOS_DEBUG
 	printf("result of sbios call %d\n", ret);
 #endif
 	return ret;

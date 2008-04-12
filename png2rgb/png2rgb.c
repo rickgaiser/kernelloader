@@ -72,8 +72,8 @@ uint8_t *loadPng(const char *file_name, uint16_t * width, uint16_t * height,
 		PNG_TRANSFORM_SWAP_ENDIAN /* png_transforms */ , png_voidp_NULL);
 
 	/* At this point you have read the entire image */
-	printf("Width: %d Height: %d Depth: %d\n", info_ptr->width,
-		info_ptr->height, info_ptr->pixel_depth / 8);
+	printf("Width: %d Height: %d Depth: %d\n", (int) info_ptr->width,
+		(int) info_ptr->height, (int) (info_ptr->pixel_depth / 8));
 
 	*width = info_ptr->width;
 	*height = info_ptr->height;

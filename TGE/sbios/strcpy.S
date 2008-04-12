@@ -151,6 +151,8 @@ $L7:
 	addu	$5,$5,1
 	sb	$2,0($3)
 	sll	$2,$2,24
+	nop
+	nop
 	.set	noreorder
 	.set	nomacro
 	bne	$2,$0,$L7

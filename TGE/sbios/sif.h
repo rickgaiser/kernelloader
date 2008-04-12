@@ -11,9 +11,6 @@
 
 #include "sifdma.h"
 
-u32 SifSetDma(SifDmaTransfer_t *sdd, s32 len);
-u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len);
-
 void sif_set_dchain(void);
 
 int sif_cmd_init(void);

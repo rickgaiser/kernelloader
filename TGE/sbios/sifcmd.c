@@ -48,17 +48,6 @@ typedef struct {
 	void *harg;
 } sifCmdHandler_t;
 
-typedef struct {
-	/** Packet size (8 bit) + additional data size (24 Bit). */
-	u32 size;
-	/** Pointer to additional data. */
-	void *dest;
-	/** Command/function identifier. */
-	int fid;
-	/** Additional option (used by SIF_CMD_INIT_CMD). */
-	u32 option;
-} tge_sifcmd_header_t;
-
 /* Even though I'm reluctant to do this, I've made this structure binary
  * compatible with the SCE libs and ps2lib.  In all implementations, a
  * pointer to this data is stored in SIF register 0x80000001.  Each routine
@@ -105,9 +94,11 @@ sr_pkt_t testSr __attribute__((aligned(64)));
 
 void dmac5_debug(void)
 {
+#ifdef SHARED_MEM_DEBUG
 	volatile uint32_t *d5_chcr = KSEG1ADDR(D5_CHCR);
 	volatile uint32_t *d5_qwc = KSEG1ADDR(D5_QWC);
 	volatile uint32_t *d5_madr = KSEG1ADDR(D5_MADR);
+#endif
 
 	iop_prints("D5_CHCR 0x");
 	iop_printx(*d5_chcr);
@@ -174,7 +165,8 @@ static void sif_cmd_interrupt()
 	cmd_data_t *cmd_data = &_sif_cmd_data;
 	tge_sifcmd_header_t *header;
 	sifCmdHandler_t *cmd_handlers = NULL;
-	int size, pktquads, id, i = 0;
+	int size, pktquads, i = 0;
+	uint32_t id;
 
 	header = (tge_sifcmd_header_t *)cmd_data->pktbuf;
 
@@ -194,10 +186,10 @@ static void sif_cmd_interrupt()
 
 	sbcall_sifsetdchain();
 
-	header = (SifCmdHeader_t *)packet;
+	header = (tge_sifcmd_header_t *)packet;
 	/* Get the command handler id and determine which handler list to
 	   dispatch from.  */
-#if 0
+#ifdef SBIOS_DEBUG
 	printf("fid 0x%x\n", header->fid);
 #endif
 	id = header->fid & ~SYSTEM_CMD;
@@ -213,6 +205,9 @@ static void sif_cmd_interrupt()
 	}
 
 	if ((cmd_handlers != NULL) && (cmd_handlers[id].handler != NULL)) {
+#ifdef SBIOS_DEBUG
+		printf("Callback 0x%x\n", cmd_handlers[id].handler);
+#endif
 		cmd_handlers[id].handler(packet, cmd_handlers[id].harg);
 	}
 

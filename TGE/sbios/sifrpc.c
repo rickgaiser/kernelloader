@@ -181,7 +181,7 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 
 	if ((((u32) recvbuf) & 0x0f) != 0) {
 		/* This is fatal and will lead to write accesses on wrong memory addresses. */
-		printf("SifCallRpc recvbuf 0x%x is not aligned (fid 0x%x rpc number 0x%x).\n", recvbuf, (cd->server != NULL) ? cd->server->sid : 0, rpc_number);
+		printf("SifCallRpc recvbuf 0x%x is not aligned (fid 0x%x rpc number 0x%x).\n", (uint32_t) recvbuf, (cd->server != NULL) ? cd->server->sid : 0, rpc_number);
 	}
 
 	if (!(mode & SIF_RPC_M_NOWBDC)) {
@@ -294,19 +294,31 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	SifRpcClientData_t *client = request->client;
 	void *pkt_addr;
 
+	data = data;
+
 	pkt_addr = client->hdr.pkt_addr;
+#ifdef SBIOS_DEBUG
+	printf("cid 0x%x pkt_addr 0x%x\n", request->cid, pkt_addr);
+#endif
 	if (request->cid == 0x8000000a) {
-		if (client->end_function)
+		/* Response to RPC call. */
+		if (client->end_function) {
+#ifdef SBIOS_DEBUG
+			printf("Calling 0x%x\n", client->end_function);
+#endif
 			client->end_function(client->end_param);
+		}
 	} else if (request->cid == 0x80000009) {
 		client->server = request->server;
 		client->buff   = request->buff;
 		client->cbuff  = request->cbuff;
 		/* Callback is not part of PS2SDK, but is required for linux. */
 		if (client->end_function) {
+#ifdef SBIOS_DEBUG
+			printf("Calling 0x%x\n", client->end_function);
+#endif
 			client->end_function(client->end_param);
 		} else {
-			iop_prints("No function called\n");
 		}
 	}
 
@@ -374,6 +386,8 @@ static void _request_call(SifRpcCallPkt_t *request, void *data)
 	SifRpcServerData_t *server = request->server;
 	SifRpcDataQueue_t *base = server->base;
 
+	data = data;
+
 	if (base->start)
 		base->end->link = server;
 	else
@@ -410,9 +424,8 @@ static void _request_rdata(SifRpcOtherDataPkt_t *rdata, void *data)
 	iSifSendCmd(0x80000008, rend, 64, rdata->src, rdata->dest, rdata->size);
 }
 
-void SifInitRpc(int mode)
+void SifInitRpc(void)
 {
-	u32 *cmdp;
 	u32 status;
 
 	core_save_disable(&status);
@@ -542,6 +555,7 @@ SifGetNextRequest(SifRpcDataQueue_t *qd)
 }
 #endif
 
+#if 0
 static void *_rpc_get_fpacket2(struct rpc_data *rpc_data, int rid)
 {
 	if (rid < 0 || rid < rpc_data->client_table_len)
@@ -550,7 +564,6 @@ static void *_rpc_get_fpacket2(struct rpc_data *rpc_data, int rid)
 		return rpc_data->client_table + (rid * RPC_PACKET_SIZE);
 }
 
-#if 0
 void SifExecRequest(SifRpcServerData_t *sd)
 {
 	SifDmaTransfer_t dmat;
@@ -641,7 +654,7 @@ int SifCheckStatRpc(SifRpcClientData_t *cd)
 
 int sbcall_sifinitrpc(void)
 {
-	SifInitRpc(0);
+	SifInitRpc();
 #ifdef FILEIO_DEBUG
 	fioInit();
 #endif

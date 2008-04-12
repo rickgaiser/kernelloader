@@ -29,15 +29,15 @@ typedef void * (*SifRpcFunc_t)(int, void *, int);
 typedef void (*SifRpcEndFunc_t)(void *);
 
 typedef struct t_SifRpcPktHeader {
-	struct t_SifCmdHeader	sifcmd;
+	tge_sifcmd_header_t sifcmd;
 	int			rec_id;
-	void			*pkt_addr;
-	int			rpc_id;
+	void		*pkt_addr;
+	uint32_t	rpc_id;
 } SifRpcPktHeader_t;
 
 typedef struct t_SifRpcRendPkt
 {
-   struct t_SifCmdHeader	sifcmd;
+   tge_sifcmd_header_t sifcmd;
    int				rec_id;		/* 04 */
    void				*pkt_addr;	/* 05 */
    int				rpc_id;		/* 06 */
@@ -51,7 +51,7 @@ typedef struct t_SifRpcRendPkt
 
 typedef struct t_SifRpcOtherDataPkt
 {
-   struct t_SifCmdHeader	sifcmd;
+   tge_sifcmd_header_t sifcmd;
    int				rec_id;		/* 04 */
    void				*pkt_addr;	/* 05 */
    int				rpc_id;		/* 06 */
@@ -64,7 +64,7 @@ typedef struct t_SifRpcOtherDataPkt
 
 typedef struct t_SifRpcBindPkt
 {
-   struct t_SifCmdHeader	sifcmd;
+   tge_sifcmd_header_t sifcmd;
    int				rec_id;		/* 04 */
    void				*pkt_addr;	/* 05 */
    int				rpc_id;		/* 06 */
@@ -74,7 +74,7 @@ typedef struct t_SifRpcBindPkt
 
 typedef struct t_SifRpcCallPkt
 {
-   struct t_SifCmdHeader	sifcmd;
+   tge_sifcmd_header_t sifcmd;
    int				rec_id;		/* 04 */
    void				*pkt_addr;	/* 05 */
    int				rpc_id;		/* 06 */
@@ -89,9 +89,9 @@ typedef struct t_SifRpcCallPkt
 
 typedef struct t_SifRpcServerData
 {
-   int				sid;		/* 04	00 */
+   uint32_t			sid;		/* 04	00 */
 
-   SifRpcFunc_t			func;		/* 05	01 */
+   SifRpcFunc_t		func;		/* 05	01 */
    void				*buff;		/* 06	02 */
    int				size;		/* 07	03 */
 
@@ -156,7 +156,7 @@ typedef struct t_SifRpcDataQueue
    struct t_SifRpcDataQueue	*next;  	/* 05 */
 } SifRpcDataQueue_t;
 
-void SifInitRpc(int mode);
+void SifInitRpc(void);
 void SifExitRpc(void);
 
 /* SIF RPC client API */

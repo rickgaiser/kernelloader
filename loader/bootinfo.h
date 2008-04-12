@@ -56,7 +56,7 @@ struct ps2_bootinfo {
     char		*ver_dvd_rom;
     char		*ver_dvd_hdd;
     char		*ver_dvd_path;
-    /* Special defines */
+    /* Special defines, not used anymore. */
     uint32_t		initrd_start;
     uint32_t		initrd_size;
 };

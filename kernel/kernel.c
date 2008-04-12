@@ -57,7 +57,7 @@ static void reset_iop()
 		uint32_t mode;
 	} dmareq;
 	uint8_t *upkt = KSEG1ADDR((uint8_t *) & packet);
-	volatile uint32_t *p = upkt;
+	volatile uint32_t *p = (uint32_t *) upkt;
 	unsigned int i;
 
 	sif_init();
@@ -98,12 +98,12 @@ static void reset_iop()
 int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 {
 #if 0
-	volatile uint32_t *crash1 = (unsigned char *) 0x00000008;
-	volatile uint32_t *crash2 = (unsigned char *) 0x00001008;
-	volatile uint32_t *crash3 = (unsigned char *) 0x04002008;
+	volatile uint32_t *crash1 = (uint32_t *) 0x00000008;
+	volatile uint32_t *crash2 = (uint32_t *) 0x00001008;
+	volatile uint32_t *crash3 = (uint32_t *) 0x04002008;
 #endif
-	register int sp asm("sp");
-	volatile uint32_t *sbios_addr = (unsigned char *) 0x80001008;
+	register unsigned long sp asm("sp");
+	volatile uint32_t *sbios_addr = (uint32_t *) 0x80001008;
 	int version;
 
 	iop_prints("Kernel started\n");

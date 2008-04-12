@@ -165,21 +165,6 @@ struct pad_data {
 #endif
 
 
-typedef struct {
-	SifRpcEndFunc_t endfunc;
-	void *efarg;
-	int *result;
-	void *optArg;
-} padCallbackData_t;
-
-typedef struct {
-	SifRpcEndFunc_t endfunc;
-	void *efarg;
-	int *result;
-	int port;
-	int slot;
-} padOpenData_t;
-
 /*
  * Pad variables etc.
  */
@@ -190,7 +175,7 @@ static const char padStateString[8][16] = { "DISCONNECT", "FINDPAD",
 };
 static const char padReqStateString[3][16] = { "COMPLETE", "FAILED", "BUSY" };
 
-static int padInitialised = 0;
+static int padInitialiseCounter = 0;
 
 // pad rpc call
 static SifRpcClientData_t padsif[2] __attribute__ ((aligned(64)));
@@ -222,99 +207,66 @@ static struct pad_data *padGetDmaStr(int port, int slot)
 	}
 }
 
-static void padCallback(void *arg)
+static void padCallback(void *rarg)
 {
-	padCallbackData_t *data = (padCallbackData_t *) arg;
-
-	*data->result = *(int *) (&buffer[12]);
-	data->endfunc(data->efarg);
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	carg->result = *(int *) (&buffer[12]);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
-static void padCallback20(void *arg)
+static void padInitCallback(void *rarg)
 {
-	padCallbackData_t *data = (padCallbackData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	switch (padInitialiseCounter) {
+	case 0:
+		if (!padsif[0].server) {
+			carg->result = -2;
+		} else {
+			carg->result = 0;
 
-	*data->result = *(int *) (&buffer[20]);
-	data->endfunc(data->efarg);
-}
-
-static void padInitStage5(void *arg)
-{
-	padCallbackData_t *data = (padCallbackData_t *) arg;
-
-	padInitialised = 1;
-	*data->result = 1;
-
-	data->endfunc(data->efarg);
-}
-
-static void padInitStage4(void *arg)
-{
-	padCallbackData_t *data = (padCallbackData_t *) arg;
-	int i;
-	// If you require a special version of the padman, check for that here
-
-	for (i = 0; i < 8; i++) {
-		PadState[0][i].open = 0;
-		PadState[0][i].port = 0;
-		PadState[0][i].slot = 0;
-		PadState[1][i].open = 0;
-		PadState[1][i].port = 0;
-		PadState[1][i].slot = 0;
-	}
-
-#ifndef ROM_PADMAN
-	*(u32 *) (&buffer[0]) = PAD_RPCCMD_INIT;
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padInitStage5, data) < 0) {
-		*data->result = -1;
-		data->endfunc(data->efarg);
-		return;
-	}
-#else
-	padInitStage5(data);
-#endif
-}
-
-static void padInitStage3(void *arg)
-{
-	padCallbackData_t *data = (padCallbackData_t *) arg;
-
-	if (!padsif[1].server) {
-		*data->result = -5;
-		data->endfunc(data->efarg);
-	}
-	else {
-		int ret;
-
-		ret = padGetModVersion(padInitStage4, data, data->result);
-		if (ret < 0) {
-			*data->result = -6;
-			data->endfunc(data->efarg);
-			return;
+			/* Go to next stage. */
+			padInitialiseCounter++;
 		}
+		break;
+	case 1:
+		if (!padsif[1].server) {
+			carg->result = -4;
+		} else {
 #ifdef ROM_PADMAN
-		/* There is no Callback, continue. */
-		padInitStage4(data);
+			carg->result = 1;
+#else
+			carg->result = 0;
 #endif
-	}
-}
+			/* Go to next stage. */
+			padInitialiseCounter++;
+		}
+		break;
+#ifndef ROM_PADMAN
+	case 2:
+		/* Return version number. */
+		if (*(int *) (&buffer[12]) > 0) {
+			carg->result = 0;
 
-static void padInitStage2(void *arg)
-{
-	padCallbackData_t *data = (padCallbackData_t *) arg;
+			/* Go to next stage. */
+			padInitialiseCounter++;
+		} else {
+			iop_prints("Padman version number invalid.\n");
+			carg->result = -6;
+		}
+		break;
+	case 3:
+		carg->result = 1;
 
-	if (!padsif[0].server) {
-		*data->result = -2;
-		data->endfunc(data->efarg);
-		return;
+		/* Go to next stage. */
+		padInitialiseCounter++;
+		break;
+#endif
+	default:
+		iop_prints("padInitCallback() called with illegal state.\n");
+		carg->result = -20;
+		break;
 	}
-
-	if (SifBindRpc(&padsif[1], PAD_BIND_RPC_ID2, SIF_RPC_M_NOWAIT,
-			padInitStage3, data) < 0) {
-		*data->result = -3;
-		data->endfunc(data->efarg);
-		return;
-	}
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 
@@ -333,24 +285,63 @@ static void padInitStage2(void *arg)
  * Initialise padman
  * a = 0 should work..
  */
-int padInit(int a, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
 {
-	static padCallbackData_t data;
+	//tge_sbcall_padinit_arg_t *arg = carg->sbarg;
+	int i;
 
-	if (padInitialised) {
-		endfunc(efarg);
-		return 0;
-	}
+	switch (padInitialiseCounter) {
+	case 0:
+		padsif[0].server = NULL;
+		padsif[1].server = NULL;
 
-	padsif[0].server = NULL;
-	padsif[1].server = NULL;
+		for (i = 0; i < 8; i++) {
+			PadState[0][i].open = 0;
+			PadState[0][i].port = 0;
+			PadState[0][i].slot = 0;
+			PadState[1][i].open = 0;
+			PadState[1][i].port = 0;
+			PadState[1][i].slot = 0;
+		}
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	if (SifBindRpc(&padsif[0], PAD_BIND_RPC_ID1, SIF_RPC_M_NOWAIT,
-			padInitStage2, &data) < 0) {
-		return -1;
+		if (SifBindRpc(&padsif[0], PAD_BIND_RPC_ID1, SIF_RPC_M_NOWAIT,
+			padInitCallback, carg) < 0) {
+			return -1;
+		}
+		break;
+
+	case 1:
+		if (SifBindRpc(&padsif[1], PAD_BIND_RPC_ID2, SIF_RPC_M_NOWAIT,
+				padInitCallback, carg) < 0) {
+			return -3;
+		}
+		break;
+
+#ifndef ROM_PADMAN
+	case 2:
+		/* Returns the padman version NOT SUPPORTED on module rom0:padman */
+		*(u32 *) (&buffer[0]) = PAD_RPCCMD_GET_MODVER;
+
+		if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128,
+			padInitCallback, carg) < 0) {
+			iop_prints("Failed padGetModVersion\n");
+			return -5;
+		}
+		break;
+
+	case 3:
+		*(u32 *) (&buffer[0]) = PAD_RPCCMD_INIT;
+		if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128,
+			padInitCallback, carg) < 0) {
+			return -7;
+		}
+		break;
+#endif
+	default:
+		/* Already initialised. */
+		carg->result = 1;
+		carg->endfunc(carg->efarg, carg->result);
+		break;
 	}
 	return 0;
 
@@ -362,60 +353,49 @@ int padInit(int a, SifRpcEndFunc_t endfunc, void *efarg, int *result)
  */
 int padReset()
 {
-	padInitialised = 0;
+	padInitialiseCounter = 0;
 	padsif[0].server = NULL;
 	padsif[1].server = NULL;
 	return 0;
 }
 
-static void padEndStage2(void *arg)
+static void padEndCallback(void *rarg)
 {
-	padCallbackData_t *data = (padCallbackData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	int ret;
 	
 	ret = *(int *) (&buffer[12]);
 	if (ret == 1) {
-		padInitialised = 0;
+		padReset();
 	}
 
-	*data->result = ret;
-	data->endfunc(data->efarg);
+	carg->result = ret;
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 /*
  * End all pad communication (not tested)
  */
-int padEnd(SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padend(tge_sbcall_rpc_arg_t *carg)
 {
-	static padCallbackData_t data;
-	int ret;
-
-
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_END;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padEndStage2, &data) < 0)
+	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padEndCallback, carg) < 0)
 		return -1;
 
-	ret = *(int *) (&buffer[12]);
-	if (ret == 1) {
-		padInitialised = 0;
-	}
-
-	return ret;
+	return 0;
 }
 
-static void padPortOpenStage2(void *arg)
+static void padPortOpenCallback(void *rarg)
 {
-	padOpenData_t *data = (padOpenData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	tge_sbcall_padportopen_arg_t *arg = carg->sbarg;
 
-	*data->result = *(int *) (&buffer[12]);
+	carg->result = *(int *) (&buffer[12]);
 
-	PadState[data->port][data->slot].padBuf = *(char **) (&buffer[20]);
+	PadState[arg->port][arg->slot].padBuf = *(char **) (&buffer[20]);
 
-	data->endfunc(data->efarg);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 /*
@@ -424,17 +404,17 @@ static void padPortOpenStage2(void *arg)
  *
  * return != 0 => OK
  */
-int padPortOpen(int port, int slot, void *padArea, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padportopen(tge_sbcall_rpc_arg_t *carg)
 {
+	tge_sbcall_padportopen_arg_t *arg = carg->sbarg;
 	int i;
 	int ret;
-	struct pad_data *dma_buf = (struct pad_data *) padArea;
-	static padOpenData_t data;
+	struct pad_data *dma_buf = (struct pad_data *) arg->addr;
 
 	// Check 64 byte alignment
-	if ((u32) padArea & 0x3f) {
-		//        scr_printf("dmabuf misaligned (%x)!!\n", dma_buf);
-		return 0;
+	if ((u32) arg->addr & 0x3f) {
+		printf("dmabuf misaligned (%x)!!\n", (uint32_t) dma_buf);
+		return -1;
 	}
 
 	for (i = 0; i < 2; i++) {	// Pad data is double buffered
@@ -452,21 +432,16 @@ int padPortOpen(int port, int slot, void *padArea, SifRpcEndFunc_t endfunc, void
 
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_OPEN;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
-	*(u32 *) (&buffer[16]) = (u32) padArea;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
+	*(u32 *) (&buffer[16]) = (u32) arg->addr;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	data.port = port;
-	data.slot = slot;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padPortOpenStage2, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padPortOpenCallback, carg);
 	if (ret < 0) {
 		return ret;
 	}
-	PadState[port][slot].open = 1;
-	PadState[port][slot].padData = padArea;
+			PadState[arg->port][arg->slot].open = 1;
+	PadState[arg->port][arg->slot].padData = arg->addr;
 	return 0;
 }
 
@@ -474,25 +449,22 @@ int padPortOpen(int port, int slot, void *padArea, SifRpcEndFunc_t endfunc, void
 /*
  * not tested :/
  */
-int padPortClose(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padportclose(tge_sbcall_rpc_arg_t *carg)
 {
-	static padCallbackData_t data;
+	tge_sbcall_padportopen_arg_t *arg = carg->sbarg;
 	int ret;
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_CLOSE;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
 	*(u32 *) (&buffer[16]) = 1;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padCallback, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padCallback, carg);
 
 	if (ret < 0)
 		return ret;
 	else {
-		PadState[port][slot].open = 0;
+		PadState[arg->port][arg->slot].open = 0;
 		return 0;
 	}
 }
@@ -502,13 +474,13 @@ int padPortClose(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *
  * Read pad data
  * Result is stored in 'data' which should point to a 32 byte array
  */
-unsigned char padRead(int port, int slot, struct padButtonStatus *data)
+int sbcall_padread(tge_sbcall_padread_arg_t *arg)
 {
 	struct pad_data *pdata;
 
-	pdata = padGetDmaStr(port, slot);
+	pdata = padGetDmaStr(arg->port, arg->slot);
 
-	memcpy(data, pdata->data, pdata->length);
+	memcpy(arg->data, pdata->data, pdata->length);
 	return pdata->length;
 }
 
@@ -517,18 +489,18 @@ unsigned char padRead(int port, int slot, struct padButtonStatus *data)
  * Get current pad state
  * Wait until state == 6 (Ready) before trying to access the pad
  */
-int padGetState(int port, int slot)
+int sbcall_padgetstate(tge_sbcall_padgetstate_arg_t *arg)
 {
 	struct pad_data *pdata;
 	unsigned char state;
 
 
-	pdata = padGetDmaStr(port, slot);
+	pdata = padGetDmaStr(arg->port, arg->slot);
 
 	state = pdata->state;
 
 	if (state == PAD_STATE_STABLE) {	// Ok
-		if (padGetReqState(port, slot) == PAD_RSTAT_BUSY) {
+		if (padGetReqState(arg->port, arg->slot) == PAD_RSTAT_BUSY) {
 			return PAD_STATE_EXECCMD;
 		}
 	}
@@ -616,34 +588,6 @@ int padGetSlotMax(int port)
 #endif
 
 /*
- * Returns the padman version
- * NOT SUPPORTED on module rom0:padman
- */
-int padGetModVersion(SifRpcEndFunc_t endfunc, void *efarg, int *result)
-{
-	static padCallbackData_t data;
-
-#ifdef ROM_PADMAN
-	return 1;					// Well.. return a low version #
-#else
-
-	*(u32 *) (&buffer[0]) = PAD_RPCCMD_GET_MODVER;
-
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padCallback,
-			&data) < 0) {
-		iop_prints("Failed padGetModVersion\n");
-		return -1;
-	}
-
-	return 0;
-#endif
-}
-
-
-/*
  * Get pad info (digital (4), dualshock (7), etc..)
  * ID: 3 - KONAMI GUN
  *     4 - DIGITAL PAD
@@ -651,36 +595,35 @@ int padGetModVersion(SifRpcEndFunc_t endfunc, void *efarg, int *result)
  *     6 - NAMCO GUN
  *     7 - DUAL SHOCK
  */
-int padInfoMode(int port, int slot, int infoMode, int index)
+int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg)
 {
-
 #ifdef ROM_PADMAN
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_INFO_MODE;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
-	*(u32 *) (&buffer[12]) = infoMode;
-	*(u32 *) (&buffer[16]) = index;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
+	*(u32 *) (&buffer[12]) = arg->term;
+	*(u32 *) (&buffer[16]) = arg->offset;
 
 	/* XXX: Check if this is working without SIF_RPC_M_NOWAIT. */
 	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0)
 		return 0;
 
 	if (*(int *) (&buffer[20]) == 1) {
-		padSetReqState(port, slot, PAD_RSTAT_BUSY);
+		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
 	return *(int *) (&buffer[20]);
 #else
 
 	struct pad_data *pdata;
 
-	pdata = padGetDmaStr(port, slot);
+	pdata = padGetDmaStr(arg->port, arg->slot);
 
 	if (pdata->ok != 1)
 		return 0;
 	if (pdata->reqState == PAD_RSTAT_BUSY)
 		return 0;
 
-	switch (infoMode) {
+	switch (arg->term) {
 	case PAD_MODECURID:
 		if (pdata->modeCurId == 0xF3)
 			return 0;
@@ -703,11 +646,11 @@ int padInfoMode(int port, int slot, int infoMode, int index)
 
 	case PAD_MODETABLE:
 		if (pdata->modeOk != 0) {
-			if (index == -1) {
+			if (arg->offset == -1) {
 				return pdata->nrOfModes;
 			}
-			else if (index < pdata->nrOfModes) {
-				return pdata->modeTable[index];
+			else if (arg->offset < pdata->nrOfModes) {
+				return pdata->modeTable[arg->offset];
 			}
 			else {
 				return 0;
@@ -722,39 +665,35 @@ int padInfoMode(int port, int slot, int infoMode, int index)
 }
 
 
-static void padSetMainModeStage2(void *arg)
+static void padSetMainModeCallback(void *rarg)
 {
-	padOpenData_t *data = (padOpenData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	tge_sbcall_padsetmainmode_arg_t *arg = carg->sbarg;
 
 	if (*(int *) (&buffer[20]) == 1) {
-		padSetReqState(data->port, data->slot, PAD_RSTAT_BUSY);
+		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
-	*data->result = *(int *) (&buffer[20]);
+	carg->result = *(int *) (&buffer[20]);
 
-	data->endfunc(data->efarg);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 /*
  * mode = 1, -> Analog/dual shock enabled; mode = 0 -> Digital  
  * lock = 3 -> Mode not changeable by user
  */
-int padSetMainMode(int port, int slot, int mode, int lock, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padsetmainmode(tge_sbcall_rpc_arg_t *carg)
 {
-	padOpenData_t data;
+	tge_sbcall_padsetmainmode_arg_t *arg = carg->sbarg;
 	int ret;
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_SET_MMODE;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
-	*(u32 *) (&buffer[12]) = mode;
-	*(u32 *) (&buffer[16]) = lock;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
+	*(u32 *) (&buffer[12]) = arg->offset;
+	*(u32 *) (&buffer[16]) = arg->lock;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	data.port = port;
-	data.slot = slot;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetMainModeStage2, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetMainModeCallback, carg);
 	if (ret < 0)
 		return ret;
 
@@ -762,36 +701,27 @@ int padSetMainMode(int port, int slot, int mode, int lock, SifRpcEndFunc_t endfu
 }
 
 
-static void padInfoPressModeStage2(void *arg)
+static void padInfoPressModeCallback(void *rarg)
 {
-	padCallbackData_t *data = (padCallbackData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	int mask;
 
 	mask = *(int *) (&buffer[12]);
 	if (mask ^ 0x3ffff) {
-		*data->result = 0;
+		carg->result = 0;
 	}
 	else {
-		*data->result = 1;
+		carg->result = 1;
 	}
-	data->endfunc(data->efarg);
+	carg->endfunc(carg->efarg, carg->result);
 }
-
-/*
- * Check if the pad has pressure sensitive buttons
- */
-int padInfoPressMode(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result)
-{
-	return padGetButtonMask(port, slot, endfunc, efarg, result);
-}
-
 
 /*
  * Pressure sensitive mode ON
  */
-int padEnterPressMode(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padenterpressmode(tge_sbcall_rpc_arg_t *carg)
 {
-	return padSetButtonInfo(port, slot, 0xFFF, endfunc, efarg, result);
+	return padSetButtonInfo(carg, 0xFFF);
 }
 
 
@@ -799,67 +729,60 @@ int padEnterPressMode(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, 
  * Check for newer version
  * Pressure sensitive mode OFF
  */
-int padExitPressMode(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padexitpressmode(tge_sbcall_rpc_arg_t *carg)
 {
-	return padSetButtonInfo(port, slot, 0, endfunc, efarg, result);
-
+	return padSetButtonInfo(carg, 0);
 }
 
 
 /*
- *
+ * Check if the pad has pressure sensitive buttons
  */
-int padGetButtonMask(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padinfopressmode(tge_sbcall_rpc_arg_t *carg)
 {
-	static padCallbackData_t data;
+	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
 	int ret;
-	*(u32 *) (&buffer[0]) = PAD_RPCCMD_GET_BTNMASK;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padInfoPressModeStage2, &data);
+	*(u32 *) (&buffer[0]) = PAD_RPCCMD_GET_BTNMASK;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
+
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padInfoPressModeCallback, carg);
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
 
-static void padSetButtonInfoStage2(void *arg)
+static void padSetButtonInfoCallback(void *rarg)
 {
-	padOpenData_t *data = (padOpenData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
 	int val;
 
 	val = *(int *) (&buffer[16]);
 
 	if (val == 1) {
-		padSetReqState(data->port, data->slot, PAD_RSTAT_BUSY);
+		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
-	*data->result = *(int *) (&buffer[16]);
-	data->endfunc(data->efarg);
+	carg->result = *(int *) (&buffer[16]);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 /*
  *
  */
-int padSetButtonInfo(int port, int slot, int buttonInfo, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int padSetButtonInfo(tge_sbcall_rpc_arg_t *carg, int buttonInfo)
 {
-	static padOpenData_t data;
+	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
 	int ret;
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_SET_BTNINFO;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
 	*(u32 *) (&buffer[12]) = buttonInfo;
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	data.port = port;
-	data.slot = slot;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetButtonInfoStage2, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetButtonInfoCallback, carg);
 	if (ret < 0)
 		return ret;
 
@@ -872,55 +795,55 @@ int padSetButtonInfo(int port, int slot, int buttonInfo, SifRpcEndFunc_t endfunc
  * If padInfoAct(port, slot, -1, 0) != 0, the controller has actuators
  * (i think ;) )
  */
-unsigned char padInfoAct(int port, int slot, int actuator, int cmd)
+int sbcall_padinfoact(tge_sbcall_padinfoact_arg_t *arg)
 {
-
 #ifdef ROM_PADMAN
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_INFO_ACT;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
-	*(u32 *) (&buffer[12]) = actuator;
-	*(u32 *) (&buffer[16]) = cmd;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
+	*(u32 *) (&buffer[12]) = arg->actno;
+	*(u32 *) (&buffer[16]) = arg->term;
 
 	/* XXX: Check if this is working without SIF_RPC_M_NOWAIT. */
 	if (SifCallRpc(&padsif[0], 1, 0, buffer, 128, buffer, 128, 0, 0) < 0)
 		return 0;
 
 	if (*(int *) (&buffer[20]) == 1) {
-		padSetReqState(port, slot, PAD_RSTAT_BUSY);
+		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
 	return *(int *) (&buffer[20]);
 #else
 	struct pad_data *pdata;
 
-	pdata = padGetDmaStr(port, slot);
+	pdata = padGetDmaStr(arg->port, arg->slot);
 
 	if (pdata->ok != 1)
 		return 0;
 	if (pdata->modeOk < 2)
 		return 0;
-	if (actuator >= pdata->nrOfActuators)
+	if (arg->actno >= pdata->nrOfActuators)
 		return 0;
 
-	if (actuator == -1)
+	if (arg->actno == -1)
 		return pdata->nrOfActuators;	// # of acutators?
 
-	if (cmd >= 4)
+	if (arg->term >= 4)
 		return 0;
 
-	return pdata->actData[actuator * 4 + cmd];
+	return pdata->actData[arg->actno * 4 + arg->term];
 #endif
 }
 
-static void padSetActAlignStage2(void *arg)
+static void padSetActAlignCallback(void *rarg)
 {
-	padOpenData_t *data = (padOpenData_t *) arg;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	tge_sbcall_padsetactalign_arg_t *arg = carg->sbarg;
 
 	if (*(int *) (&buffer[20]) == 1) {
-		padSetReqState(data->port, data->slot, PAD_RSTAT_BUSY);
+		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
-	*data->result = *(int *) (&buffer[20]);
-	data->endfunc(data->efarg);
+	carg->result = *(int *) (&buffer[20]);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 /*
@@ -929,30 +852,33 @@ static void padSetActAlignStage2(void *arg)
  * actAlign[1] = 1 enables 'big' engine
  * set actAlign[2-5] to 0xff (disable)
  */
-int padSetActAlign(int port, int slot, char actAlign[6], SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padsetactalign(tge_sbcall_rpc_arg_t *carg)
 {
-	static padOpenData_t data;
+	tge_sbcall_padsetactalign_arg_t *arg = carg->sbarg;
+	char *actAlign = arg->data;
 	int i;
 	char *ptr;
 	int ret;
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_SET_ACTALIGN;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
 
 	ptr = (char *) (&buffer[12]);
 	for (i = 0; i < 6; i++)
 		ptr[i] = actAlign[i];
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	data.port = port;
-	data.slot = slot;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetActAlignStage2, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetActAlignCallback, carg);
 	if (ret < 0)
 		return ret;
 	return 0;
+}
+
+static void padSetActDirectCallback(void *rarg)
+{
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	carg->result = *(int *) (&buffer[20]);
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 
@@ -962,25 +888,23 @@ int padSetActAlign(int port, int slot, char actAlign[6], SifRpcEndFunc_t endfunc
  * actAlign[0] = 0/1 turns off/on 'small' engine
  * actAlign[1] = 0-255 sets 'big' engine speed
  */
-int padSetActDirect(int port, int slot, char actAlign[6], SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_padsetactdirect(tge_sbcall_rpc_arg_t *carg)
 {
-	static padCallbackData_t data;
+	tge_sbcall_padsetactdirect_arg_t *arg = carg->sbarg;
+	char *actAlign = arg->data;
 	int i;
 	char *ptr;
 	int ret;
 
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_SET_ACTDIR;
-	*(u32 *) (&buffer[4]) = port;
-	*(u32 *) (&buffer[8]) = slot;
+	*(u32 *) (&buffer[4]) = arg->port;
+	*(u32 *) (&buffer[8]) = arg->slot;
 
 	ptr = (char *) (&buffer[12]);
 	for (i = 0; i < 6; i++)
 		ptr[i] = actAlign[i];
 
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
-	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padCallback20, &data);
+	ret = SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padSetActDirectCallback, carg);
 	if (ret < 0) {
 		return ret;
 	}
@@ -998,6 +922,8 @@ int padSetActDirect(int port, int slot, char actAlign[6], SifRpcEndFunc_t endfun
 int padGetConnection(int port, int slot)
 {
 #ifdef ROM_PADMAN
+	port = port;
+	slot = slot;
 	return 1;
 #else
 
@@ -1012,82 +938,9 @@ int padGetConnection(int port, int slot)
 #endif
 }
 
-int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padinit_arg_t *arg = carg->sbarg;
-	return padInit(arg->mode, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padend(tge_sbcall_rpc_arg_t *carg)
-{
-	return padEnd(carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padportopen(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padportopen_arg_t *arg = carg->sbarg;
-	return padPortOpen(arg->port, arg->slot, arg->addr, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padportclose(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padportopen_arg_t *arg = carg->sbarg;
-	return padPortClose(arg->port, arg->slot, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padsetmainmode(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padsetmainmode_arg_t *arg = carg->sbarg;
-	return padSetMainMode(arg->port, arg->slot, arg->offset, arg->lock, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padsetactdirect(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padsetactdirect_arg_t *arg = carg->sbarg;
-	return padSetActDirect(arg->port, arg->slot, arg->data, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padsetactalign(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padsetactalign_arg_t *arg = carg->sbarg;
-	return padSetActAlign(arg->port, arg->slot, arg->data, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padinfopressmode(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
-	return padInfoPressMode(arg->port, arg->slot, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padenterpressmode(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
-	return padEnterPressMode(arg->port, arg->slot, carg->endfunc, carg->efarg, &carg->result);
-}
-int sbcall_padexitpressmode(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_padpressmode_arg_t *arg = carg->sbarg;
-	return padExitPressMode(arg->port, arg->slot, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_padread(tge_sbcall_padread_arg_t *arg)
-{
-	return padRead(arg->port, arg->slot, arg->data);
-}
-
-int sbcall_padgetstate(tge_sbcall_padgetstate_arg_t *arg)
-{
-	return padGetState(arg->port, arg->slot);
-}
-
 int sbcall_padgetreqstate(tge_sbcall_padgetreqstate_arg_t *arg)
 {
 	return padGetReqState(arg->port, arg->slot);
-}
-
-int sbcall_padinfoact(tge_sbcall_padinfoact_arg_t *arg)
-{
-	return padInfoAct(arg->port, arg->slot, arg->actno, arg->term);
 }
 
 #if 0
@@ -1097,7 +950,3 @@ int sbcall_padinfocomb(tge_sbcall_padinfocomb_arg_t *arg)
 }
 #endif
 
-int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg)
-{
-	return padInfoMode(arg->port, arg->slot, arg->term, arg->offset);
-}

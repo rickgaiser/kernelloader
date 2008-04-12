@@ -24,13 +24,16 @@ extern "C" {
 
 #define SYSTEM_CMD	0x80000000
 
-typedef struct t_SifCmdHeader
-{
-   u32				size;
-   void				*dest;
-   int				cid;
-   u32				unknown;
-} SifCmdHeader_t;
+typedef struct {
+	/** Packet size (8 bit) + additional data size (24 Bit). */
+	u32 size;
+	/** Pointer to additional data. */
+	void *dest;
+	/** Command/function identifier. */
+	int fid;
+	/** Additional option (used by SIF_CMD_INIT_CMD). */
+	u32 option;
+} tge_sifcmd_header_t;
 
 typedef struct t_SifCmdHandlerData
 {

@@ -23,6 +23,13 @@
 #include "tge_types.h"
 #include "tge_defs.h"
 
+#include "tge_sbios.h"
+#include "tge_sifdma.h"
+
+#include "sifdma.h"
+#include "sifcmd.h"
+#include "sifrpc.h"
+
 
 // struct for chain reading
 typedef struct {
@@ -198,14 +205,6 @@ typedef enum {
 #define CDVD_TRAY_OPEN		0			// Tray Open
 #define CDVD_TRAY_CLOSE		1			// Tray Close
 #define CDVD_TRAY_CHECK		2			// Tray Check
-
-/** Parameter of callback functions (SIFRPC). */
-typedef struct {
-	SbiosEndFunc_t endfunc;
-	void *efarg;
-	int *result;
-	void *optArg;
-} cdvdCallbackData_t;
 
 
 #ifdef __cplusplus
@@ -492,6 +491,7 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 //			0 if error
 s32 cdInit(SifRpcEndFunc_t endfunc, void *efarg, int *result);
 
+#if 0
 // waits/checks for completion of n-commands
 // 
 // args:	0 = wait for completion of command (blocking)
@@ -499,6 +499,7 @@ s32 cdInit(SifRpcEndFunc_t endfunc, void *efarg, int *result);
 // returns:	0 = completed
 //			1 = not completed
 s32  cdSync(s32 mode);
+#endif
 
 // search for a file on disc
 // 

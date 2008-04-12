@@ -23,16 +23,8 @@ extern "C" {
 #define SIF_DMA_INT_I	0x2
 #define SIF_DMA_INT_O	0x4
 
-typedef struct t_SifDmaTransfer
-{
-   void				*src,
-      				*dest;
-   int				size;
-   int				attr;
-} SifDmaTransfer_t;
-
-u32 SifSetDma(SifDmaTransfer_t *sdd, s32 len);
-u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len);
+u32 SifSetDma(tge_sifdma_transfer_t *sdd, s32 len);
+u32 iSifSetDma(tge_sifdma_transfer_t *sdd, s32 len);
 s32 SifDmaStat(u32 id);
 u32 sif_dma_get_hw_index(void);
 u32 sif_dma_get_sw_index(void);

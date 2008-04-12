@@ -26,6 +26,8 @@ zerobss:
 	nop
 	sq	$0, ($2)
 	sltu	$1, $2, $3
+	nop
+	nop
 	bne	$1, $0, 1b
 	addiu	$2, $2, 16
 

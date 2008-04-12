@@ -14,7 +14,7 @@ IOP_INC_DIR = include/
 IOP_BIN  = bin/dmarelay.irx
 IOP_OBJS = obj/main.o obj/ata.o obj/smap.o obj/imports.o
 
-IOP_CFLAGS  += -Wall -fno-builtin-printf -fno-builtin-memcpy
+IOP_CFLAGS  += -Wall -fno-builtin-printf -fno-builtin-memcpy -Wimplicit-int -Werror-implicit-function-declaration -Werror
 IOP_LDFLAGS += -s
 
 install: all

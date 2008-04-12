@@ -24,7 +24,7 @@ endif
 IOP_MODS = intrelay imports
 IOP_OBJS = $(addsuffix .o, $(addprefix $(IOP_OBJS_DIR), $(IOP_MODS)))
 IOP_INCS += -I../../include
-IOP_CFLAGS  += -Wall -fno-builtin-printf -fno-builtin-memcpy
+IOP_CFLAGS  += -Wall -fno-builtin-printf -fno-builtin-memcpy -Wimplicit-int -Werror-implicit-function-declaration -Werror
 IOP_LDFLAGS += -s
 
 install: all

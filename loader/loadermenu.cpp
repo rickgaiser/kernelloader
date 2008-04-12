@@ -312,6 +312,8 @@ static void setUserMode() {
 
 int poweroff(void *arg)
 {
+	arg = arg;
+
 	printf("Try to power off.\n");
 	graphic_paint();
 
@@ -329,10 +331,13 @@ int poweroff(void *arg)
 
 int reboot(void *arg)
 {
+	arg = arg;
+
 	printf("Try to reboot.\n");
 	graphic_paint();
 
 	padEnd();
+	padReset();
 
 	SifExitIopHeap();
 	SifLoadFileExit();
@@ -350,6 +355,9 @@ int reboot(void *arg)
 
 	/* Return to the PS2 browser. */
 	LoadExecPS2("", 0, NULL);
+
+	/* not reached. */
+	return 0;
 }
 
 int fsFile(void *arg)
@@ -425,6 +433,8 @@ int submitConfiguration(void *arg)
 {
 	int i;
 
+	arg = arg;
+
 	for (i = 0; i < getNumberOfModules(); i++) {
 		moduleEntry_t *module;
 
@@ -460,6 +470,8 @@ int enableAllModules(void *arg)
 {
 	int i;
 
+	arg = arg;
+
 	for (i = 0; i < getNumberOfModules(); i++) {
 		moduleEntry_t *module;
 
@@ -472,6 +484,8 @@ int enableAllModules(void *arg)
 int disableAllModules(void *arg)
 {
 	int i;
+
+	arg = arg;
 
 	for (i = 0; i < getNumberOfModules(); i++) {
 		moduleEntry_t *module;
@@ -486,6 +500,8 @@ int enableAllSBIOSCalls(void *arg)
 {
 	int i;
 
+	arg = arg;
+
 	for (i = 0; i < numberOfSbiosCalls; i++) {
 		sbiosCallEnabled[i] = 1;
 	}
@@ -495,6 +511,8 @@ int enableAllSBIOSCalls(void *arg)
 int disableAllSBIOSCalls(void *arg)
 {
 	int i;
+
+	arg = arg;
 
 	for (i = 0; i < numberOfSbiosCalls; i++) {
 		sbiosCallEnabled[i] = 0;
@@ -506,6 +524,8 @@ int disableAllSBIOSCalls(void *arg)
 int defaultSBIOSCalls(void *arg)
 {
 	int i;
+
+	arg = arg;
 
 	for (i = 0; i < numberOfSbiosCalls; i++) {
 		if ((i >= 176) && (i <= 195)) {
@@ -624,6 +644,8 @@ int fsroot(void *arg)
 
 int mcSaveConfig(void *arg)
 {
+	arg = arg;
+
 	setEnableDisc(true);
 	saveConfiguration();
 	setEnableDisc(false);
@@ -633,6 +655,8 @@ int mcSaveConfig(void *arg)
 int mcLoadConfig(void *arg)
 {
 	Menu *menu;
+
+	arg = arg;
 
 	menu = getCurrentMenu();
 	setCurrentMenu(NULL);
@@ -685,6 +709,8 @@ int setDefaultKernelParameterMenu(void *arg)
 
 	setDefaultKernelParameter(text);
 	editString(text);
+
+	return 0;
 }
 
 void initMenu(Menu *menu, graphic_mode_t mode)
@@ -750,7 +776,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		""
 	};
 	linuxMenu->addItem(kmc1Param.menuName, fsroot, (void *) &kmc1Param);
-#if !defined(RESET_IOP) || defined(PS2LINK)
+#if !defined(RESET_IOP) || defined(PS2LINK) || defined(NAPLINK)
 	static fsRootParam_t khostParam = {
 		kernelFilename,
 		menu,

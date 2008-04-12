@@ -203,11 +203,37 @@ void graphic_paint(void)
 	paintTexture(texPenguin, 5, 10, 1);
 
 	gsKit_font_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
-		"Loader for Linux " LOADER_VERSION);
+		"Loader for Linux " LOADER_VERSION
+#ifdef RESET_IOP
+		"R"
+#endif
+#ifdef PS2LINK
+		"P"
+#endif
+#ifdef NAPLINK
+		"N"
+#endif
+#ifdef SCREENSHOT
+		"S"
+#endif
+#ifdef NEW_ROM_MODULES
+		"M"
+#endif
+#ifdef OLD_ROM_MODULES
+		"O"
+#endif
+#ifdef SHARED_MEM_DEBUG
+		"S"
+#endif
+	);
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"09.02.2008");
+		"25.02.2008"
+#ifdef RTE
+		" RTE"
+#endif
+	);
 
 	if (statusMessage != NULL) {
 		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,

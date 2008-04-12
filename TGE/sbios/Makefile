@@ -7,14 +7,14 @@ EE_OBJCOPY = $(EE_PREFIX)objcopy
 ROM_MODULE_VERSION=old
 
 EE_INCS = -I. -I../include
-EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS) -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -fno-builtin-memcpy -fno-builtin-memset
+EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS) -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -fno-builtin-memcpy -fno-builtin-memset -Werror
 
 SBIOS_ADDR = 0x80001000
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
 
-EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap mc cache \
+EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap cache \
 	strlen strncpy memcpy pad memset strcpy cdvd ncmd scmd smod iopmem \
-	memcmp
+	memcmp mc mutex
 EE_OBJS = $(addsuffix _$(ROM_MODULE_VERSION).o, $(EE_FILES))
 ifeq ($(FILEIO_DEBUG),yes)
 EE_CFLAGS += -DFILEIO_DEBUG
@@ -35,6 +35,9 @@ ifeq ($(ROM_MODULE_VERSION),old)
 EE_CFLAGS += -DOLD_ROM_MODULE_VERSION
 else
 EE_CFLAGS += -DNEW_ROM_MODULE_VERSION
+endif
+ifeq ($(SBIOS_DEBUG),yes)
+EE_CFLAGS += -DSBIOS_DEBUG
 endif
 
 install: all

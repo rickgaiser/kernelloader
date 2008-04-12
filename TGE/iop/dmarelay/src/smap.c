@@ -38,7 +38,7 @@ static inline int do_transmit(void)
 	USE_SMAP_REGS;
 	volatile iop_dmac_chan_t *dev9_chan =
 		(volatile iop_dmac_chan_t *) DEV9_DMAC_BASE;
-	int res;
+	u32 res;
 	struct smap_rpc_data *t = (struct smap_rpc_data *) tx_rpcbuf;
 
 	res = WaitSema(smap_args->semid);
@@ -83,7 +83,7 @@ static inline int do_transmit(void)
 
 static void *tx_rpc_func(int fid, void *data, int size)
 {
-	int *res = &tx_result;
+	u32 *res = &tx_result;
 
 	switch (fid) {
 	case RPCF_SMAP_GetBufAddr:
@@ -135,9 +135,9 @@ static inline int do_receive(void)
 	USE_SMAP_REGS;
 	volatile iop_dmac_chan_t *dev9_chan =
 		(volatile iop_dmac_chan_t *) DEV9_DMAC_BASE;
-	int res;
+	u32 res;
 	struct smap_rpc_data *t = (struct smap_rpc_data *) rx_rpcbuf;
-	SifDmaTransfer_t *dmat = &rx_rpcbuf[0x10];
+	SifDmaTransfer_t *dmat = (SifDmaTransfer_t *) &rx_rpcbuf[0x10];
 	int trid;
 
 	res = WaitSema(smap_args->semid);
@@ -201,7 +201,7 @@ static inline int do_receive(void)
 
 static void *rx_rpc_func(int fid, void *data, int size)
 {
-	int *res = &rx_result;
+	u32 *res = &rx_result;
 
 	switch (fid) {
 	case RPCF_SMAP_GetBufAddr:

@@ -127,6 +127,8 @@ $L13:
 	addu	$6,$6,-1
 	addu	$5,$5,1
 	sb	$2,0($3)
+	nop
+	nop
 	.set	noreorder
 	.set	nomacro
 	bne	$6,$4,$L13

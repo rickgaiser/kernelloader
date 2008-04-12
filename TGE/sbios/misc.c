@@ -2,6 +2,7 @@
  * misc.c - Misc SBIOS calls
  *
  * Copyright (c) 2003 Marcus R. Brown <mrbrown@0xd6.org>
+ * Copyright (c) 2008 Mega Man
  *
  * See the file LICENSE, located within this directory, for licensing terms.
  */
@@ -18,6 +19,8 @@
 #include "iopmemdebug.h"
 
 #include "core.h"
+#include "cdvd.h"
+#include "stdio.h"
 
 int sbcall_getver()
 {
@@ -57,21 +60,53 @@ int sbcall_getc()
 
 int sbcall_halt(tge_sbcall_halt_arg_t *arg)
 {
+	u32 status;
+
+	arg = arg;
+
+	_sh(_lh(0xbf80146c) & 0xFFFE, 0xbf80146c);
+	_sh(0, 0xbf801460);
+	_sh(0, 0xbf80146c);
+
+	//if (arg->mode == TGE_SB_HALT_MODE_POWEROFF) {
+#ifdef NEW_ROM_MODULE_VERSION
+		u32 result;
+		
+		if (cdPowerOff(&result) == 0) {
+			printf("Power off failed.\n");
+
+			/* Power off manually. */
+			_sb(0, 0xBF402017);
+			_sb(0xF, 0xBF402016);
+		}
+#else
+		_sb(0, 0xBF402017);
+		_sb(0xF, 0xBF402016);
+#endif
+	//}
+
+	core_save_disable(&status);
+	while (1) {
+		/* Stop system or wait until reset. */
+	}
 	return -1;
 }
 
 int sbcall_setdve(tge_sbcall_setdve_arg_t *arg)
 {
+	arg = arg;
 	return -1;
 }
 
 int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
 {
+	arg = arg;
 	return -1;
 }
 
 int sbcall_setrgbyc(tge_sbcall_setrgbyc_arg_t *arg)
 {
+	arg = arg;
 	return 0;
 }
 

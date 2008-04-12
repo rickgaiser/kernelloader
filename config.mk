@@ -13,6 +13,10 @@ RESET_IOP = yes
 # reset is done):
 LOAD_PS2LINK = no
 
+# Activate if started by naplink
+LOAD_NAPLINK = no
+NAPLINK_PATH = ../../naplink-ps2-v1.0.1a/cd/
+
 # Debug output using fileio functions (RPC).
 FILEIO_DEBUG = no
 
@@ -20,3 +24,6 @@ FILEIO_DEBUG = no
 NEW_ROM_MODULES = no
 
 SCREENSHOT = no
+
+# Activate debug for SBIOS.
+SBIOS_DEBUG = no

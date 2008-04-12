@@ -49,6 +49,8 @@
 #define CD_SERVER_DISKREADY		0x8000059A
 #define CD_SERVER_EXTRA			0x80000596	// XCDVDFSV only
 
+static int cdvdInitCounter = 0;
+
 // allows access to gp reg value from linker script
 extern void *_gp;
 
@@ -125,54 +127,72 @@ extern u32 searchFileRecvBuff;
 #endif
 
 // **** Other Functions ****
-static void cdInitStage4(tge_sbcall_rpc_arg_t *carg)
-{
-	if (clientDiskReady.server != 0) {
-		bindDiskReady = 0;
-		initMode = CDVD_INIT_INIT;
-		SifWriteBackDCache(&initMode, 4);
-		if (SifCallRpc(&clientInit, 0, SIF_RPC_M_NOWAIT, &initMode, 4, 0, 0, cdNCmdInit, carg) < 0) {
-			carg->result = -6;
-			carg->endfunc(carg->efarg, carg->result);
-		}
-	} else {
-		carg->result = -5;
-		carg->endfunc(carg->efarg, carg->result);
-	}
-}
 
-static void cdInitStage3(tge_sbcall_rpc_arg_t *carg)
+static void cdvdInitCallback(void *rarg)
 {
-	if (clientSearchFile.server != 0) {
-		bindSearchFile = 0;
-		if (SifBindRpc(&clientDiskReady, CD_SERVER_DISKREADY, SIF_RPC_M_NOWAIT, cdInitStage4, carg) < 0) {
-			if (cdDebug > 0) {
-				printf("Libcdvd bind err CdDiskReady\n");
-			}
-			carg->result = -4;
-			carg->endfunc(carg->efarg, carg->result);
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	switch(cdvdInitCounter) {
+	case 0:
+		if (clientInit.server != 0) {
+			bindInit = 0;
+			cdvdInitCounter++;
+		} else {
+			printf("CDVD: Bind clientInit failed.\n");
 		}
-	} else {
-		carg->result = -3;
-		carg->endfunc(carg->efarg, carg->result);
-	}
-}
-
-static void cdInitStage2(tge_sbcall_rpc_arg_t *carg)
-{
-	if (clientInit.server != 0) {
-		bindInit = 0;
-		if (SifBindRpc(&clientSearchFile, CD_SERVER_SEARCHFILE, SIF_RPC_M_NOWAIT, cdInitStage3, carg) < 0) {
-			if (cdDebug > 0) {
-				printf("libcdvd bind err cdSearchFile\n");
-			}
-			carg->result = -2;
-			carg->endfunc(carg->efarg, carg->result);
-		}
-	} else {
 		carg->result = -1;
-		carg->endfunc(carg->efarg, carg->result);
+		CDVD_UNLOCKS();
+		break;
+
+	case 1:
+		if (clientSearchFile.server != 0) {
+			bindSearchFile = 0;
+			cdvdInitCounter++;
+		} else {
+			printf("CDVD: Bind clientSearchFile failed.\n");
+		}
+		carg->result = -1;
+		CDVD_UNLOCKS();
+		break;
+
+	case 2:
+		if (clientDiskReady.server != 0) {
+			bindDiskReady = 0;
+			cdvdInitCounter++;
+		} else {
+			printf("CDVD: Bind clientDiskReady failed.\n");
+		}
+		carg->result = -1;
+		CDVD_UNLOCKS();
+		break;
+
+	case 3:
+		cdvdInitCounter++;
+		carg->result = -1;
+		CDVD_UNLOCKS();
+		break;
+
+	case 4:
+		if (cdNCmdInitCallback(carg) == 0) {
+			cdvdInitCounter++;
+		} else {
+			printf("cdNCmdInit failed\n");
+		}
+		carg->result = -1;
+		CDVD_UNLOCKN();
+		break;
+
+	case 5:
+		if (cdSCmdInitCallback(carg) == 0) {
+			cdvdInitCounter++;
+			carg->result = 0;
+		} else {
+			printf("cdNCmdInit failed\n");
+			carg->result = -1;
+		}
+		CDVD_UNLOCKS();
+		break;
 	}
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 // init cdvd system
@@ -182,38 +202,95 @@ static void cdInitStage2(tge_sbcall_rpc_arg_t *carg)
 //                      0 if error
 int sbcall_cdvdinit(tge_sbcall_rpc_arg_t *carg)
 {
-	if (bindInit == 0) {
-		if (bindSCmd == 0) {
-			carg->result = 0;
-			carg->endfunc(carg->efarg, carg->result);
-			return 0;
-		} else {
-			printf("sbcall_cdvdinit() called again before finished.\n");
-			return -100;
+	//printf("sbcall_cdvdinit stage %d\n", cdvdInitCounter);
+	switch(cdvdInitCounter) {
+	case 0:
+		if (CDVD_LOCKS()) {
+			/* Temporay not available. */
+			return -2;
 		}
-	}
-	if (cdSyncS(1))
-		return 0;
-	//SifInitRpc(0);
-	//cdThreadId = GetThreadId();
-	bindSearchFile = -1;
-	bindNCmd = -1;
-	bindSCmd = -1;
-	bindDiskReady = -1;
-	bindInit = -1;
+		bindSearchFile = -1;
+		bindNCmd = -1;
+		bindSCmd = -1;
+		bindDiskReady = -1;
+		bindInit = -1;
 
-	if (SifBindRpc(&clientInit, CD_SERVER_INIT, SIF_RPC_M_NOWAIT, cdInitStage2, carg) < 0) {
-		if (cdDebug > 0) {
-			printf("Libcdvd bind err CD_Init\n");
+		if (SifBindRpc(&clientInit, CD_SERVER_INIT, SIF_RPC_M_NOWAIT, cdvdInitCallback, carg) < 0) {
+			printf("CDVD: bind err CD_Init\n");
+			CDVD_UNLOCKS();
+			return -1;
 		}
-		return -1;
-	} else {
-		return 0;
+		break;
+	case 1:
+		if (CDVD_LOCKS()) {
+			/* Temporay not available. */
+			return -2;
+		}
+		if (SifBindRpc(&clientSearchFile, CD_SERVER_SEARCHFILE, SIF_RPC_M_NOWAIT, cdvdInitCallback, carg) < 0) {
+			printf("CDVD: bind err cdSearchFile\n");
+			CDVD_UNLOCKS();
+			return -3;
+		}
+		break;
+	case 2:
+		if (CDVD_LOCKS()) {
+			/* Temporay not available. */
+			return -2;
+		}
+		if (SifBindRpc(&clientDiskReady, CD_SERVER_DISKREADY, SIF_RPC_M_NOWAIT, cdvdInitCallback, carg) < 0) {
+			printf("CDVD: bind err CdDiskReady\n");
+			CDVD_UNLOCKS();
+			return -5;
+		}
+		break;
+	case 3:
+		if (CDVD_LOCKS()) {
+			/* Temporay not available. */
+			return -2;
+		}
+		initMode = CDVD_INIT_INIT;
+		SifWriteBackDCache(&initMode, 4);
+		if (SifCallRpc(&clientInit, 0, SIF_RPC_M_NOWAIT, &initMode, 4, 0, 0, cdvdInitCallback, carg) < 0) {
+			CDVD_UNLOCKS();
+			printf("CDVD: rpc call err CDVD_INIT_INIT\n");
+			return -7;
+		}
+		break;
+	case 4:
+		if (CDVD_LOCKN()) {
+			/* Temporay not available. */
+			return -2;
+		}
+		if (cdNCmdInit(carg, cdvdInitCallback) < 0) {
+			CDVD_UNLOCKN();
+			printf("CDVD: bind err N CMD\n");
+			return -9;
+		}
+		break;
+	case 5:
+		if (CDVD_LOCKS()) {
+			/* Temporay not available. */
+			return -2;
+		}
+		if (cdSCmdInit(carg, cdvdInitCallback) < 0) {
+			CDVD_UNLOCKS();
+			printf("CDVD: bind err S CMD\n");
+			return -11;
+		}
+		break;
+	default:
+		//printf("CDVD: already initialized.\n");
+		carg->result = 0;
+		carg->endfunc(carg->efarg, carg->result);
+		break;
 	}
+
+	return 0;
 }
 
-void cdResetCallback(tge_sbcall_rpc_arg_t *carg)
+static void cdResetCallback(void *rarg)
 {
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	carg->result = 0;
 	carg->endfunc(carg->efarg, carg->result);
 }
@@ -316,17 +393,16 @@ s32 cdSearchFile(CdvdFileSpec_t * file, const char *name)
 }
 #endif
 
-static void cdDiskReadyStage2(void *arg)
+static void cdDiskReadyCallback(void *rarg)
 {
-	cdvdCallbackData_t *data = (cdvdCallbackData_t *) arg;
-
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	if (cdDebug > 0) {
 		printf("DiskReady ended\n");
 	}
 
-	//SignalSema(sCmdSemaId);
-	*data->result = *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
-	data->endfunc(data->efarg, *data->result);
+	carg->result = *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
+	CDVD_UNLOCKS();
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 // checks if drive is ready
@@ -334,29 +410,28 @@ static void cdDiskReadyStage2(void *arg)
 // args:         mode
 // returns:     CDVD_READY_READY if ready
 //                      CDVD_READY_NOTREADY if busy
-s32 cdDiskReady(s32 mode, SifRpcEndFunc_t endfunc, void *efarg, int *result)
-{
-	static cdvdCallbackData_t data;
+int sbcall_cdvdready(tge_sbcall_rpc_arg_t *carg) {
+	tge_sbcall_cdvdready_arg_t *arg = carg->sbarg;
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("DiskReady 0\n");
-
-	data.endfunc = endfunc;
-	data.efarg = efarg;
-	data.result = result;
+	}
 
 	//	return CDVD_READY_NOTREADY;
-	if (cdSyncS(1)) {
+	if (CDVD_LOCKS()) {
+		/* Temporay not available. */
 		return CDVD_READY_NOTREADY;
 	}
 
-	diskReadyMode = mode;
+	diskReadyMode = arg->mode;
 	if (bindDiskReady < 0) {
+		CDVD_UNLOCKS();
 		return -1;
 	}
 	SifWriteBackDCache(&diskReadyMode, 4);
 
-	if (SifCallRpc(&clientDiskReady, 0, SIF_RPC_M_NOWAIT, &diskReadyMode, 4, sCmdRecvBuff, 4, cdDiskReadyStage2, &data) < 0) {
+	if (SifCallRpc(&clientDiskReady, 0, SIF_RPC_M_NOWAIT, &diskReadyMode, 4, sCmdRecvBuff, 4, cdDiskReadyCallback, carg) < 0) {
+		CDVD_UNLOCKS();
 		return -2;
 	}
 
@@ -498,15 +573,10 @@ void cdCallback(void *funcNum)
 	// clear the currently executing function num
 	cbSema = 0;
 	cdCallbackNum = 0;
+	CDVD_UNLOCKN();
 
 }
 #endif
-
-int sbcall_cdvdready(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_cdvdready_arg_t *arg = carg->sbarg;
-	return cdDiskReady(arg->mode, carg->endfunc, carg->efarg, &carg->result);
-}
 
 #if 0
 int sbcall_cdvdpowerhook(tge_sbcall_rpc_arg_t *carg)

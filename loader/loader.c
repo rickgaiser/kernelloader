@@ -288,6 +288,24 @@ moduleEntry_t modules[] = {
 		.load = LOAD_ON_PS2LINK,
 		.ps2link = -1
 	},
+#ifdef NAPLINK
+	{
+		.path = "host:npm-usbd.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.ps2link = 1
+	},
+	{
+		.path = "host:npm-2301.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.ps2link = 1
+	},
+#endif
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,
@@ -432,16 +450,19 @@ void panic()
  * @param start Physical start address (included).
  * @param end Physical end address (excluded).
  */
-int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end)
+int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end, uint32_t *highest)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
-	uint32_t entry = NULL;
+	uint32_t entry = 0;
 	uint32_t area;
 
 	start = start & 0x0FFFFFFF;
 	end = end & 0x0FFFFFFF;
+	if (highest != NULL) {
+		*highest = 0;
+	}
 
 	file_header = (Elf32_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf32_Ehdr_t);
@@ -482,7 +503,7 @@ int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end)
 			&& (program_header->memsz != 0) )
 		{
 			uint32_t dest;
-			int size;
+			uint32_t size;
 
 			printf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 				program_header->vaddr,
@@ -519,6 +540,11 @@ int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end)
 				}
 
 				last = dest + size;
+				if (highest != NULL) {
+					if (*highest < last) {
+						*highest = last;
+					}
+				}
 				if (last >= end) {
 					error_printf("The memory region end address 0x%08x of %s is after 0x%08x.",
 						last, name, end);
@@ -626,7 +652,7 @@ void verify_sections(char *buffer)
 				};
 				iop_dprintf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
 			}
-			int size = program_header->memsz - program_header->filesz;
+			unsigned int size = program_header->memsz - program_header->filesz;
 			if (size > 0) {
 				unsigned int i;
 
@@ -648,15 +674,17 @@ void verify_sections(char *buffer)
  * @param size Pointer where file size will be stored, can be NULL.
  * @return Pointer to memory where file is loaded to.
  */
-char *load_file(const char *filename, int *size)
+char *load_file(const char *filename, int *size, void *addr)
 {
-	char *buffer;
+	char *buffer = NULL;
 	int s;
 	int filesize;
 	FILE *fin;
 
-	if (size == NULL)
+	if (size == NULL) {
 		size = &s;
+		addr = NULL;
+	}
 
 	setEnableDisc(-1);
 	graphic_setPercentage(0, filename);
@@ -668,22 +696,31 @@ char *load_file(const char *filename, int *size)
 	}
 
 	fseek(fin, 0, SEEK_END);
-	filesize = s = *size = ftell(fin);
+	filesize = s = ftell(fin);
 	fseek(fin, 0, SEEK_SET);
 	dprintf("filesize %d\n", *size);
-	// memalign() begins at &_end behind elf file. This ensures that the first 5 MByte are not used.
-	buffer = (char *) memalign(64, *size);
+	if (addr != NULL) {
+		if (filesize < *size) {
+			buffer = addr;
+		}
+	} else {
+		// memalign() begins at &_end behind elf file. This ensures that the first 5 MByte are not used.
+		buffer = (char *) memalign(64, *size);
+	}
 	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
+	*size = filesize;
 	if (buffer == NULL) {
 		fclose(fin);
 		setEnableDisc(0);
 		return NULL;
 	}
-	if ((u32) buffer < (u32) &_end) {
-		/* This will lead to problems. */
-		error_printf("memalign() is unusable!");
-		setEnableDisc(0);
-		panic();
+	if (addr == NULL) {
+		if ((u32) buffer < (u32) &_end) {
+			/* This will lead to problems. */
+			error_printf("memalign() is unusable!");
+			setEnableDisc(0);
+			panic();
+		}
 	}
 
 	dprintf("Loading...\n");
@@ -737,7 +774,7 @@ int loadModules(void)
 				romfile = rom_getFile(&modules[i].path[5]);
 			}
 			if (romfile == NULL) {
-				modules[i].buffer = load_file(modules[i].path, &modules[i].size);
+				modules[i].buffer = load_file(modules[i].path, &modules[i].size, NULL);
 				modules[i].allocated = 1;
 				if (modules[i].buffer == NULL) {
 					error_printf("Failed to load module '%s'.", modules[i].path);
@@ -1129,7 +1166,7 @@ uint32_t *getSBIOSCallTable(char *addr)
 	} else {
 		error_printf("SBIOS call table not found.");
 	}
-	return jumpBase;
+	return (uint32_t *) jumpBase;
 }
 /**
  * Load kernel, initrd and required modules. Then start kernel.
@@ -1147,11 +1184,17 @@ int loader(void *arg)
 	uint32_t *patch;
 	uint32_t iopaddr;
 	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
+#if 0
 	volatile uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
-	graphic_mode_t mode = (int) arg;
+#endif
 	int sbios_size = 0;
 	const char *sbios_filename = NULL;
 	const char *kernel_filename = NULL;
+	uint32_t *initrd_header = NULL;
+	uint32_t initrd_start = 0;
+	uint32_t initrd_size = 0;
+
+	arg = arg;
 
 	commandline = getKernelParameter();
 
@@ -1188,7 +1231,7 @@ int loader(void *arg)
 		}
 	}
 	if (sbios == NULL) {
-		sbios = load_file(sbios_filename, &sbios_size);
+		sbios = load_file(sbios_filename, &sbios_size, NULL);
 	}
 	if (sbios == NULL) {
 		error_printf("Failed to load sbios.elf");
@@ -1201,7 +1244,7 @@ int loader(void *arg)
 		graphic_setStatusMessage("Checking SBIOS...");
 
 		/* Check for errors in ELF file. */
-		if (check_sections("SBIOS", sbios, 0x1000, 0x10000) != 0) {
+		if (check_sections("SBIOS", sbios, 0x1000, 0x10000, NULL) != 0) {
 			free(sbios);
 			return -2;
 		}
@@ -1209,7 +1252,7 @@ int loader(void *arg)
 		for (i = 0; i < sbios_size; i++) {
 			if (((uint32_t *) sbios)[i] == *magic_check) {
 				found = 1;
-				SBIOSCallTable = getSBIOSCallTable(&(((uint32_t *) sbios)[i - 1]));
+				SBIOSCallTable = getSBIOSCallTable((char *) (&(((uint32_t *) sbios)[i - 1])));
 				if (SBIOSCallTable != NULL) {
 					break;
 				}
@@ -1222,7 +1265,7 @@ int loader(void *arg)
 			return -3;
 		} else {
 			graphic_setStatusMessage("Setup SBIOS...");
-			printf("Using address 0x%08x as SBIOSCallTable (SBIOS is at 0x%08x).\n", SBIOSCallTable, sbios);
+			printf("Using address 0x%08x as SBIOSCallTable (SBIOS is at 0x%08x).\n", (uint32_t) SBIOSCallTable, (uint32_t) sbios);
 			disableSBIOSCalls(SBIOSCallTable);
 			graphic_setStatusMessage(NULL);
 		}
@@ -1240,11 +1283,13 @@ int loader(void *arg)
 		}
 	}
 	if (buffer == NULL) {
-		buffer = load_file(kernel_filename, NULL);
+		buffer = load_file(kernel_filename, NULL, NULL);
 	}
 	if (buffer != NULL) {
 		const char *initrd_filename;
 		uint32_t lowestAddress;
+		uint32_t highest;
+		uint32_t base;
 
 		lowestAddress = (uint32_t) _ftext;
 		if (lowestAddress > ((uint32_t) buffer)) {
@@ -1253,36 +1298,63 @@ int loader(void *arg)
 
 		/* Check for errors in ELF file. */
 		graphic_setStatusMessage("Checking Kernel...");
-		if (check_sections("kernel", buffer, 0x10000, lowestAddress) != 0) {
-			free(((unsigned int) sbios) & 0x0FFFFFFF);
+		if (check_sections("kernel", buffer, 0x10000, lowestAddress, &highest) != 0) {
+			free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
 			free(buffer);
 			return -2;
+		}
+		base = ((highest + 4096 - 1) & ~(4096 - 1)) - 8;
+		if (base > highest) {
+			initrd_header = (uint32_t *) base;
+		} else {
+			initrd_header = NULL;
 		}
 
 		/* Access data from kernel space, because TLB misses can't be handled here. */
 		buffer = (char *) (((unsigned int) buffer) | KSEG0_MASK);
 		graphic_setStatusMessage(NULL);
 		if (loadModules()) {
-			free(((unsigned int) sbios) & 0x0FFFFFFF);
-			free(((unsigned int) buffer) & 0x0FFFFFFF);
+			free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
+			free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
 			return -2;
 		}
 
 		initrd_filename = getInitRdFilename();
 		if (initrd_filename != NULL) {
-			bootinfo->initrd_start = ((unsigned int) load_file(initrd_filename, &bootinfo->initrd_size));
-			if (bootinfo->initrd_start != NULL) {
-				if (bootinfo->initrd_size != 0) {
-					bootinfo->initrd_start |= KSEG0_MASK;
+			if (initrd_header == NULL) {
+				/* We don't want to overwrite end of kernel. */
+				error_printf("Can't load initrd. End of kernel must not be within the last 8 bytes of a page. "
+					"You can remove or add any kernel module to fix this problem end.\n");
+				free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
+				free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
+				return -12;
+			}
+			initrd_size = ((uint32_t) lowestAddress) - ((uint32_t) &initrd_header[2]);
+			printf("%d bytes for initrd available.\n", initrd_size);
+			initrd_start = ((unsigned int) load_file(initrd_filename, &initrd_size, &initrd_header[2]));
+			if (initrd_start != 0) {
+				if (initrd_size != 0) {
+					if ((base + 8 + initrd_size) >= lowestAddress) {
+						error_printf("Initrd is to big to move behind kernel %d <= %d bytes.\n",
+							lowestAddress, (highest + 8 + initrd_size));
+						free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
+						free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
+						return -11;
+					}
+					/* Magic number is used ny kernel to detect initrd. */
+					initrd_header[0] = 0x494E5244;
+					initrd_header[1] = initrd_size;
+
+					initrd_start |= KSEG0_MASK;
 				} else {
 					error_printf("Loading of initrd failed (1).");
 					return -9;
 				}
 			} else {
-				error_printf("Loading of initrd failed (2).");
+				error_printf("Loading of initrd failed (out of memory).");
 				return -10;
 			}
-			printf("initrd_start 0x%08x 0x%08x\n", bootinfo->initrd_start, bootinfo->initrd_size);
+			printf("initrd_start 0x%08x 0x%08x\n", initrd_start, initrd_size);
 		}
 
 		printf("Try to reboot IOP.\n");
@@ -1302,7 +1374,7 @@ int loader(void *arg)
 		while (SifIopSync());
 
 		graphic_setStatusMessage("Initialize RPC");
-		printf("RPC");
+		//printf("RPC");
 		SifInitRpc(0);
 
 		graphic_setStatusMessage("Patching enable LMB");
@@ -1315,13 +1387,13 @@ int loader(void *arg)
 		addEEDebugHandler();
 
 		graphic_setStatusMessage("Starting modules");
-		printf("Starting modules\n");
+		//printf("Starting modules\n");
 
 		startModules();
 
 		graphic_setStatusMessage("Started all modules");
 
-		printf("Started modules\n");
+		//printf("Started modules\n");
 
 		printAllModules();
 		iopaddr = SifGetReg(0x80000000);
@@ -1519,7 +1591,7 @@ int loader(void *arg)
 		}
 	} else {
 		error_printf("Failed to load kernel.");
-		free(((unsigned int) sbios) & 0x0FFFFFFF);
+		free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
 		return -1;
 	}
 	iop_prints(U2K("End reached?\n"));

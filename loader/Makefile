@@ -14,39 +14,49 @@ ifneq ($(LIBTIFF),)
 EE_LIBS += -L$(LIBTIFF) -ltiff
 endif
 EE_LIBS += -lm -ldebug
-EE_CFLAGS = -g -I$(PS2DEV)/gsKit/include -I../include
-EE_CFLAGS += -Wall -W -Werror-implicit-function-declaration -Wimplicit-int
+EE_FLAGS = -g -I$(PS2DEV)/gsKit/include -I../include
+EE_FLAGS += -Wall -W
 ifeq ($(SHARED_MEM_DEBUG),yes)
-EE_CFLAGS += -DSHARED_MEM_DEBUG
+EE_FLAGS += -DSHARED_MEM_DEBUG
 EE_OBJS += iopmem.o
 endif
 ifeq ($(LOAD_PS2LINK),yes)
-EE_CFLAGS += -DPS2LINK
+EE_FLAGS += -DPS2LINK
+endif
+ifeq ($(LOAD_NAPLINK),yes)
+EE_FLAGS += -DNAPLINK
+ROM_FILES += $(NAPLINK_MODULES)
 endif
 ifeq ($(RESET_IOP),yes)
-EE_CFLAGS += -DRESET_IOP
+EE_FLAGS += -DRESET_IOP
 endif
 ifeq ($(SCREENSHOT),yes)
-EE_CFLAGS += -DSCREENSHOT
+EE_FLAGS += -DSCREENSHOT
 endif
 ifeq ($(NEW_ROM_MODULES),yes)
-EE_CFLAGS += -DNEW_ROM_MODULES
+EE_FLAGS += -DNEW_ROM_MODULES
 EE_LIBS += -lpadx
 else
-EE_CFLAGS += -DOLD_ROM_MODULES
+EE_FLAGS += -DOLD_ROM_MODULES
 EE_LIBS += -lpad
 endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
 
 # Autodetect if RTE is available.
-EE_CFLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
+EE_FLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
 
-EE_CXXFLAGS = $(EE_CFLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
+EE_CFLAGS += $(EE_FLAGS) -Wimplicit-int -Werror-implicit-function-declaration
+
+EE_CXXFLAGS = $(EE_FLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
 
 MODULES = ioptrap.irx iomanX.irx ps2dev9.irx ps2ip.irx ps2smap.irx poweroff.irx \
 	ps2link.irx usbd.irx usb_mass.irx fileXio.irx ps2kbd.irx
 
-ROM_FILES = \
+NAPLINK_MODULES += \
+	npm-usbd.irx \
+	npm-2301.irx
+
+ROM_FILES += \
 	ps2dev9.irx \
 	eedebug.irx \
 	fileXio.irx \
@@ -103,6 +113,9 @@ $(PACKEDFILE): $(EE_BIN)
 
 $(MODULES):
 	for file in $(MODULES); do cp $(PS2SDK)/iop/irx/$$file .; done
+
+$(NAPLINK_MODULES):
+	for file in $(NAPLINK_MODULES); do cp $(NAPLINK_PATH)/$$file .; done
 
 rom.o: rom.c romfilelist.h romdefinitions.h rominitialize.h
 

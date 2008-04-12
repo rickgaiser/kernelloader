@@ -14,11 +14,11 @@ void iop_printx(uint32_t val);
 int puts(const char *s);
 #else
 /** Do nothing .*/
-#define iop_prints(text)
+#define iop_prints(text) do {} while(0)
 /** Do nothing .*/
-#define iop_printx(val)
+#define iop_printx(val) do {} while(0)
 /** Do nothing .*/
-#define puts(text)
+#define puts(text) do {} while(0)
 #endif
 
 #endif /* _IOPMEMDEBUG_H_ */

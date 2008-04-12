@@ -335,8 +335,34 @@
 .code sbr_ioph_free
 80004448
 .code sbr_pad_init
+80007fd0
+.word padInitialiseCounter
 80004610
 .code sbr_pad_end
+800043b0
+.code sbr_pad_init_stage2
+8000b040
+.word padsif[0].hdr.pkt_addr
+.word padsif[0].hdr.rpc_id
+.word padsif[0].hdr.sema_id
+.word padsif[0].hdr.mode
+.word padsif[0].command
+.word padsif[0].buff
+.word padsif[0].cbuff
+.word padsif[0].end_function
+.word padsif[0].end_param
+.word padsif[0].server
+8000b068
+.word padsif[1].hdr.pkt_addr
+.word padsif[1].hdr.rpc_id
+.word padsif[1].hdr.sema_id
+.word padsif[1].hdr.mode
+.word padsif[1].command
+.word padsif[1].buff
+.word padsif[1].cbuff
+.word padsif[1].end_function
+.word padsif[1].end_param
+.word padsif[1].server
 80004730
 .code sbr_pad_portopen
 80004848

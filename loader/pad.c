@@ -59,6 +59,7 @@ void deinitializeController(void)
 		}
 	}
 	padEnd();
+	padReset();
 }
 
 /*

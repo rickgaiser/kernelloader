@@ -1,4 +1,4 @@
-PR#1 - Solved.
+PR#1 - Solved by workaround.
 Fix initialisation of ATA/Network/PCI in loader. Currently PS2SDK code is
 copied. Network frames can be send, but  not received. Hard disc is not working.
 -
@@ -7,6 +7,8 @@ Update: Hard disc is now working slowly without interrupts.
 Update: Network is now working.
 -
 Update: Hard disc is now working fast with interrupts.
+-
+Update: IRX modules need to be loaded when hard disc shoul work.
 
 PR#2
 Function sbcall_cdvdtrayrequestStage2() is sometimes not called after RPC Call.
@@ -26,18 +28,20 @@ Memory card is not working when new modules are loaded from ROM.
 PR#5
 CDVD driver version is not detected by TGE SBIOS.
 -
-You need to choose SBOS version in kernelloader menu.
+You need to choose SBIOS version in kernelloader menu.
 
 PR#6
 PAD driver version is not detected by TGE SBIOS.
 -
-You need to choose SBOS version in kernelloader menu.
+You need to choose SBIOS version in kernelloader menu.
 
-PR#7
+PR#7 - Solved
 Initrd must be loaded to low memory address.
 -
 Update: This is automatically done. But if loading fails and you try it again, it
 is possible that initrd is loaded to higher address (see PR#10).
+-
+Initrd is now loaded and copied later to lower memory address behind kernel.
 
 PR#8 - Solved
 Network can only send, but not receive.
@@ -53,15 +57,26 @@ Update: Hard disc is too slow, interrupts are not working.
 -
 Update: Hard disc is now working without DMA. But it seems that Sony never
 delivered any responsible IOP module.
+-
+Update: Some IRX modules (ps2link)  need to be loaded once before.
 
-PR#10
+PR#10 - Solved
 When loading of Linux failed, because file names where wrong and this is fixed
 after. Then it is possible that the initrd is loaded at a higher address, which
 leads to segmentation faults when starting system later.
+-
+Fixed in linux initrd patch.
 
 PR#11
 New ROM modules and TGE version with support for it leads to linux panic:
 Scheduling in interrupt.
+-
+Currently it leads to strange exceptions at startup
+-
+Module padman is responsible for this. You need to disable padman or need to use
+padman.irx from RTE.
+-
+IOP heap bug fixed solved some problems, but it is not yet working.
 
 PR#12
 It is possible that USB is not working with V14/V15 slim PS2 console. This was
@@ -71,3 +86,12 @@ PR#13
 Game controller (pad) is not working in linux.
 -
 You need to disable IOP debug output and eedebug.irx in kernelloader menu.
+
+PR#14 - Solved
+Kernel crashs after shutdown. This is uncritical, because it happens after
+unmounting all partitions. This should be fixed when CDVD is working.
+-
+Update: Power off is now working.
+
+PR#15
+When you insert a USB device while booting before Linux kernel starts, the system crashs.

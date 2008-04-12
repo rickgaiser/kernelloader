@@ -8,7 +8,7 @@
 int rpc_printf(const char *format, ...);
 #else
 /** Do nothing. */
-#define rpc_printf(args...)
+#define rpc_printf(args...) do {} while(0)
 #endif
 #ifdef SHARED_MEM_DEBUG
 int printf(const char *format, ...);
@@ -17,7 +17,8 @@ int printf(const char *format, ...);
 #define printf rpc_printf
 #else
 /** Do nothing. */
-#define printf(args...)
+/** Don't print something. */
+#define printf(args...) do {} while(0)
 #endif
 #endif
 int snprintf(char *str, int len, const char *fmt, ...);

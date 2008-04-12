@@ -40,14 +40,14 @@ typedef struct
 
 
 static moduleLoaderEntry_t moduleList[] = {
-#ifndef PS2LINK
+#if defined(IOP_RESET) && !defined(PS2LINK)
 	{
 		.path = "eedebug.irx",
 		.argLen = 0,
 		.args = NULL
 	},
 #endif
-#ifdef RESET_IOP
+#if defined(RESET_IOP)
 	{
 		.path = "rom0:" MODPREFIX "SIO2MAN",
 		.argLen = 0,
@@ -70,7 +70,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL,
 		.loadCfg = -1 /* MC modules are loaded before this entry. */
 	},
-#ifdef RESET_IOP
+#if defined(RESET_IOP)
 	{
 		.path = "rom0:" MODPREFIX "CDVDMAN",
 		.argLen = 0,
@@ -86,7 +86,6 @@ static moduleLoaderEntry_t moduleList[] = {
 		.argLen = 0,
 		.args = NULL
 	},
-#ifdef PS2LINK
 	{
 		.path = "poweroff.irx",
 		.argLen = 0,
@@ -110,6 +109,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		//.args = "192.168.0.10\000255.255.255.0\000192.168.0.1",
 		.ps2smap = 1
 	},
+#ifdef PS2LINK
 	{
 		.path = "ps2link.irx",
 		.argLen = 0,
@@ -117,11 +117,24 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 #endif
 #endif
+#ifdef NAPLINK
+	{
+		.path = "npm-usbd.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+	{
+		.path = "npm-2301.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+#else
 	{
 		.path = "usbd.irx",
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
 	{
 		.path = "usb_mass.irx",
 		.argLen = 0,
@@ -202,9 +215,12 @@ int loadLoaderModules(void)
 			rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
 		}
 		if (rv < 0) {
+			printf("Failed to load module \"%s\".", moduleList[i].path);
 			error_printf("Failed to load module \"%s\".", moduleList[i].path);
 		}
 	}
 	graphic_setStatusMessage(NULL);
 	printAllModules();
+
+	return 0;
 }

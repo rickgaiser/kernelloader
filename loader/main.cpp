@@ -29,6 +29,9 @@ int main(int argc, char **argv)
 	const char *errorMessage = NULL;
 	int i;
 
+	argc = argc;
+	argv = argv;
+
 	if (*((char *) 0x1FC80000 - 0xAE) != 'E') {
 		mode = MODE_NTSC;
 	} else {
@@ -40,6 +43,7 @@ int main(int argc, char **argv)
 
 	/* Setup graphic screen. */
 	menu = graphic_main(mode);
+
 	lastValidMenu = menu;
 
 	/* Disable menu until start up. */
@@ -121,7 +125,7 @@ int main(int argc, char **argv)
 			if (new_pad & PAD_CROSS) {
 				goToNextErrorMessage();
 				errorMessage = getErrorMessage();
-				if (errorMessage != NULL) {
+				if (errorMessage == NULL) {
 					graphic_setPercentage(0, NULL);
 					graphic_setStatusMessage(NULL);
 				}
@@ -211,7 +215,7 @@ extern "C" {
 		bool usePad;
 
 		usePad = false;	
-		if (smod_get_mod_by_name("padman", &module) != NULL) {
+		if (smod_get_mod_by_name("padman", &module) != 0) {
 #ifdef OLD_ROM_MODULES
 			/* Only old ROM version of padman is working. */
 			if ((module.version >> 8) <= 1) {

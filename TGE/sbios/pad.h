@@ -238,7 +238,7 @@ int padExitPressMode(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, i
  * Dunno if these need to be exported
  */
 int padGetButtonMask(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *result);
-int padSetButtonInfo(int port, int slot, int buttonInfo, SifRpcEndFunc_t endfunc, void *efarg, int *result);
+int padSetButtonInfo(tge_sbcall_rpc_arg_t *carg, int buttonInfo);
 
 /*
  * Get actuator status for this controller

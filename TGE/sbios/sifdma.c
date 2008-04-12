@@ -283,9 +283,9 @@ static void sif_dma_setup_tag(u32 freetags)
  * @param tcount Number of transfers to do.
  * @return ID, describing the DMA transfers.
  */
-u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
+u32 SifSetDma(tge_sifdma_transfer_t *transfer, s32 tcount)
 {
-	SifDmaTransfer_t *t;
+	tge_sifdma_transfer_t *t;
 	u32 status, freetags, i, ntags, start, count;
 	int id = 0;
 
@@ -339,7 +339,7 @@ u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
 	return id;
 }
 
-u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len)
+u32 iSifSetDma(tge_sifdma_transfer_t *sdd, s32 len)
 {
 	return SifSetDma(sdd, len);
 }
@@ -367,7 +367,7 @@ int sif_dma_stat(int id)
 	else
 		dma_count = sif1_dma_count;
 
-	if ((dma_count == (id >> 16)) || dma_count == count) {
+	if ((dma_count == (((u32) id) >> 16)) || dma_count == count) {
 		if (index >= starttag && index <= lasttag)
 			return 0;
 	}

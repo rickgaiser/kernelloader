@@ -47,6 +47,19 @@ int intr_dev9_handler(void *unused)
 	return 1;
 }
 
+#ifdef DEV9_SUPPORT
+int intr_dev9_handler_dev9(int flag)
+{
+	_sw(TGE_SBUS_IRQ_DEV9, SIF_SMFLAG);
+
+	_sw(_lw(0xbf801450) | 2, 0xbf801450);
+	_sw(_lw(0xbf801450) & 0xfffffffd, 0xbf801450);
+	_lw(0xbf801450);
+	
+	return 1;
+}
+#endif
+
 int intr_ilink_handler(void *unused)
 {
 	_sw(TGE_SBUS_IRQ_ILINK, SIF_SMFLAG);
@@ -76,8 +89,8 @@ int _start(int argc, char *argv[])
 
 #ifdef DEV9_SUPPORT
 		/* ps2dev9 seems to be running use other way to get interrupts. */
-		dev9RegisterIntrCb(1, intr_dev9_handler);
-		dev9RegisterIntrCb(0, intr_dev9_handler);
+		dev9RegisterIntrCb(1, intr_dev9_handler_dev9);
+		dev9RegisterIntrCb(0, intr_dev9_handler_dev9);
 
 		dev9IntrEnable(SPD_INTR_ATA0);
 		dev9IntrEnable(SPD_INTR_ATA1);

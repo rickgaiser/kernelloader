@@ -30,30 +30,63 @@
 
 #include "iopheap.h"
 #include "stdio.h"
+#include "mutex.h"
 
 #define IH_C_BOUND	0x0001
 
+typedef union {
+	uint32_t size;
+	uint32_t iopaddr;
+} iopheap_pkt_t;
+
 extern SifRpcClientData_t _ih_cd;
-extern int _ih_caps;
 
 SifRpcClientData_t _ih_cd;
 int _ih_caps = 0;
+static sbios_mutex_t iopHeapMutex = SBIOS_MUTEX_INIT;
 
-int SifInitIopHeap(SifRpcEndFunc_t endfunc, void *efarg)
+/** Receive buffer requires only 48, use 64 because of cache aliasing problems.*/
+static u8 iopheap_buffer[64] __attribute__ ((aligned(64)));
+iopheap_pkt_t *iopheap_pkt = NULL;
+
+void iopHeapInitCallback(void *rarg)
+{
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+
+	if (_ih_cd.server != 0) {
+		carg->result = 0;
+		iopheap_pkt = (iopheap_pkt_t *) iopheap_buffer;
+		_ih_caps |= IH_C_BOUND;
+	} else {
+		carg->result = -1;
+	}
+	sbios_unlock(&iopHeapMutex);
+	carg->endfunc(carg->efarg, carg->result);
+}
+
+int sbcall_iopheapinit(tge_sbcall_rpc_arg_t *carg)
 {
 	int res;
 
-	if (_ih_caps)
+	if (_ih_caps) {
+		carg->result = 0;
+		carg->endfunc(carg->efarg, carg->result);
 		return 0;
-
-	SifInitRpc(0);
-
-	res = SifBindRpc(&_ih_cd, 0x80000003, SIF_RPC_M_NOWAIT, endfunc, efarg);
-	if (res != 0) {
-		return -E_SIF_RPC_BIND;
 	}
 
-	_ih_caps |= IH_C_BOUND;
+	SifInitRpc();
+
+	if (sbios_tryLock(&iopHeapMutex)) {
+		printf("sbcall_iopheapinit: Semaphore lock failed.\n");
+		/* Temporary not available. */
+		return -2;
+	}
+
+	res = SifBindRpc(&_ih_cd, 0x80000003, SIF_RPC_M_NOWAIT, iopHeapInitCallback, carg);
+	if (res != 0) {
+		sbios_unlock(&iopHeapMutex);
+		return -E_SIF_RPC_BIND;
+	}
 
 	return 0;
 }
@@ -66,24 +99,64 @@ void SifExitIopHeap()
 }
 #endif
 
-int SifAllocIopHeap(int size, SifRpcEndFunc_t endfunc, void *efarg, u32 *result)
+void iopHeapCallback(void *rarg)
 {
-	/* result must not be align until smaller than 8 quadwords. */
-	*result = size;
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	carg->result = iopheap_pkt->iopaddr;
+	sbios_unlock(&iopHeapMutex);
+	carg->endfunc(carg->efarg, carg->result);
+}
 
-	if (SifCallRpc(&_ih_cd, 1, SIF_RPC_M_NOWAIT, result, 4, result, 4, endfunc, efarg) < 0)
+int sbcall_iopaheapalloc(tge_sbcall_rpc_arg_t *carg)
+{
+	tge_sbcall_iopheapalloc_arg_t *arg = carg->sbarg;
+
+	if (!(_ih_caps & IH_C_BOUND)) {
+		printf("sbcall_iopaheapalloc: not initialized.\n");
+		/* not intialized. */
 		return -1;
+	}
+
+	if (sbios_tryLock(&iopHeapMutex)) {
+		printf("sbcall_iopaheapalloc: lock failed\n");
+		/* Temporary not available. */
+		return -2;
+	}
+
+	/* result must not be align until smaller than 8 quadwords. */
+	iopheap_pkt->size = arg->size;
+
+	if (SifCallRpc(&_ih_cd, 1, SIF_RPC_M_NOWAIT, iopheap_pkt, 4, iopheap_pkt, 4, iopHeapCallback, carg) < 0) {
+		sbios_unlock(&iopHeapMutex);
+		return -1;
+	}
 
 	return 0;
 }
 
-int SifFreeIopHeap(void *addr, SifRpcEndFunc_t endfunc, void *efarg, int *result)
+int sbcall_iopheapfree(tge_sbcall_rpc_arg_t *carg)
 {
-	/* result must not be align until smaller than 8 quadwords. */
-	*result = addr;
+	tge_sbcall_iopheapfree_arg_t *arg = carg->sbarg;
 
-	if (SifCallRpc(&_ih_cd, 2, SIF_RPC_M_NOWAIT, result, 4, result, 4, endfunc, efarg) < 0)
+	if (!(_ih_caps & IH_C_BOUND)) {
+		printf("sbcall_iopaheapalloc: not initialized.\n");
+		/* not intialized. */
+		return -1;
+	}
+
+	if (sbios_tryLock(&iopHeapMutex)) {
+		printf("sbcall_iopheapfree: lock failed\n");
+		/* Temporary not available. */
+		return -2;
+	}
+
+	/* result must not be align until smaller than 8 quadwords. */
+	iopheap_pkt->iopaddr = (int) arg->iopaddr;
+
+	if (SifCallRpc(&_ih_cd, 2, SIF_RPC_M_NOWAIT, iopheap_pkt, 4, iopheap_pkt, 4, iopHeapCallback, carg) < 0) {
+		sbios_unlock(&iopHeapMutex);
 		return -E_SIF_RPC_CALL;
+	}
 	return 0;
 }
 
@@ -116,21 +189,3 @@ int SifLoadIopHeap(const char *path, void *addr, SifRpcEndFunc_t endfunc, void *
 #endif
 
 
-int sbcall_iopheapinit(tge_sbcall_rpc_arg_t *carg)
-{
-	/* XXX: Assumption that no error will happen, set result to 0. */
-	carg->result = 0;
-	return SifInitIopHeap(carg->endfunc, carg->efarg);
-}
-
-int sbcall_iopaheapalloc(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_iopheapalloc_arg_t *arg = carg->sbarg;
-	return SifAllocIopHeap(arg->size, carg->endfunc, carg->efarg, &carg->result);
-}
-
-int sbcall_iopheapfree(tge_sbcall_rpc_arg_t *carg)
-{
-	tge_sbcall_iopheapfree_arg_t *arg = carg->sbarg;
-	return SifFreeIopHeap(arg->iopaddr, carg->endfunc, carg->efarg, &carg->result);
-}

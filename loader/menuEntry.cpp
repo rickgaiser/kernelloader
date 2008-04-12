@@ -81,4 +81,5 @@ int MenuEntry::execute(void)
 	} else {
 		error_printf("Missing function call for menu \"%s\".", name);
 	}
+	return 0;
 }

@@ -40,6 +40,7 @@
 #include "cdvd.h"
 #include "ncmd.h"
 #include "scmd.h"
+#include "mutex.h"
 
 #define CD_SERVER_NCMD			0x80000595	// non-blocking commands (Non-synchronous)
 
@@ -60,13 +61,14 @@
 #define CD_NCMD_READCHAIN		0x0F	// XCDVDFSV only
 #endif
 
-s32 cdCheckNCmd(s32 cmd);
+/** Trace macro for function call. */
+#define CD_CHECK_NCMD(cmd) cdCheckNCmd(cmd, __FILE__, __LINE__)
+
+s32 cdCheckNCmd(s32 cmd, const char *file, int line);
 
 s32 bindNCmd = -1;
 
 SifRpcClientData_t clientNCmd __attribute__ ((aligned(64)));	// for n-cmds
-
-s32 nCmdSemaId = -1;		// n-cmd semaphore id
 
 s32 nCmdNum = 0;
 
@@ -77,30 +79,15 @@ u32 getTocSendBuff[3] __attribute__ ((aligned(64)));	// get toc
 u32 _rd_intr_data[64] __attribute__ ((aligned(64)));
 u32 curReadPos __attribute__ ((aligned(64)));
 u8 tocBuff[3072] __attribute__ ((aligned(64)));	// toc buffer (for cdGetToc())
-u8 nCmdRecvBuff[48] __attribute__ ((aligned(64)));
-u8 nCmdSendBuff[48] __attribute__ ((aligned(64)));
+u8 nCmdRecvBuff[64] __attribute__ ((aligned(64)));
+u8 nCmdSendBuff[64] __attribute__ ((aligned(64)));
 s32 streamStatus = 0;
 CdvdReadMode_t dummyMode;
 u32 seekSector __attribute__ ((aligned(64)));
 u8 cdda_st_buf[64] ALIGNED(64);
 
-extern s32 bindNcmd;
-extern SifRpcClientData_t clientNCmd;
-extern s32 nCmdSemaId;
-extern s32 nCmdNum;
-extern u32 readStreamData[5];
-extern u32 readData[6];
-extern CdvdChain_t readChainData[66];
-extern u32 getTocSendBuff[3];
-extern u32 _rd_intr_data[64];
-extern u32 curReadPos;
-extern u8 tocBuff[3072];
-extern u8 nCmdRecvBuff[48];
-extern u8 nCmdSendBuff[48];
-extern s32 streamStatus;
-extern CdvdReadMode_t dummyMode;
-extern u32 seekSector;
-extern u8 cdda_st_buf[64];
+/** Mutex to protect RPC calls. */
+static sbios_mutex_t cdvdMutexN = SBIOS_MUTEX_INIT;
 
 s32 cdNCmdDiskReady(void);
 
@@ -116,16 +103,12 @@ struct _cdvd_read_data
 	u32		src2;
 };
 
-typedef struct {
-	tge_sbcall_rpc_arg_t *carg;
-	struct _cdvd_read_data *data;
-} cdvdReadCallbackData_t;
-
 // this gets called when the cdRead function finishes
 // to copy the data read in to unaligned buffers
-void cdAlignReadBuffer(cdvdReadCallbackData_t *arg)
+static void cdAlignReadBuffer(void *rarg)
 {
-	struct _cdvd_read_data *uncached = UNCACHED_SEG(arg->data);
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	struct _cdvd_read_data *uncached = UNCACHED_SEG(_rd_intr_data);
 	
 	if (uncached->size1 && uncached->dest1)	{
 		memcpy(uncached->dest1, &uncached->src1, uncached->size1);
@@ -134,8 +117,9 @@ void cdAlignReadBuffer(cdvdReadCallbackData_t *arg)
 	if (uncached->size2 && uncached->dest2)	{
 		memcpy(uncached->dest2, &uncached->src2, uncached->size2);
 	}
-	arg->carg->result = 0;
-	arg->carg->endfunc(arg->carg->efarg, arg->carg->result);
+	CDVD_UNLOCKN();
+	carg->result = 0;
+	carg->endfunc(carg->efarg, carg->result);
 }
 
 // read data from cd
@@ -149,7 +133,6 @@ void cdAlignReadBuffer(cdvdReadCallbackData_t *arg)
 //                      0 if error
 int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 {
-	static cdvdReadCallbackData_t data;
 	tge_sbcall_cdvdread_arg_t *arg = carg->sbarg;
 //	return cdRead(arg->lbn, arg->sectors, arg->buf, arg->readmode, carg->endfunc, carg->efarg, &carg->result);
 //s32 cdRead(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode)
@@ -159,7 +142,7 @@ int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return -1;
 #endif
-	if (cdCheckNCmd(CD_NCMD_READ) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_READ) == 0)
 		return -2;
 
 	readData[0] = arg->lbn;
@@ -183,19 +166,20 @@ int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 	SifWriteBackDCache(readData, 24);
 	SifWriteBackDCache(&curReadPos, 4);
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("call cdread cmd\n");
+	}
 
-	data.carg = carg;
-	data.data = _rd_intr_data;
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_READ, SIF_RPC_M_NOWAIT, readData, 24, 0, 0,
-				(void *) cdAlignReadBuffer, &data) < 0) {
+				(void *) cdAlignReadBuffer, carg) < 0) {
+		CDVD_UNLOCKN();
 		return -3;
 	}
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("cdread end\n");
+	}
 
 	return 0;
 }
@@ -205,7 +189,7 @@ int cdDvdRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_DVDREAD) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_DVDREAD) == 0)
 		return 0;
 
 	readData[0] = lbn;
@@ -226,6 +210,7 @@ int cdDvdRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -241,7 +226,7 @@ int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_CDDAREAD) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_CDDAREAD) == 0)
 		return 0;
 
 	readData[0] = lbn;
@@ -274,6 +259,7 @@ int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -282,8 +268,9 @@ int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 }
 #endif
 
-static void cdGetTocStage2(tge_sbcall_rpc_arg_t *carg)
+static void cdGetTocStage2(void *rarg)
 {
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	tge_sbcall_cdvdgettoc_arg_t *arg = carg->sbarg;
 	u32 len;
 
@@ -304,6 +291,7 @@ static void cdGetTocStage2(tge_sbcall_rpc_arg_t *carg)
 	if (len != 0) {
 		memcpy(arg->buf, tocBuff, len);
 	}
+	CDVD_UNLOCKN();
 	carg->endfunc(carg->efarg, carg->result);
 }
 
@@ -314,7 +302,7 @@ static void cdGetTocStage2(tge_sbcall_rpc_arg_t *carg)
 //                      0 otherwise
 int sbcall_cdvdgettoc(tge_sbcall_rpc_arg_t *carg)
 {
-	if (cdCheckNCmd(CD_NCMD_GETTOC) < 0) {
+	if (CD_CHECK_NCMD(CD_NCMD_GETTOC) == 0) {
 		return -1;
 	}
 	getTocSendBuff[0] = (u32) tocBuff;
@@ -322,6 +310,7 @@ int sbcall_cdvdgettoc(tge_sbcall_rpc_arg_t *carg)
 	SifWriteBackDCache(getTocSendBuff, 12);
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_GETTOC, SIF_RPC_M_NOWAIT, getTocSendBuff, 12, nCmdRecvBuff, 8, cdGetTocStage2, carg) < 0) {
+		CDVD_UNLOCKN();
 		return -2;
 	}
 	return 0;
@@ -338,7 +327,7 @@ s32 cdSeek(u32 sectorLoc)
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_SEEK) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_SEEK) == 0)
 		return 0;
 
 	seekSector = sectorLoc;
@@ -351,6 +340,7 @@ s32 cdSeek(u32 sectorLoc)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -369,7 +359,7 @@ s32 cdStandby(void)
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_STANDBY) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_STANDBY) == 0)
 		return 0;
 
 	cdCallbackNum = CD_NCMD_STANDBY;
@@ -378,6 +368,7 @@ s32 cdStandby(void)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -386,8 +377,10 @@ s32 cdStandby(void)
 }
 #endif
 
-void NCmdCallback(tge_sbcall_rpc_arg_t *carg)
+static void NCmdCallback(void *rarg)
 {
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	CDVD_UNLOCKN();
 	carg->result = 0;
 	carg->endfunc(carg->efarg, carg->result);
 }
@@ -402,11 +395,13 @@ int sbcall_cdvdstop(tge_sbcall_rpc_arg_t *carg)
 #if 0 /* not done by RTE. */
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_STOP) == 0)
-		return 0;
 #endif
+	if (CD_CHECK_NCMD(CD_NCMD_STOP) == 0) {
+		return -2;
+	}
 
-	if (SifCallRpc(&clientNCmd, CD_NCMD_STOP, SIF_RPC_M_NOWAIT, 0, 0, 0, 0, NCmdCallback, NCmdCallback) < 0) {
+	if (SifCallRpc(&clientNCmd, CD_NCMD_STOP, SIF_RPC_M_NOWAIT, 0, 0, 0, 0, NCmdCallback, carg) < 0) {
+		CDVD_UNLOCKN();
 		return -1;
 	}
 
@@ -423,7 +418,7 @@ s32 cdPause(void)
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_PAUSE) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_PAUSE) == 0)
 		return 0;
 
 	cdCallbackNum = CD_NCMD_PAUSE;
@@ -432,6 +427,7 @@ s32 cdPause(void)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -454,7 +450,7 @@ s32 cdApplyNCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_NCMD) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_NCMD) == 0)
 		return 0;
 
 	*(u16 *) & nCmdRecvBuff[0] = cmdNum;
@@ -466,6 +462,7 @@ s32 cdApplyNCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_NCMD, 0, nCmdRecvBuff, 20, nCmdRecvBuff, 16, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -491,7 +488,7 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 {
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_READIOPMEM) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_READIOPMEM) == 0)
 		return 0;
 
 	readData[0] = sectorLoc;
@@ -509,11 +506,13 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("cdread end\n");
+	}
 
 	SignalSema(nCmdSemaId);
 	return 1;
@@ -529,11 +528,12 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 #ifdef F_cdNCmdDiskReady
 s32 cdNCmdDiskReady(void)
 {
-	if (cdCheckNCmd(CD_NCMD_DISKREADY) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_DISKREADY) == 0)
 		return 0;
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_DISKREADY, 0, 0, 0, &nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
@@ -560,11 +560,12 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
-	if (cdCheckNCmd(CD_NCMD_READCHAIN) == 0)
+	if (CD_CHECK_NCMD(CD_NCMD_READCHAIN) == 0)
 		return 0;
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("call cdReadChain cmd 0\n");
+	}
 
 	for (chainNum = 0; chainNum < 64; chainNum++) {
 		if (readChain[chainNum].sectorLoc == 0xFFFFFFFF ||
@@ -591,26 +592,29 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 		sectorType = 2048;
 
 	curReadPos = 0;
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("call cdReadChain cmd 1\n");
+	}
 
 	for (i = 0; i < chainNum; i++) {
 		// if memory is on EE, make sure its not cached
 		if ((readChainData[i].buffer & 1) == 0) {
-			if (cdDebug > 0)
+			if (cdDebug > 0) {
 				printf("sceSifWriteBackDCache addr= 0x%08x size= %d, sector= %d\n",
 				       readChainData[i].buffer, readChainData[i].numSectors * sectorType,
 				       readChainData[i].sectorLoc);
 			SifWriteBackDCache((void *) (readChainData[i].buffer),
 					   readChainData[i].numSectors * sectorType);
+			}
 		}
 	}
 
 	SifWriteBackDCache(readChainData, 24);
 	SifWriteBackDCache(&curReadPos, 4);
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("call cdReadChain cmd 2\n");
+	}
 	cdCallbackNum = CD_NCMD_READCHAIN;
 	cbSema = 1;
 	if (SifCallRpc
@@ -619,11 +623,13 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 		cdCallbackNum = 0;
 		cbSema = 0;
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("cdread end\n");
+	]
 	SignalSema(nCmdSemaId);
 	return 1;
 }
@@ -671,10 +677,12 @@ s32 cdStRead(u32 sectorType, u32 * buffer, u32 mode, u32 * error)
 	s32 ret, i, err, sectorReadSize;
 
 	*error = 0;
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("sceCdStRead call read size=%d mode=%d\n", sectorType, mode);
-	if (streamStatus == 0)
+	}
+	if (streamStatus == 0) {
 		return 0;
+	}
 	SifWriteBackDCache(buffer, sectorType * 2048);
 
 	// read only data currently in stream buffer
@@ -692,17 +700,20 @@ s32 cdStRead(u32 sectorType, u32 * buffer, u32 mode, u32 * error)
 
 		if (err) {
 			*error = err;
-			if (cdDebug > 0)
+			if (cdDebug > 0) {
 				printf("sceCdStRead BLK Read cur_size= %d read_size= %d req_size= %d err 0x%x\n", i,
 				       sectorReadSize, sectorType, err);
+			}
 
-			if (sectorReadSize == 0)
+			if (sectorReadSize == 0) {
 				break;
+			}
 		}
 	}
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("sceCdStRead BLK Read Ended\n");
+	}
 	return i;
 }
 #endif
@@ -786,11 +797,12 @@ s32 cdStResume(void)
 #ifdef F_cdStream
 int cdStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode_t *rm)
 {
-	if (cdCheckNCmd(15) == 0)
+	if (CD_CHECK_NCMD(15) == 0)
 		return 0;
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("call cdreadstm call\n");
+	}
 
 	readStreamData[0] = lbn;
 	readStreamData[1] = nsectors;
@@ -799,17 +811,20 @@ int cdStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode_t *
 	if (rm) {
 		readStreamData[4] = (rm->retries) | (rm->readSpeed << 8) | (rm->sectorType << 16);
 	}
-	if (cdDebug > 0)
+	if (cdDebug > 0){
 		printf("call cdreadstm cmd\n");
+	}
 
 	SifWriteBackDCache(readStreamData, 20);
 	if (SifCallRpc(&clientNCmd, CD_NCMD_STREAM, 0, readStreamData, 20, nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return 0;
 	}
 
-	if (cdDebug > 0)
+	if (cdDebug > 0) {
 		printf("cdread end\n");
+	}
 	SignalSema(nCmdSemaId);
 	return *(int *)UNCACHED_SEG(nCmdRecvBuff);
 }
@@ -820,7 +835,7 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 {
 	u32 sector_size;
 
-	if (cdCheckNCmd(17) == 0)
+	if (CD_CHECK_NCMD(17) == 0)
 		return cmd < CDVD_ST_CMD_INIT ? -1 : 0;
 
 	if (rm->sectorType == CDVD_SECTOR_2368)
@@ -841,6 +856,7 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_CDDASTREAM, 0, readStreamData, 20, nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
+		CDVD_UNLOCKN();
 		return cmd < CDVD_ST_CMD_INIT ? -1 : 0;
 	}
 
@@ -849,78 +865,86 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 }
 #endif
 
-// waits/checks for completion of n-commands
-// 
-// args:        mode:   0 = wait for completion of command (blocking)
-//                      1 = check current status and return immediately
-// returns:     0 if completed
-//              1 if still executing command
-s32 cdSync(s32 mode)
+/**
+ * Checks for completion of n-commands and try to lock.
+ *
+ * @returns
+ * @retval 0 if completed and locked.
+ * @retval 1 if still executing command or locked by other.
+ */
+int cdvdLockN(const char *file, int line)
 {
-	// block till completed mode
-	if (mode == 0) {
-		if (cdDebug > 0)
-			printf("N cmd wait\n");
-
-		// wait till callback semaphore and client are ready
-		while (SifCheckStatRpc(&clientNCmd))
-			;
-		return 0;
+	file = file;
+	line = line;
+#if 0
+	printf("cdvdLockN\n");
+#endif
+	if (sbios_tryLock(&cdvdMutexN)) {
+		return 1;
 	}
 	// check status and return
 	if (SifCheckStatRpc(&clientNCmd)) {
-		printf("cdSync failed\n");
+		sbios_unlock(&cdvdMutexN);
 		return 1;
 	}
 
 	return 0;
 }
 
-// check whether ready to send an n-command
-// 
-// args:        current command
-// returns:     1 if read to send
-//                      0 if busy/error
-s32 cdCheckNCmd(s32 cmd)
+/**
+ * Unlock cdvd ncmd mutex.
+ * Only working if RPC calls has been finished.
+ */
+void cdvdUnlockN(const char *file, int line)
 {
-	s32 i;
-	//cdSemaInit();
-	//if (PollSema(nCmdSemaId) != nCmdSemaId) {
-	//	if (cdDebug > 0)
-	//		printf("Ncmd fail sema cmd:%d keep_cmd:%d\n", cmd, nCmdNum);
-	//	return 0;
-	//}
+	file = file;
+	line = line;
+#if 0
+	printf("cdvdUnlockN\n");
+#endif
+	sbios_unlock(&cdvdMutexN);
+}
 
-	nCmdNum = cmd;
-	//ReferThreadStatus(cdThreadId, &cdThreadParam);
-	if (cdSync(1)) {
-		//SignalSema(nCmdSemaId);
+/**
+ * Check whether ready to send an n-command and lock it.
+ *
+ * @param cmd current command
+ * @returns
+ * @retval 1 if ready to send, after use cdvdUnlockN is required.
+ * @retval 0 if busy/error
+ */
+s32 cdCheckNCmd(s32 cmd, const char *file, int line)
+{
+	if (cdvdLockN(file, line)) {
 		return 0;
 	}
 
-	if (bindNCmd >= 0)
+	nCmdNum = cmd;
+
+	if (bindNCmd >= 0) {
+		/* RPC is bound. */
 		return 1;
-	return 0;
+	} else {
+		/* Error, RPC not yet bound. */
+		cdvdUnlockN(file, line);
+		return 0;
+	}
 }
 
-static void cdNCmdInitStage2(tge_sbcall_rpc_arg_t *carg)
+int cdNCmdInitCallback(tge_sbcall_rpc_arg_t *carg)
 {
+	carg = carg;
+
 	if (clientNCmd.server != 0) {
 		bindNCmd = 0;
-		cdSCmdInit(carg);
+		return 0;
 	} else {
-		carg->result = -8;
-		carg->endfunc(carg->efarg, carg->result);
+		return -1;
 	}
 }
 
-void cdNCmdInit(tge_sbcall_rpc_arg_t *carg)
+int cdNCmdInit(tge_sbcall_rpc_arg_t *carg, SifRpcEndFunc_t endfunc)
 {
 	// bind rpc for n-commands
-	if (SifBindRpc(&clientNCmd, CD_SERVER_NCMD, SIF_RPC_M_NOWAIT, cdNCmdInitStage2, carg) < 0) {
-		if (cdDebug > 0)
-			printf("Libcdvd bind err N CMD\n");
-		carg->result = -7;
-		carg->endfunc(carg->efarg, carg->result);
-	}
+	return SifBindRpc(&clientNCmd, CD_SERVER_NCMD, SIF_RPC_M_NOWAIT, endfunc, carg);
 }

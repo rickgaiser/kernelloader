@@ -1,0 +1,11 @@
+How Linux and SBIOS interacts:
+##############################
+
+SBIOS RPC functions return 0 on success.
+Then the callback functions must be called.
+When callback function is called with result 0 then RPC function will be called again for some functions like pad init.
+This can be used to make more RPC calls if required.
+When callback function is called with result 1 then RPC function call is finished.
+
+SBIOS RPC functions return negative value on error.
+Callback function must not be called.

@@ -22,7 +22,7 @@ entry_t *copy_sections(char *buffer)
 	int i;
 	entry_t *entry = NULL;
 
-	printf("Using pointer 0x%x\n", buffer);
+	printf("Using pointer 0x%x\n", (uint32_t) buffer);
 
 	file_header = (Elf32_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf32_Ehdr_t);
@@ -131,7 +131,7 @@ int loader(void)
 	extern char demo[];
 
 	/* Install linux kernel. */
-	entry = copy_sections(&demo);
+	entry = copy_sections((char *) &demo);
 
 #if 0
 	/* Verify if everything is correct. */

@@ -106,6 +106,8 @@ $L16:
 $L31:
 	.set	noreorder
 	.set	nomacro
+	nop
+	nop
 	beql	$2,$0,$L16
 	sd	$3,0($7)
 	.set	macro
@@ -132,6 +134,9 @@ $L2:
 $L20:
 	sb	$5,0($3)
 	addu	$6,$6,-1
+	nop
+	nop
+	nop
 	.set	noreorder
 	.set	nomacro
 	bne	$6,$2,$L20

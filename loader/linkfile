@@ -14,9 +14,10 @@
 ENTRY(_start);
 
 SECTIONS {
-	.text 0x00300000: {
-		*(.rom)
+	/* Load into high 16 MB, lower 16MB reserved for extracting kernel and initrd. */
+	.text 0x1000000: {
 		_ftext = . ;
+		*(.rom)
 		*(.text)
 		*(.text.*)
 		*(.gnu.linkonce.t*)
