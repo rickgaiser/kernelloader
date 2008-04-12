@@ -18,7 +18,8 @@ IOP_CFLAGS  += -Wall -fno-builtin-printf -fno-builtin-memcpy
 IOP_LDFLAGS += -s
 
 install: all
-	cp $(IOP_BIN) ../../../loader/
+	mkdir -p ../../../loader/TGE
+	cp $(IOP_BIN) ../../../loader/TGE
 
 all: $(IOP_OBJS_DIR) $(IOP_BIN_DIR) $(IOP_BIN)
 

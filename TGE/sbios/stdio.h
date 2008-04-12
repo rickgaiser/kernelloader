@@ -4,11 +4,21 @@
 
 #include <stdarg.h>
 
+#ifdef FILEIO_DEBUG
+int rpc_printf(const char *format, ...);
+#else
+/** Do nothing. */
+#define rpc_printf(args...)
+#endif
 #ifdef SHARED_MEM_DEBUG
 int printf(const char *format, ...);
 #else
+#ifdef FILEIO_DEBUG
+#define printf rpc_printf
+#else
 /** Do nothing. */
 #define printf(args...)
+#endif
 #endif
 int snprintf(char *str, int len, const char *fmt, ...);
 int vsnprintf(char *b, int len, const char *fmt, va_list pvar);

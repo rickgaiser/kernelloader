@@ -24,6 +24,11 @@
 #include "smem.h"
 #include "smod.h"
 #include "usb.h"
+#include "ps2dev9.h"
+#include "iopprintdata.h"
+#include "debug.h"
+#include "pad.h"
+#include "rom.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -46,6 +51,14 @@
 	__asm__ __volatile__("sync.p"::);
 
 
+#if 0
+/** Debug print. */
+#define dprintf printf
+/** Debug print on IOP. */
+#define iop_dprintf iop_printf
+/** Debug print on IOP. */
+#define iop_dprints iop_prints
+#else
 /** Debug print. */
 #define dprintf(args...)
 /** Debug print on IOP. */
@@ -53,22 +66,14 @@
 /** Debug print on IOP. */
 #define iop_dprints(args...)
 
-/** Structure describing module that should be loaded. */
-typedef struct
-{
-	/** Path to module file. */
-	const char *path;
-	/** Buffer used for loading the module. */
-	unsigned char *buffer;
-	/** Module size. */
-	unsigned int size;
-	/** True, if module must be buffered and can't be loaded after IOP reset. */
-	int buffered;
-	/** Parameter length. */
-	unsigned int argLen;
-	/** Module parameters. */
-	const char *args;
-} moduleEntry_t;
+#endif
+
+/** Number of instructions checked to find SBIOS call table. */
+#define NUMBER_OF_INSTRUCTIONS_CHECKED 128
+/** Base address for SBIOS. */
+#define SBIOS_START_ADDRESS 0x80001000
+
+typedef short int16_t;
 
 /** Definition of kernel entry function. */
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
@@ -79,180 +84,300 @@ static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )
 const char commandline_pal[] = "crtmode=pal ramdisk_size=16384";
 /** Linux parameter for NTSC mode. */
 const char commandline_ntsc[] = "crtmode=ntsc ramdisk_size=16384";
-/* IP + Netmask + Gateway. */
-const char ifcfg[] = "192.168.0.23\000255.255.255.0\000192.168.0.1";
+
+#ifdef PS2LINK
+#define LOAD_ON_PS2LINK 1
+#define LOAD_ON_NOT_PS2LINK 0
+#else
+#define LOAD_ON_PS2LINK 0
+#define LOAD_ON_NOT_PS2LINK 1
+#endif
 
 /** Modules that should be loaded. */
 moduleEntry_t modules[] = {
-#if 0
-	/* RTE modules. */
 	{
-		.path = "host:sio2man.irx",
+		.path = "host:eedebug.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.ps2link = 1,
+		.debug = 1
 	},
+#ifdef RTE
 	{
-		.path = "host:mcman.irx",
+		.path = "host:RTE/sio2man.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 0,
+		.rte = 1
 	},
-	{
-		.path = "host:mcserv.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:padman.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:libsd.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:sdrdrv.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:iopintr.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:dmarelay.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
-	},
-#else
-	/* TGE modules. */
-#if 0
+#endif
 	{
 		.path = "rom0:XSIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
 	},
-	{
-		.path = "rom0:XMCMAN",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "rom0:XMCSERV",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "rom0:XPADMAN",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL
-	},
-#else
 	{
 		.path = "rom0:SIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/mcman.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
+	},
+#endif
+	{
+		.path = "rom0:XMCMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
 	},
 	{
 		.path = "rom0:MCMAN",
 		.buffered = 0,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/mcserv.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
+	},
+#endif
+	{
+		.path = "rom0:XMCSERV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
 	},
 	{
 		.path = "rom0:MCSERV",
 		.buffered = 0,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/padman.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.rte = 1
+	},
+#endif
+	{
+		.path = "rom0:XPADMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
 	},
 	{
 		.path = "rom0:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/libsd.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
+	},
+	{
+		.path = "host:RTE/sdrdrv.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
 	},
 #endif
 	{
 		.path = "host:ioptrap.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.debug = 1
 	},
 	{
 		.path = "host:iomanX.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 1,
+		.debug = 1
 	},
-#ifdef PS2LINK
 	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
 	},
 	{
 		.path = "host:ps2ip.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
 	},
 	{
 		.path = "host:ps2smap.irx",
 		.buffered = -1,
 		.argLen = sizeof(ifcfg),
-		.args = ifcfg
+		.args = ifcfg,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
 	},
 	{
 		.path = "host:poweroff.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
 	},
 	{
 		.path = "host:ps2link.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
 	},
-#endif
-#ifdef SHARED_MEM_DEBUG
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
-	},
+		.args = NULL,
+#ifdef SHARED_MEM_DEBUG
+		.load = 1,
+#else
+		.load = 0,
 #endif
-#ifdef TGE
+		.debug = 1
+	},
+#ifdef RTE
 	{
-		.path = "host:intrelay.irx",
+		.path = "host:RTE/iopintr.irx",
 		.buffered = -1,
 		.argLen = 0,
-		.args = NULL
-	},
-	{
-		.path = "host:dmarelay.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.load = 0,
+		.ps2link = 1,
+		.rte = 1
 	},
 #endif
+	{
+		.path = "host:TGE/intrelay.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.ps2link = 1,
+		.tge = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/dmarelay.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.ps2link = 1,
+		.rte = 1
+	},
+#endif
+	{
+		.path = "host:TGE/dmarelay.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.ps2link = 1,
+		.tge = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/cdvdman.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
+	},
+#endif
+	{
+		.path = "rom0:XCDVDMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
+	},
+	{
+		.path = "rom0:CDVDMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
+#ifdef RTE
+	{
+		.path = "host:RTE/cdvdfsv.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.rte = 1
+	},
 #endif
 };
 
@@ -396,9 +521,10 @@ char *load_file(const char *filename, int *size)
 	if (size == NULL)
 		size = &s;
 
+	graphic_setPercentage(0, filename);
 	fin = fopen(filename, "rb");
 	if (fin == NULL) {
-		printf("Error cannot open elf file \"%s\".\n", filename);
+		printf("Error cannot open file \"%s\".\n", filename);
 		return NULL;
 	}
 
@@ -424,7 +550,6 @@ char *load_file(const char *filename, int *size)
 	int n;
 	int next = 10000;
 	printf("%s size %d\n", filename, *size);
-	graphic_setPercentage(0, filename);
 	while ((n = fread(&buffer[pos], 1, next, fin)) > 0) {
 		pos += n;
 		s -= n;
@@ -442,26 +567,61 @@ char *load_file(const char *filename, int *size)
 	return buffer;
 }
 
+int getNumberOfModules(void)
+{
+	return sizeof(modules) / sizeof(moduleEntry_t);
+}
+
+moduleEntry_t *getModuleEntry(int idx)
+{
+	return &modules[idx];
+}
+
+
 /** Load all IOP modules (from host). */
-void loadModules(void)
+int loadModules(void)
 {
 	int i;
+	int j;
 
-	for (i = 0; i < sizeof(modules) / sizeof(moduleEntry_t); i++)
+	for (i = 0; i < getNumberOfModules(); i++)
 	{
-		if (modules[i].buffered) {
+		if ((modules[i].buffered) && (modules[i].load)) {
+			rom_entry_t *romfile = NULL;
+
 			dprintf("Loading module %s.\n", modules[i].path);
-			modules[i].buffer = load_file(modules[i].path, &modules[i].size);
-			if (modules[i].buffer == NULL) {
-				printf("Failed to load module '%s'.\n", modules[i].path);
-				SleepThread();
-				panic();
+			if (strncmp(modules[i].path, "host:", 5) == 0) {
+				printf("Try to load %s\n", &modules[i].path[5]);
+				romfile = rom_getFile(&modules[i].path[5]);
+			}
+			if (romfile == NULL) {
+				modules[i].buffer = load_file(modules[i].path, &modules[i].size);
+				modules[i].allocated = 1;
+				if (modules[i].buffer == NULL) {
+					error_printf("Failed to load module '%s'.\n", modules[i].path);
+
+					/* Free memory. */
+					for (j = 0; j < i; j++) {
+						if ((modules[j].buffered) && (modules[j].load)) {
+							if (modules[j].allocated) {
+								free(modules[i].buffer);
+								modules[j].allocated = 0;
+							}
+						}
+					}
+					return -1;
+				}
+			} else {
+				modules[i].allocated = 0;
+				modules[i].buffer = romfile->start;
+				modules[i].size = romfile->size;
 			}
 		} else {
 			dprintf("Not loading module %s.\n", modules[i].path);
 			modules[i].buffer = NULL;
 		}
 	}
+	return 0;
 }
 
 /** Start all IOP modules. */
@@ -470,12 +630,14 @@ void startModules(void)
 	int i;
 	int rv;
 
-	for (i = 0; i < sizeof(modules) / sizeof(moduleEntry_t); i++)
+	for (i = 0; i < getNumberOfModules(); i++)
 	{
-		if (modules[i].buffered) {
-			SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
-		} else {
-			SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
+		if (modules[i].load) {
+			if (modules[i].buffered) {
+				SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
+			} else {
+				SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
+			}
 		}
 	}
 }
@@ -673,16 +835,180 @@ void printAllModules(void)
 	}
 }
 
+#ifndef PS2LINK
+#define QUEUE_DEPTH 256
+iop_text_data_t textQueue[QUEUE_DEPTH];
+int queueReadPos = 0;
+int queueWritePos = 0;
+
+static void print_iop_data(iop_text_data_t *data, void *arg)
+{
+	if (((queueWritePos + 1) % QUEUE_DEPTH)!= queueReadPos) {
+		memcpy(&textQueue[queueWritePos], data, sizeof(iop_text_data_t));
+		queueWritePos = (queueWritePos + 1) % QUEUE_DEPTH;
+	}
+}
+#endif
+
+char magic_string[] = "PS2b";
+uint32_t *magic_check = (uint32_t *) magic_string;
+
+uint32_t *getSBIOSCallTable(char *addr)
+{
+	void *code;
+	uint32_t *entrypoint;
+	uint32_t *magic;
+	uint32_t regs[32];
+	uint32_t load[32];
+	uint32_t jumpBase;
+
+	memset(regs, 0, sizeof(regs));
+	memset(load, 0, sizeof(load));
+	jumpBase = 0;
+
+	entrypoint = (uint32_t *) addr;
+	magic = (uint32_t *) (addr + 4);
+
+	printf("Entrypoint 0x%08x magic 0x%08x\n", *entrypoint, *magic);
+
+	if (*magic != *magic_check) {
+		error_printf("SBIOS file is incorrect (magic is wrong).\n");
+		return NULL;
+	}
+
+	entrypoint = (uint32_t *) ((((uint32_t) *entrypoint) - SBIOS_START_ADDRESS) + ((uint32_t) addr));
+
+	for (code = entrypoint; code < (void *)(entrypoint + NUMBER_OF_INSTRUCTIONS_CHECKED); code += 4) {
+		uint32_t value;
+
+		value = *((uint32_t *)code);
+		//printf("Check code at 0x%08x 0x%08x op %d\n", code, value, value >> 26);
+		if ((value >> 26) == 9) {
+			/* addiu instruction. */
+			int rs;
+			int rt;
+			int immidiate;
+
+			rs = (value >> 21) & 0x1f;
+			rt = (value >> 16) & 0x1f;
+			immidiate = ((int16_t) ((uint16_t) (value & 0xFFFF)));
+
+			regs[rt] = regs[rs] + immidiate;
+			dprintf("addiu r%d, r%d, 0x%04x\n", rt, rs, immidiate);
+		}
+		if ((value >> 26) == 15) {
+			int rs;
+			int rt;
+			int immidiate;
+
+			/* lui instruction */
+			rs = (value >> 21) & 0x1f;
+			rt = (value >> 16) & 0x1f;
+			immidiate = ((int16_t) ((uint16_t) (value & 0xFFFF)));
+
+			if (rs == 0) {
+				regs[rt] = immidiate << 16;
+				dprintf("lui r%d, 0x%08x\n", rt, regs[rt]);
+			}
+		}
+		if ((value >> 26) == 0) {
+			/* Special */
+			if ((value & 0x3f) == 35) {
+				/* subu instruction */
+				int rs;
+				int rt;
+				int rd;
+
+				rs = (value >> 21) & 0x1f;
+				rt = (value >> 16) & 0x1f;
+				rd = (value >> 11) & 0x1f;
+
+				dprintf("0x%08x = 0x%08x - 0x%08x\n", regs[rs] - regs[rt], regs[rs], regs[rt]);
+				dprintf("subu r%d, r%d, r%d\n", rd, rs, rt);
+				regs[rd] = regs[rs] - regs[rt];
+			}
+			if ((value & 0x3f) == 33) {
+				/* subu instruction */
+				int rs;
+				int rt;
+				int rd;
+
+				rs = (value >> 21) & 0x1f;
+				rt = (value >> 16) & 0x1f;
+				rd = (value >> 11) & 0x1f;
+
+				dprintf("addu r%d, r%d, r%d\n", rd, rs, rt);
+				regs[rd] = regs[rs] + regs[rt];
+			}
+			if ((value & 0x3f) == 9) {
+				/* jalr instruction */
+				int rs;
+				int rt;
+				int rd;
+
+				rs = (value >> 21) & 0x1f;
+				rt = (value >> 16) & 0x1f;
+				rd = (value >> 11) & 0x1f;
+
+				if (rt == 0) {
+					dprintf("jalr r%d, r%d\n", rd, rs);
+					if (load[rs] != 0) {
+						jumpBase = load[rs];
+					}
+					break;
+				}
+			}
+		}
+		if ((value >> 26) == 35) {
+			int rt;
+			int rs;
+			int immidiate;
+
+			rt = (value >> 16) & 0x1f;
+			rs = (value >> 21) & 0x1f;
+			immidiate = ((int16_t) ((uint16_t) (value & 0xFFFF)));
+
+			dprintf("lw r%d, 0x%02x(r%d)\n", rt, immidiate, rs);
+			load[rt] = regs[rs] + immidiate;
+			dprintf("Load addr 0x%08x\n", load[rt]);
+		}
+		if ((value >> 26) == 3) {
+			uint32_t target;
+			uint32_t pc;
+
+			target = (value & 0x03FFFFFF) << 2;
+			pc = ((uint32_t) code) - ((uint32_t) addr) + SBIOS_START_ADDRESS;
+			target |= pc & 0xF0000000;
+			/* jal instruction. */
+			dprintf("jal 0x%x\n", target);
+#if 0
+			if (regs[5] == search) {
+				/* memcopy gets SBIOS in register a1 and size in register a2. */
+				sbiosSize = regs[6];
+				printf("SBIOS size is 0x%08x.\n", sbiosSize);
+				break;
+			}
+#endif
+		}
+	}
+	printf("SBIOS Call table offset is at 0x%08x.\n", jumpBase);
+	if (jumpBase != 0) {
+		jumpBase = jumpBase - SBIOS_START_ADDRESS + ((uint32_t) addr);
+	} else {
+		error_printf("SBIOS call table not found.");
+	}
+	return jumpBase;
+}
 /**
  * Load kernel, initrd and required modules. Then start kernel.
  * @param mode Graphic mode that should be used.
  */
-int loader(graphic_mode_t mode)
+int loader(void *arg)
 {
 	entry_t *entry;
 	int ret;
-	char *buffer;
-	char *sbios;
+	char *buffer = NULL;
+	char *sbios = NULL;
 	struct ps2_bootinfo *bootinfo = (struct ps2_bootinfo *) PS2_BOOTINFO_OLDADDR;
 	register int sp asm("sp");
 	const char *commandline;
@@ -690,6 +1016,10 @@ int loader(graphic_mode_t mode)
 	uint32_t iopaddr;
 	uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
 	uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
+	graphic_mode_t mode = (int) arg;
+	int sbios_size = 0;
+	const char *sbios_filename = NULL;
+	const char *kernel_filename = NULL;
 
 	/* Set commandline for correct video mode. */
 	if(mode == MODE_NTSC) {
@@ -717,35 +1047,92 @@ int loader(graphic_mode_t mode)
 	printf("Stack 0x%08x\n", sp);
 	if ((u32) sp < (u32) &_end) {
 		/* This will lead to problems. */
-		printf("Stack is unusable!\n");
-		panic();
+		error_printf("Stack is unusable!");
+		return -1;
 	}
-	sbios = load_file("host:sbios.elf", NULL);
+	sbios_filename = getSBIOSFilename();
+	if (strncmp(sbios_filename, "host:", 5) == 0) {
+		rom_entry_t *romfile;
+
+		romfile = rom_getFile(&sbios_filename[5]);
+		if (romfile != NULL) {
+			sbios = romfile->start;
+			sbios_size = romfile->size;
+		}
+	}
 	if (sbios == NULL) {
-		printf("Failed to load sbios.elf\n");
-		return 0;
+		sbios = load_file(sbios_filename, &sbios_size);
+	}
+	if (sbios == NULL) {
+		error_printf("Failed to load sbios.elf");
+		return -1;
 	} else {
+		uint32_t *SBIOSCallTable = NULL;
+		int found = 0;
+		int i;
+
+		graphic_setStatusMessage("Checking SBIOS...");
+
+		for (i = 0; i < sbios_size; i++) {
+			if (((uint32_t *) sbios)[i] == *magic_check) {
+				found = 1;
+				SBIOSCallTable = getSBIOSCallTable(&(((uint32_t *) sbios)[i - 1]));
+				if (SBIOSCallTable != NULL) {
+					break;
+				}
+			}
+		}
+		if (SBIOSCallTable == NULL) {
+			if (!found) {
+				error_printf("SBIOS file is invalid, magic not found.\n");
+			}
+			return -3;
+		} else {
+			graphic_setStatusMessage("Setup SBIOS...");
+			printf("Using address 0x%08x as SBIOSCallTable (SBIOS is at 0x%08x).\n", SBIOSCallTable, sbios);
+			disableSBIOSCalls(SBIOSCallTable);
+			graphic_setStatusMessage(NULL);
+		}
 		/* Access data from kernel space, because TLB misses can't be handled here. */
 		sbios = (char *) (((unsigned int) sbios) | KSEG0_MASK);
 	}
 	FlushCache(0);
-	buffer = load_file("host:kernel.elf", NULL);
+	kernel_filename = getKernelFilename();
+	if (strncmp(kernel_filename, "host:", 5) == 0) {
+		rom_entry_t *romfile;
+
+		romfile = rom_getFile(&kernel_filename[5]);
+		if (romfile != NULL) {
+			buffer = romfile->start;
+		}
+	}
+	if (buffer == NULL) {
+		buffer = load_file(kernel_filename, NULL);
+	}
 	if (buffer != NULL) {
+		const char *initrd_filename;
 		/* Access data from kernel space, because TLB misses can't be handled here. */
 		buffer = (char *) (((unsigned int) buffer) | KSEG0_MASK);
-		loadModules();
+		if (loadModules()) {
+			free(((unsigned int) sbios) & 0x0FFFFFFF);
+			free(((unsigned int) buffer) & 0x0FFFFFFF);
+			return -2;
+		}
 
-		bootinfo->initrd_start = ((unsigned int) load_file("host:initrd.gz", &bootinfo->initrd_size));
-		if (bootinfo->initrd_size == 0) {
-			bootinfo->initrd_start = ((unsigned int) load_file("host:initrd", &bootinfo->initrd_size));
+		initrd_filename = getInitRdFilename();
+		if (initrd_filename != NULL) {
+			bootinfo->initrd_start = ((unsigned int) load_file(initrd_filename, &bootinfo->initrd_size));
+			if (bootinfo->initrd_size != 0) {
+				bootinfo->initrd_start |= KSEG0_MASK;
+			}
+			printf("initrd_start 0x%08x 0x%08x\n", bootinfo->initrd_start, bootinfo->initrd_size);
 		}
-		if (bootinfo->initrd_size != 0) {
-			bootinfo->initrd_start |= KSEG0_MASK;
-		}
-		printf("initrd_start 0x%08x 0x%08x\n", bootinfo->initrd_start, bootinfo->initrd_size);
 
 		printf("Try to reboot IOP.\n");
+		graphic_setStatusMessage("Reseting IOP");
 		FlushCache(0);
+
+		padEnd();
 
 		SifExitIopHeap();
 		SifLoadFileExit();
@@ -756,26 +1143,67 @@ int loader(graphic_mode_t mode)
 
 		while (SifIopSync());
 
+		graphic_setStatusMessage("Initialize RPC");
 		printf("RPC");
 		SifInitRpc(0);
 
+		graphic_setStatusMessage("Patching enable LMB");
 		sbv_patch_enable_lmb();
+		graphic_setStatusMessage("Patching disable prefix check");
 		sbv_patch_disable_prefix_check();
 
+#ifndef PS2LINK
+		graphic_setStatusMessage("Adding eedebug handler");
+		/* Register eedebug handler. */
+		SifAddCmdHandler(0x00000010, print_iop_data, NULL);
+#endif
+
+		graphic_setStatusMessage("Starting modules");
 		printf("Starting modules\n");
 
 		startModules();
+
+		graphic_setStatusMessage("Started all modules");
+#if 0 //ndef PS2LINK
+		init_scr();
+
+		/* Print queued eedebug messages. (Anything printed by IOP. */
+		while(queueWritePos != queueReadPos) {
+			if (queueWritePos != queueReadPos) {
+			textQueue[queueReadPos].text[79] = 0;
+				scr_printf("%s", textQueue[queueReadPos].text);
+				queueReadPos = (queueReadPos + 1) % QUEUE_DEPTH;
+			}
+			DelayThread(1000);
+		}
+#endif
+
 		printf("Started modules\n");
 
 		printAllModules();
 		iopaddr = SifGetReg(0x80000000);
+
+		graphic_setStatusMessage("Stop RPC");
 
 		SifExitIopHeap();
 		SifLoadFileExit();
 		SifExitRpc();
 		SifStopDma();
 
+		graphic_setStatusMessage("Copying files and start...");
+
 		disable_interrupts();
+		if (loaderConfig.enableDev9) {
+			/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
+			if (ps2dev9_init() == 0) {
+				/* DEV9 is initialized and at least network should be available. */
+
+				/* Tell Linux to activate HDD and Network. */
+				bootinfo->pccard_type = 0x0100;
+				bootinfo->pcic_type = pcic_get_cardtype();
+			}
+		}
+
 		ee_kmode_enter();
 #ifdef USER_SPACE_SUPPORT
 		iop_kmode_enter();
@@ -932,12 +1360,13 @@ int loader(graphic_mode_t mode)
 			iop_prints(U2K("ELF not loaded.\n"));
 		}
 	} else {
-		iop_prints(U2K("ELF not loaded.\n"));
+		error_printf("Failed to load kernel.");
+		free(((unsigned int) sbios) & 0x0FFFFFFF);
+		return -1;
 	}
 	iop_prints(U2K("End reached?\n"));
+	error_printf("Unknown program state.");
 
-	panic();
-
-	return(0);
+	return -2;
 }
 

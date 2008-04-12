@@ -1,6 +1,11 @@
 Linux patch: first 2 instructions of exception handler need to be nop and after
 patched jump must be also a nop.
 
-USB doesn't work, because SBR_IOPH_ALLOC is not working, which is used in
-"arch/mips/ps2/pci.c" by GrowLocalMem() <- AllocLocalMem() <-
-pci_alloc_consistent() <- hc_alloc_ohci() <- hc_add_ohci().
+Fix initialisation of ATA/Network/PCI in loader. Currently PS2SDK code is
+copied. Network frames can be send, but  not received. Hard disc is not working.
+
+Function sbcall_cdvdtrayrequestStage2() is sometimes not called after RPC Call.
+(When linux is working without debug then second RPC trayreq call leads to
+deadlock.) RPC call message is transfered to IOP, when I replace the handler
+with sceSifAddCmdHandler(0x8000000A, ...); the moment before, my handler is
+executed. It seems that message is lost in RPC or CDVD module.

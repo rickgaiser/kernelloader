@@ -336,7 +336,7 @@ void mcInitStage2(void *arg)
 #endif		
 		
 		// call init function
-		if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_INIT], 0, &mcCmd, 48, rdata, 12, mcInitStage3, data)) < 0)
+		if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_INIT], SIF_RPC_M_NOWAIT, &mcCmd, 48, rdata, 12, mcInitStage3, data)) < 0)
 		{
 			// init error
 #ifdef MC_DEBUG
@@ -442,10 +442,12 @@ int mcGetInfo(int port, int slot, int* type, int* free, int* format, SifRpcEndFu
 	lastResult = result;
 	lastEndfunc = endfunc;
 	lastEfarg = efarg;	
-	// send sif command
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_INFO], 1, mcInfoCmd, 48, rdata, 4, (SifRpcEndFunc_t)mcGetInfoApdx, endParameter)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_GET_INFO;
+	// send sif command
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_INFO], 1, mcInfoCmd, 48, rdata, 4, (SifRpcEndFunc_t)mcGetInfoApdx, endParameter)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -482,9 +484,11 @@ int mcOpen(int port, int slot, const char *name, int mode, SifRpcEndFunc_t endfu
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_OPEN], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_OPEN;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_OPEN], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -514,9 +518,11 @@ int mcClose(int fd, SifRpcEndFunc_t endfunc, void *efarg, int *result)
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CLOSE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_CLOSE;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CLOSE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -550,9 +556,11 @@ int mcSeek(int fd, int offset, int origin, SifRpcEndFunc_t endfunc, void *efarg,
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SEEK], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_SEEK;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SEEK], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -591,9 +599,11 @@ int mcRead(int fd, void *buffer, int size, SifRpcEndFunc_t endfunc, void *efarg,
 	data.result = result;
 	data.optArg = endParameter;
 
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_READ], 1, &mcFileCmd, 48, rdata, 4, (SifRpcEndFunc_t)mcReadFixAlign, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_READ;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_READ], 1, &mcFileCmd, 48, rdata, 4, (SifRpcEndFunc_t)mcReadFixAlign, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -641,9 +651,11 @@ int mcWrite(int fd, const void *buffer, int size, SifRpcEndFunc_t endfunc, void 
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_WRITE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_WRITE;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_WRITE], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -673,9 +685,11 @@ int mcFlush(int fd, SifRpcEndFunc_t endfunc, void *efarg, int *result)
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FLUSH], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_FLUSH;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FLUSH], 1, &mcFileCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -733,9 +747,11 @@ int mcChdir(int port, int slot, const char* newDir, char* currentDir, SifRpcEndF
 	data.efarg = efarg;
 	data.result = result;
 	data.optArg = currentDir;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CH_DIR], 1, &mcCmd, 0x414, rdata, 4, (SifRpcEndFunc_t)mcStoreDir, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_CH_DIR;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_CH_DIR], 1, &mcCmd, 0x414, rdata, 4, (SifRpcEndFunc_t)mcStoreDir, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -777,10 +793,12 @@ int mcGetDir(int port, int slot, const char *name, unsigned mode, int maxent, mc
 	// send sif command
 	data.endfunc = endfunc;
 	data.efarg = efarg;
-	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_DIR], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_GET_DIR;
+	data.result = result;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_GET_DIR], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
    	return ret;
 }
 
@@ -824,9 +842,11 @@ int mcSetFileInfo(int port, int slot, const char* name, const mcTable* info, uns
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_SET_INFO;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -862,9 +882,11 @@ int mcDelete(int port, int slot, const char *name, SifRpcEndFunc_t endfunc, void
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_DELETE], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_DELETE;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_DELETE], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
    	return ret;
 }
 
@@ -896,9 +918,11 @@ int mcFormat(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *resu
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_FORMAT;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_FORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -929,10 +953,12 @@ int mcUnformat(int port, int slot, SifRpcEndFunc_t endfunc, void *efarg, int *re
 	// call unformat function
 	data.endfunc = endfunc;
 	data.efarg = efarg;
-	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_UNFORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_UNFORMAT;
+	data.result = result;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_RPCCMD_UNFORMAT], 1, &mcCmd, 48, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -967,9 +993,11 @@ int mcGetEntSpace(int port, int slot, const char* path, SifRpcEndFunc_t endfunc,
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_GET_ENT], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_GET_ENT;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_GET_ENT], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -1010,9 +1038,11 @@ int mcRename(int port, int slot, const char* oldName, const char* newName, SifRp
 	data.endfunc = endfunc;
 	data.efarg = efarg;
 	data.result = result;
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_RENAME;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_SET_INFO], 1, &mcCmd, 0x414, rdata, 4, mcCallback, &data)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -1039,9 +1069,11 @@ int mcChangeThreadPriority(int level)
 	*(u32*)mcCmd.name = level;
 	
 	// call sif function
-	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_CHG_PRITY], 1, &mcCmd, 48, rdata, 4, 0, 0)) != 0)
-		return ret;
 	lastCmd = MC_FUNC_CHG_PRITY;
+	if((ret = SifCallRpc(&cdata, mcRpcCmd[mcType][MC_FUNC_CHG_PRITY], 1, &mcCmd, 48, rdata, 4, 0, 0)) != 0) {
+		lastCmd = 0;
+		return ret;
+	}
 	return ret;
 }
 
@@ -1101,7 +1133,11 @@ int mcSync(int mode, int *cmd, int *result)
 
 int sbcall_mcinit(tge_sbcall_rpc_arg_t *carg)
 {
+#ifdef OLD_ROM_MODULE_VERSION
 	return mcInit(MC_TYPE_MC, carg->endfunc, carg->efarg, &carg->result);
+#else
+	return mcInit(MC_TYPE_XMC, carg->endfunc, carg->efarg, &carg->result);
+#endif
 }
 
 int sbcall_mcgetinfo(tge_sbcall_rpc_arg_t *carg)

@@ -11,7 +11,6 @@ OBJ_DIR = obj
 
 # We specify -G0 to get rid of gp register problems.
 CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G0 -O0 -mips3 -nostdlib -DPS2_EE
-CFLAGS += -D$(TYPE)
 
 SRC = start $(PROGRAM) rtesif strlen strncpy \
 	cache timers irq interrupts panic mmu demo loader syscall \

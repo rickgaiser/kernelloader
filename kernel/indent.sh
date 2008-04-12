@@ -6,4 +6,4 @@ indent --blank-lines-after-declarations --blank-lines-after-procedures \
 --no-space-after-function-call-names --no-space-after-parentheses \
 --dont-break-procedure-type --dont-space-special-semicolon --ignore-profile \
 --use-tabs --tab-size 4 --line-length 80 --comment-line-length 80 \
---parameter-indentation 4 --dont-line-up-parentheses $1
+--parameter-indentation 4 --dont-line-up-parentheses --cuddle-else $1

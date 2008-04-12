@@ -11,6 +11,8 @@
 
 #include "tge_sbios.h"
 
+typedef void (*SbiosEndFunc_t)(void *, int);
+
 /* misc.c */
 int sbcall_getver(void);
 int sbcall_halt(tge_sbcall_halt_arg_t *arg);
@@ -90,5 +92,19 @@ int sbcall_padinfoact(tge_sbcall_padinfoact_arg_t *arg);
 int sbcall_padinfocomb(tge_sbcall_padinfocomb_arg_t *arg);
 #endif
 int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg);
+
+/* cdvd.c */
+int sbcall_cdvdinit(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdreset(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdready(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdstop(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdgettoc(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdreadrtc(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdwritertc(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdgeterror(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdgettype(tge_sbcall_rpc_arg_t *carg);
+int sbcall_cdvdtrayrequest(tge_sbcall_rpc_arg_t *carg);
 
 #endif /* TGE_SBCALLS_H */

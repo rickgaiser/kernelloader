@@ -2,8 +2,9 @@ Kernelloader for ps2 linux
 ##########################
 
 This program can load a linux kernel and start it. You need linux kernel
-2.4.17 for ps2 from the sony website. You also need to get a mips cross
-compiler. You can download it here:
+2.4.17 for ps2 from the sony website. To build it you need a linux host
+and the PS2SDK. You also need to get a mips cross compiler. You can
+download it here:
 
 Linux 2.4.17_mvl21:
 http://www.sony.net/Products/Linux/Download/PlayStation_BB_Navigator.html
@@ -31,7 +32,8 @@ sh # cd usr/src/linux-2.4.17_ps2
 
 There is no patch required to start linux.
 
-The patch adds support for initrd in linux:
+The patch adds support for initrd in linux, currently hard discs are not
+supported, so you will need it:
 
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-initrd.patch
 
@@ -46,9 +48,10 @@ sh # echo "/usr/local/ps2/bin/ee-" >.hhl_cross_compile-mips-r5900
 sh # ./setup-ps2
 
 
-Status: Kerneloader doesn't print anything on screen. Debug information is
-printed using ps2link. Kernel is starting, graphic is working, initrd not
-tested. No support for other hardware (usb keyboard is not working).
+Status: Kerneloader has a on screen menu. Debug information is
+printed using ps2link, when it is enabled in config.mk. Kernel is starting,
+most stuff is working. Hard disc, network, sound and some configuration
+stuff is not working. CD/DVD access is unstable and incomplete.
 
 INSTALL:
 First you need to compile ps2smap and ps2link from ps2dev svn and copy the
@@ -56,14 +59,117 @@ modules "ps2smap.irx" and "ps2link.irx" to the directory "$PS2SDK/iop/irx/".
 Then run make for a test (You should change the ip address in
 "loader/Makefile" and in "loader/loader.c" variable "ifcfg"):
 
+PS2SDK
+######
+To compile kernelloader you need PS2SDK, if you don't use it already
+install it as follows:
+
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2toolchain
+sh # cd ps2toolchain
+sh # chmod +x toolchain.sh
+sh # ./toolchain.sh
+
+USB
+###
+You need also to install the usb driver:
+
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/usb_massA
+sh # cd usb_mass
+sh # cd iop
 sh # make
+sh # cp usb_mass.irx /usr/local/ps2dev/ps2sdk/iop/irx
+
+STL
+###
+STL is used and need to be installed:
+
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/stlport
+sh # cd stlport
+sh # make
+sh # make install
+
+PS2LINK
+#######
+If you want to debug something then you also need ps2link, but the
+following steps are not required, when you don't activate it in
+config.mk.
+
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2eth
+sh # cd ps2eth
+sh # make
+sh # cp smap/ps2smap.irx /usr/local/ps2dev/ps2sdk/iop/irx/
+sh # cd ..
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2link
+sh # cd ps2link
+sh # make
+sh # cp iop/ps2link.irx /usr/local/ps2dev/ps2sdk/iop/irx/
+
+To further compile someting for PS2SDK, you need to setup the environment:
+export PS2DEV="/usr/local/ps2dev"
+export PS2SDK="$PS2DEV/ps2sdk"
+export PS2LIB="$PS2SDK"
+export PATH="${PS2DEV}/bin:${PS2DEV}/ee/bin:${PS2DEV}/iop/bin:${PS2DEV}/dvp/bin:${PS2DEV}/ps2sdk/bin:$PATH"
+
+You need also to set up where your source code is:
+export PS2_SRC_PREFIX=$HOME/ps2src
+You need to adjust it to your prefered path.
+export PS2SDKSRC="${PS2_SRC_PREFIX}/ps2sdk"
+export GSKITSRC="${PS2_SRC_PREFIX}/gsKit"
+export LIBTIFF="${PS2_SRC_PREFIX}/libtiff"
+export LIBJPG="${PS2_SRC_PREFIX}/libjpg/libjpg"
+export PS2ETH="${PS2_SRC_PREFIX}/ps2eth"
+
+GSKIT
+#####
+The graphic library is used for displaying everything. You need to install it:
+sh # cd $PS2SDKSRC
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/gsKit
+sh # cd gsKit
+sh # make
+sh # make install
+
+SJCRUNCH
+########
+sjcrunch is a packer for PS2 elf files. This is required to get smaller
+file size and to get a version which can be booted by Action Replay
+Media Player. You need to download it from:
+
+http://www.ps2dev.org
+
+sh # cd $PS2SDKSRC
+sh # mkdir sjcrunch
+sh # cd sjcrunch
+sh # unzip sjcrunch-2.1.zip
+sh # cd pc
+sh # make
+sh # cd ..
+sh # cp pc/sjcrunch_packer script
+sh # cp script
+sh # sed <sjcrunch -e s-SJCRUNCH_PATH=.*-SJCRUNCH_PATH=$(pwd)- -e s-SJCRUNCH_PACKER=.*-SJCRUNCH_PACKER=\$SJCRUNCH_PATH/sjcrunch_packer- >/usr/local/ps2dev/ps2sdk/bin/sjcrunch
+sh # chmod +x /usr/local/ps2dev/ps2sdk/bin/sjcrunch
+
+Kernelloader
+############
+Now you can go back to kernelloader for a test:
+
+sh # make
+
+The following test will upload the elf file using ps2link. ps2link must
+be started on the PS2. You can also use your prefered upload method. The
+elf file "kloader.elf" can also be started by AR Max Media Player. You need
+just to copy it on a USB memory stick.
+
 sh # make test
 
-You should see the output of example kernel on ps2link output. The kernel
+A menu will start and you can select the first menu entry by pressing the
+CROSS button on the first pad.
+You should see the output of example kernel on screen. The kernel
 tries to emulate the original PS2 kernel and start a graphic demo. SIFRPC
 is working correctly in this kernel. All IOP hardware should work. Only
 single thread and a interrupt handler is supported.
 
+Linux
+#####
 Now you should compile the linux kernel. Run menu config and deactivate
 old bootinfo support.
 
@@ -71,15 +177,23 @@ sh # make menuconfig
 
 For initrd support:
 Deactivate "Machine selection"  ---> "Support for old style boot information"
-Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
+Activate "Machine selection"  ---> "Support for PS2 Memory Card File System" (choose "*" and not "M")
 Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
 Activate "Block devices" ---> "Initial RAM disk (initrd) support"
+Activate "File systems" ---> "ISO 9660 CDROM file system support" (choose "*" and not "M")
+Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
 
 Save configuration and then run:
 
 sh # make dep
 sh # make
-sh # cp ../usr/src/linux-2.4.17_ps2/vmlinux ../kernelloader/loader/kernel.elf
+You need to copy the file "linux-2.4.17_ps2/vmlinux" on a ps2 memroy card
+or a USB memroy stick and insert it into your PS2.
+
+Initrd
+######
+The initrd includes the linux file system and is currently the only
+useful way to use TGE linux.
 
 Make an "initrd.gz":
 
@@ -93,6 +207,8 @@ Then copy "initrd.gz" to "kernelloader/loader".
 
 sh # cp initrd.gz ../kernelloader/loader/
 
+Kernelloader
+############
 Go back to kernelloader dir and run make test again.
 
 sh # make test
@@ -100,14 +216,35 @@ sh # make test
 Maximum size of kernel is 5 MB.
 The loader sets maximum "initrd.gz" decompressed size to 16 MB (using
 "ramdisk_size=16384").
-The linux kernel should start. USB keyboard is working. Other hardware
-support will follow in a short time.
+The linux kernel should start. USB keyboard is working. You can also
+load the kernel from a memory card or a USB memory stick. You can select
+the file in the menu in the kernelloader on the PS2 using the first pad.
 
 Remarks:
 ########
 
-You can select the SBIOS type by changing variable TYPE in config.mk
-from "TGE" to "RTE".  Then you need to put in the original PS2 linux
-DVD disc 1. The SBIOS will be automatically extracted. Linux will not
-start with this version, but my test kernel will work.
-USB is only working when ps2link modules are not loaded (see config.mk).
+You can select the SBIOS type "TGE" or "RTE" if you have DISC 1 from Sony's
+Linux (for PlayStation 2) Release 1.0. To start linux this is not required.
+TGE is not finished and it is possible that "RTE" is running more stable.
+Then you need to put in the original PS2 linux DVD DISC 1 and adjust the
+path in config.mk. The SBIOS will be automatically extracted. Linux will
+only start with this version when you change the configuration accordingly:
+
+When kernelloader is started you need to do the following:
+1. Uncheck "Enable TGE (disable RTE)" in "Configuration Menu".
+2. Execute "Submit above config" in "Configuration Menu".
+3. Uncheck "Use SBIOS from TGE (ow RTE)".
+4. Uncheck all CDVD entries in "Enabled SBIOS Calls" menu which is
+located in "Configuration Menu" (entries 176 to 195).
+
+With this configuration USB keyboard seems only to work when it is not
+plugged in at startup.
+
+USB is only working when ps2link modules are not loaded (see "Configuration Menu").
+It is also possible to select new ROM modules instead of old ones.
+
+CDVD calls should also be disabled when using TGE, because of some Linux
+kernel exceptions.
+
+Files with prefix "host:" a first searched in a kloader.elf embedded
+files system.

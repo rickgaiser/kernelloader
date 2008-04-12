@@ -122,7 +122,7 @@ typedef struct t_SifRpcHeader
     * (in PS2SDK this stores the semaphore id).
     * Name is now confusing and should be named semaphore value.
     */
-   int				sema_id;	/* 06	02 */
+   volatile int		sema_id;	/* 06	02 */
    u32			 	mode;		/* 07	03 */
 } SifRpcHeader_t;
 

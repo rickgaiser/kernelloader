@@ -22,9 +22,14 @@
 static int initialized;
 
 static u32 sif_reg_table[32] __attribute__((aligned(64)));
+/** Next/current dma tag that is used for transfer by software. */
 static u8 sif1_dmatag_index;
 static u16 sif1_dma_count;
-static ee_dmatag_t sif1_dmatags[32];
+/** Ring buffer of DMA tags. Last tag is for wrap around and can't be used for
+ * anything else.
+ * Must be cache line size aligned to prevent cache aliasing effects.
+ */
+static ee_dmatag_t sif1_dmatags[32] __attribute__((aligned(64)));
 
 /* Describes the tag accepted by the IOP on SIF1 DMA transfers.  */
 typedef struct {
@@ -115,7 +120,9 @@ static void sif_dma_init()
 {
 	ee_dmatag_t *tag;
 
+	/* Will be increased by first dma transfer to 0. */
 	sif1_dma_count = 0xffff;
+	/* First transfer will begin with dma tag index 0. */
 	sif1_dmatag_index = 30;
 
 	/* This causes the DMAC to loop to the first tag when it hits this tag;
@@ -128,11 +135,16 @@ static void sif_dma_init()
 	_sw(0, EE_DMAC_SIF1_QWC);
 	/* Set as start DMAtag. */
 	_sw(PHYSADDR(&sif1_dmatags), EE_DMAC_SIF1_TADR);
+#if 0
 	iop_prints("sif1_dmatag 0x");
 	iop_printx(&sif1_dmatags);
 	iop_prints("\n");
+#endif
 }
 
+/** Advance to next dma tag. dma tag 31 cannot be used. Organized as ring
+ * buffer.
+ */
 #define SET_NEXT_DMATAG()			\
 	{					\
 		sif1_dmatag_index++;		\
@@ -162,6 +174,7 @@ static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmata
 	u128 *s128, *d128;
 	u32 data_qwc, i, qwc = (size + 15) / 16;
 
+	/* Get address of next dma tag. */
 	SET_NEXT_DMATAG();
 	tag = KSEG1ADDR(&sif1_dmatags[sif1_dmatag_index]);
 
@@ -180,6 +193,7 @@ static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmata
 			tag->addr = PHYSADDR(dtag);
 			data_qwc = 7;
 
+			/* Get address of next dma tag. */
 			SET_NEXT_DMATAG();
 			tag = KSEG1ADDR(&sif1_dmatags[sif1_dmatag_index]);
 			tag->id_qwc = EE_DMATAG_ID_QWC(id, qwc - 7) |
@@ -204,41 +218,61 @@ static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmata
 		((attr & TGE_SIFDMA_ATTR_ERT) ? 0x80000000 : 0);
 }
 
-static u32 sif_dma_index()
+static u32 sif_get_number_of_free_dma_tags()
 {
-	u32 index;
+	u32 hw_index;
 
-	index = (_lw(EE_DMAC_SIF1_TADR) - PHYSADDR(&sif1_dmatags)) / sizeof(ee_dmatag_t);
-	index = index > 0 ? index - 1 : 30;
+	/* Get index of current dma tag used by hardware. */
+	hw_index = (_lw(EE_DMAC_SIF1_TADR) - PHYSADDR(&sif1_dmatags)) / sizeof(ee_dmatag_t);
+	/* Calculate index of previous dma tag. We have 32 dma tags. The last dma
+	 * tag cannort be used, because it is just a jump command to the beginning
+	 * of the ring buffer. So index is 0..30.
+	 * Index 30 is the last usable dma tag before 0.
+	 */
+	hw_index = hw_index > 0 ? hw_index - 1 : 30;
 
-	if (index == sif1_dmatag_index)
+	/* Calculate number of free dma tags. */
+	if (hw_index == sif1_dmatag_index)
 		return _lw(EE_DMAC_SIF1_QWC) ? 30 : 31;
 
-	if (index < sif1_dmatag_index)
-		return index - sif1_dmatag_index + 30;
+	if (hw_index < sif1_dmatag_index)
+		return hw_index - sif1_dmatag_index + 30;
 
-	return index - sif1_dmatag_index - 1;
+	return hw_index - sif1_dmatag_index - 1;
 }
 
-static void sif_dma_setup_tag(u32 index)
+static void sif_dma_setup_tag(u32 freetags)
 {
 	ee_dmatag_t *tag;
 
-	if (index == 31)
+	if (freetags == 31) {
+		/* DMA ring buffer queue is empty. */
 		return;
+	}
+	/* DMA ring buffer is not empty. */
 
+	/* Get last dma tag of previous dma transfer. */
 	tag = KSEG1ADDR(&sif1_dmatags[sif1_dmatag_index]);
 
-	if (index == 30) {
+	if (freetags == 30) {
+		/* DMA ring buffer has one entry, which is currently processed by
+		 * hardware.
+		 */
+
+		/* Rebuild dma tag by dma registers. */
 		/* Keep the previous IRQ and PCE bits.  */
 		tag->id_qwc &= 0x8c000000;
+		/* Don't stop DMA transfer after last DMA tag. */
 		tag->id_qwc |= EE_DMATAG_ID(EE_DMATAG_ID_REF);
 		tag->id_qwc |= _lw(EE_DMAC_SIF1_QWC);
 		tag->addr = _lw(EE_DMAC_SIF1_MADR);
 
+		/* Restart/reload this dma tag. */
 		_sw(0, EE_DMAC_SIF1_QWC);
 		_sw(PHYSADDR(tag), EE_DMAC_SIF1_TADR);
 	} else {
+		/* DMA ring buffer has more than one entry. */
+		/* Don't stop DMA transfer after last DMA tag. */
 		tag->id_qwc |= EE_DMATAG_ID(EE_DMATAG_ID_REF);
 	}
 }
@@ -252,7 +286,7 @@ static void sif_dma_setup_tag(u32 index)
 u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
 {
 	SifDmaTransfer_t *t;
-	u32 status, index, i, ntags, start, count;
+	u32 status, freetags, i, ntags, start, count;
 	int id = 0;
 
 #if 0
@@ -270,7 +304,7 @@ u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
 	_lw(EE_DMAC_SIF1_CHCR);
 	_sw(_lw(EE_DMAC_ENABLER) & ~EE_DMAC_CPND, EE_DMAC_ENABLEW);
 
-	index = sif_dma_index();
+	freetags = sif_get_number_of_free_dma_tags();
 
 	/* Find out how many tags we'll need for the transfer.  */
 	for (i = tcount, t = transfer, ntags = 0; i; i--, t++) {
@@ -281,18 +315,19 @@ u32 SifSetDma(SifDmaTransfer_t *transfer, s32 tcount)
 	}
 
 	/* We can only transfer if we have enough tags free.  */
-	if (ntags <= index) {
+	if (ntags <= freetags) {
 		/* Same as RTE until this line 0x800022d8. */
 		/* XXX: (((sif1_dmatag_index + 1) % 31) & 0xff) + 16 * (sif1_dmatag_index + 1); */
 		start = ((sif1_dmatag_index + 1) % 31) & 0xff;
 		count = start ? sif1_dma_count : sif1_dma_count + 1;
 		id = (count << 16) | (start << 8) | (ntags & 0xff);
 
-		sif_dma_setup_tag(index);
+		sif_dma_setup_tag(freetags);
 
 		for (i = tcount - 1, t = transfer; i; i--, t++)
 			sif_dma_transfer(t->src, t->dest, t->size, t->attr, EE_DMATAG_ID_REF);
 
+		/* DMA transfer will stop after last dma transfer. */
 		sif_dma_transfer(t->src, t->dest, t->size, t->attr, EE_DMATAG_ID_REFE);
 	}
 
@@ -339,6 +374,21 @@ int sif_dma_stat(int id)
 
 	core_restore(status);
 	return -1;
+}
+
+u32 sif_dma_get_hw_index(void)
+{
+	u32 index;
+
+	index = (_lw(EE_DMAC_SIF1_TADR) - PHYSADDR(&sif1_dmatags)) / sizeof(ee_dmatag_t);
+	index = index > 0 ? index - 1 : 30;
+
+	return index;
+}
+
+u32 sif_dma_get_sw_index(void)
+{
+	return sif1_dmatag_index;
 }
 
 /* Function is same as RTE. */

@@ -1,3 +1,4 @@
+
 /*
  * ata.c - TGE DMA relay for PS2 ATA
  *
@@ -56,40 +57,116 @@ static void dma_stop(int val)
 		SPD_REG8(SPD_R_IF_CTRL) = if_ctrl;
 	}
 
-	/*M_PRINTF("ATA DMA force break\n");*/
+	/*M_PRINTF("ATA DMA force break\n"); */
 }
 
 static void read_thread(void *arg)
 {
 	USE_SPD_REGS;
-	volatile iop_dmac_chan_t *dev9_chan = (volatile iop_dmac_chan_t *)DEV9_DMAC_BASE;
-	struct eng_args *args = (struct eng_args *)arg;
-	ata_dma_transfer_t *t = &dma_transfer;
+	volatile iop_dmac_chan_t *dev9_chan =
+		(volatile iop_dmac_chan_t *) DEV9_DMAC_BASE;
+	struct eng_args *args = (struct eng_args *) arg;
+	ata_dma_transfer_t *t = &dma_transfer;	/* s7 */
+	SifDmaTransfer_t *dmat;		/* s3 */
 	u32 res;
+	int c;						/* s1 */
+	int k;						/* s2 */
+	int init;					/* s4 */
+	u32 did;					/* s6 */
+	SifDmaTransfer_t *transfer;	/* s0 */
 
+	did = -1;
 	while (1) {
-		while (SleepThread() || WaitSema(args->semid))
-			;
+	  start_loop:
+		while (SleepThread() || WaitSema(args->semid));
 
+		dmat = t->dmat;
+		transfer = NULL;
+		init = 1;
 		ClearEventFlag(args->evflg, 0);
 
 		dma_setup(0);
 		EnableIntr(IOP_IRQ_DMA_DEV9);
 
+		/* Initiate the DMA transfer.  */
+		dev9_chan->madr = (u32) dma_buffer;
+		k = t->count;
+		c = k;
+		do {
+			if (c > 0) {
+				dev9_chan->bcr = ((dmat->size / 128) << 16) | 32;
+				dev9_chan->chcr = 0x01000200;
+
+				if (init > 0) {
+					SPD_REG8(0x4e) = t->command;	/* ATA command register.  */
+					SPD_REG8(SPD_R_PIO_DIR) = 1;
+					SPD_REG8(SPD_R_PIO_DATA) = 0;
+					DelayThread(1000);	/* XXX: Is this required? */
+					SPD_REG8(SPD_R_XFR_CTRL) |= 0x80;
+					init = 0;
+				}
+			}
+
+			if (transfer != 0) {
+				do {
+					int intStatus;
+
+					CpuSuspendIntr(&intStatus);
+					did = SifSetDma(transfer, 1);
+					CpuResumeIntr(intStatus);
+				} while (did == 0);
+			}
+			if (c > 0) {
+				WaitEventFlag(args->evflg, (EF_DMA_DONE | EF_ATA_DONE), 0x11,
+					&res);
+				dmat++;
+				if (res & EF_ATA_DONE) {
+					/* If we got the ATA end signal, force stop the transfer.  */
+					DisableIntr(IOP_IRQ_DMA_DEV9, NULL);
+					dma_stop(1);
+					SignalSema(args->semid);
+					goto start_loop;
+				}
+				c--;
+			}
+			if (transfer != NULL) {
+				transfer++;
+				k--;
+			}
+			else {
+				transfer = t->dmat;
+			}
+		} while (k > 0);
+
+		DisableIntr(IOP_IRQ_DMA_DEV9, NULL);
+		do {
+			if (SifDmaStat(did) < 0) {
+				break;
+			}
+			PollEventFlag(args->evflg, EF_ATA_DONE, 0x11, &res);
+		} while (!(res & EF_ATA_DONE));
+
+		/* If we got the ATA end signal, force stop the transfer.  */
+		if (res & EF_ATA_DONE)
+			dma_stop(1);
+
+		SPD_REG8(0x5c) = t->devctrl;
+
+		SignalSema(args->semid);
 	}
 }
 
 static void write_thread(void *arg)
 {
 	USE_SPD_REGS;
-	volatile iop_dmac_chan_t *dev9_chan = (volatile iop_dmac_chan_t *)DEV9_DMAC_BASE;
-	struct eng_args *args = (struct eng_args *)arg;
+	volatile iop_dmac_chan_t *dev9_chan =
+		(volatile iop_dmac_chan_t *) DEV9_DMAC_BASE;
+	struct eng_args *args = (struct eng_args *) arg;
 	ata_dma_transfer_t *t = &dma_transfer;
 	u32 res;
 
 	while (1) {
-		while (SleepThread() || WaitSema(args->semid))
-			;
+		while (SleepThread() || WaitSema(args->semid));
 
 		ClearEventFlag(args->evflg, 0);
 
@@ -97,18 +174,22 @@ static void write_thread(void *arg)
 		EnableIntr(IOP_IRQ_DMA_DEV9);
 
 		/* Initiate the DMA transfer.  */
-		dev9_chan->madr = (u32)dma_buffer;
-		dev9_chan->bcr  = ((t->size / 128) << 16) | 32;
+		dev9_chan->madr = (u32) dma_buffer;
+		dev9_chan->bcr = ((t->size / 128) << 16) | 32;
 		dev9_chan->chcr = 0x01000201;
 
 		SPD_REG8(0x4e) = t->command;	/* ATA command register.  */
 		SPD_REG8(SPD_R_PIO_DIR) = 1;
 		SPD_REG8(SPD_R_PIO_DATA) = 0;
+		DelayThread(1000);		/* XXX: Is this required? */
 		SPD_REG8(SPD_R_XFR_CTRL) |= 0x80;
 
-		WaitEventFlag(args->evflg, (EF_DMA_DONE|EF_ATA_DONE), 0x11, &res);
+		WaitEventFlag(args->evflg, (EF_DMA_DONE | EF_ATA_DONE), 0x11, &res);
 
+#if 0
+		/* XXX: Add this? */
 		SPD_REG8(SPD_R_XFR_CTRL) &= 0x7f;
+#endif
 
 		DisableIntr(IOP_IRQ_DMA_DEV9, NULL);
 
@@ -126,20 +207,21 @@ static void *rpc_func(int fid, void *buf, int bufsize)
 	int thid = -1;
 
 	switch (fid) {
-		case RPCF_GetBufAddr:
-			*res = (u32)dma_buffer;
-			break;
-		case RPCF_DmaRead:
-			thid = read_thid;
-			WakeupThread(thid);
-			break;
-		case RPCF_DmaWrite:
-			thid = write_thid;
-			WakeupThread(thid);
-			break;
+	case RPCF_GetBufAddr:
+		*res = (u32) dma_buffer;
+		break;
+	case RPCF_DmaRead:
+		thid = read_thid;
+		WakeupThread(thid);
+		break;
+	case RPCF_DmaWrite:
+		thid = write_thid;
+		WakeupThread(thid);
+		break;
 
-		default:
-			*res = -1;
+	default:
+		M_PRINTF("rpc_func: invalid function code (%d).\n", fid);
+		*res = -1;
 	}
 
 	if (thid >= 0) {
@@ -152,14 +234,10 @@ static void *rpc_func(int fid, void *buf, int bufsize)
 
 static void rpc_thread(void *unused)
 {
-	if (!sceSifCheckInit())
-		sceSifInit();
-
-	sceSifInitRpc(0);
-
 	sceSifSetRpcQueue(&qd, GetThreadId());
 
-	sceSifRegisterRpc(&sd, RPCS_ATA_DMA_BEGIN, rpc_func, &dma_transfer, NULL, NULL, &qd);
+	sceSifRegisterRpc(&sd, RPCS_ATA_DMA_BEGIN, rpc_func, &dma_transfer, NULL,
+		NULL, &qd);
 
 	sceSifRpcLoop(&qd);
 }
@@ -174,14 +252,10 @@ static void *rpc_end_func(int fid, void *buf, int bufsize)
 
 static void rpc_end_thread(void *unused)
 {
-	if (!sceSifCheckInit())
-		sceSifInit();
-
-	sceSifInitRpc(0);
-
 	sceSifSetRpcQueue(&end_qd, GetThreadId());
 
-	sceSifRegisterRpc(&end_sd, RPCS_ATA_DMA_END, rpc_end_func, NULL, NULL, NULL, &end_qd);
+	sceSifRegisterRpc(&end_sd, RPCS_ATA_DMA_END, rpc_end_func, NULL, NULL, NULL,
+		&end_qd);
 
 	sceSifRpcLoop(&end_qd);
 }
@@ -196,6 +270,7 @@ int ata_engine_init(struct eng_args *args)
 	thread.thread = read_thread;
 	thread.stacksize = 4096;
 	thread.priority = 21;
+	thread.option = 0;
 	if ((read_thid = CreateThread(&thread)) < 0)
 		return read_thid;
 
@@ -206,6 +281,7 @@ int ata_engine_init(struct eng_args *args)
 	thread.thread = write_thread;
 	thread.stacksize = 4096;
 	thread.priority = 21;
+	thread.option = 0;
 	if ((write_thid = CreateThread(&thread)) < 0)
 		return write_thid;
 
@@ -216,6 +292,7 @@ int ata_engine_init(struct eng_args *args)
 	thread.thread = rpc_thread;
 	thread.stacksize = 4096;
 	thread.priority = 20;
+	thread.option = 0;
 	if ((thid = CreateThread(&thread)) < 0)
 		return thid;
 
@@ -226,6 +303,7 @@ int ata_engine_init(struct eng_args *args)
 	thread.thread = rpc_end_thread;
 	thread.stacksize = 1024;
 	thread.priority = 20;
+	thread.option = 0;
 	if ((thid = CreateThread(&thread)) < 0)
 		return thid;
 

@@ -1,3 +1,4 @@
+
 /*
  * main.c - TGE DMA relay
  *
@@ -14,7 +15,7 @@ struct eng_args eng_args = { -1, -1 };
 
 static int dev9_dma_handler(void *arg)
 {
-	int evflg = *(int *)arg;
+	int evflg = *(int *) arg;
 
 	iSetEventFlag(evflg, EF_DMA_DONE);
 	return 1;
@@ -25,6 +26,13 @@ int _start(int argc, char *argv[])
 	iop_event_t event;
 	int semid, evflg, res;
 
+	M_PRINTF("IOP DMA relay module\n");
+
+	if (!sceSifCheckInit())
+		sceSifInit();
+
+	sceSifInitRpc(0);
+
 	if ((semid = CreateMutex(IOP_MUTEX_UNLOCKED)) < 0) {
 		E_PRINTF("Unable to create %s (error %d).\n", "semaphore", semid);
 		return 1;
@@ -32,7 +40,7 @@ int _start(int argc, char *argv[])
 
 	eng_args.semid = semid;
 
-	event.attr = event.bits = 0;
+	event.attr = event.bits = event.option = 0;
 	if ((evflg = CreateEventFlag(&event)) < 0) {
 		E_PRINTF("Unable to create %s (error %d).\n", "event flag", evflg);
 		return 1;
@@ -42,8 +50,11 @@ int _start(int argc, char *argv[])
 
 	CpuEnableIntr();
 	DisableIntr(IOP_IRQ_DMA_DEV9, NULL);
-	if ((res = RegisterIntrHandler(IOP_IRQ_DMA_DEV9, 1, dev9_dma_handler, &eng_args.evflg))) {
-		E_PRINTF("Unable to register 0x%02x intr handler (error %d).\n", IOP_IRQ_DMA_DEV9, res);
+	if ((res =
+			RegisterIntrHandler(IOP_IRQ_DMA_DEV9, 1, dev9_dma_handler,
+				&eng_args.evflg))) {
+		E_PRINTF("Unable to register 0x%02x intr handler (error %d).\n",
+			IOP_IRQ_DMA_DEV9, res);
 		return 1;
 	}
 

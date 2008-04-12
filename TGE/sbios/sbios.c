@@ -413,7 +413,71 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 159 */
 	sbcall_mcgetentspace,
 	/* 160 */
-	0 /* MC_CALL, What is this? */
+	0, /* MC_CALL, What is this? */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 176 */
+	sbcall_cdvdinit,
+	/* 177 */
+	sbcall_cdvdreset,
+	/* 178 */
+	sbcall_cdvdready,
+	/* 179 */
+	sbcall_cdvdread,
+	/* 180 */
+	sbcall_cdvdstop,
+	/* 181 */
+	sbcall_cdvdgettoc,
+	/* 182 */
+	sbcall_cdvdreadrtc,
+	/* 183 */
+	sbcall_cdvdwritertc,
+	/* 184 */
+	sbcall_cdvdmmode,
+	/* 185 */
+	sbcall_cdvdgeterror,
+	/* 186 */
+	sbcall_cdvdgettype,
+	/* 187 */
+	sbcall_cdvdtrayrequest,
+	/* 188 */
+	0,
+	/* 189 */
+	0,
+	/* 190 */
+	0,
+	/* 191 */
+	0,
+	/* 192 */
+	0,
+	/* 193 */
+	0,
+	/* 194 */
+	0,
+	/* 195 */
+	0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 208 */
+	0,
+	/* 209 */
+	0,
+	/* 210 */
+	0,
+	/* 211 */
+	0,
+	/* 212 */
+	0,
+	/* 213 */
+	0,
+	/* 214 */
+	0,
+	/* 215 */
+	0,
+	/* 216 */
+	0,
+	/* 217 */
+	0,
+	/* 218 */
+	0
 
 };
 
@@ -431,8 +495,9 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 	printf("sbios call %s %s\n", description, (sbfunc) ? "implemented" : "not implemented");
 #endif
 
-	if (!sbfunc)
+	if (!sbfunc) {
 		return -1;
+	}
 
 	ret = sbfunc(arg);
 

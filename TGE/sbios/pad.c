@@ -37,7 +37,11 @@
 #include "string.h"
 #include "pad.h"
 
+#ifdef OLD_ROM_MODULE_VERSION
 #define ROM_PADMAN 1
+#else
+#define NEW_PADMAN 1
+#endif
 
 /*
  * Slightly different behaviour if using "rom0:padman" or something newer
@@ -261,7 +265,7 @@ static void padInitStage4(void *arg)
 
 #ifndef ROM_PADMAN
 	*(u32 *) (&buffer[0]) = PAD_RPCCMD_INIT;
-	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, 0, padInitStage5, data) < 0) {
+	if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128, padInitStage5, data) < 0) {
 		*data->result = -1;
 		data->endfunc(data->efarg);
 		return;

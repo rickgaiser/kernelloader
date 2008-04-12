@@ -28,6 +28,8 @@
 .code cp0DisableInterruptsAndSetStatusRegister
 01023808
 .code SifWriteBackDCache
+0102aed8
+.code strncmp_or_memcmp
 0102af6c
 .code memcpy
 0100b718
@@ -90,3 +92,21 @@ bf801600
 .word HcRhStatus
 .word HcRhPortStatus[0]
 .word HcRhPortStatus[1]
+01003b28
+.code readSPD_REG8(reg)
+01003b80
+.code writeSPD_REG8(reg, value)
+01003bd0
+.code readSPD_REG16(reg)
+01003c28
+.code writeSPD_REG16(reg, value)
+01003c78
+.code writeSPD_REG32(reg, value)
+01003cc8
+.code readSPD_REG16x2(reg)
+01003d08
+.code writeSPD_REG16x2(reg, value)
+01003d48
+.code writeSPD_REG0x205c(value)
+01000f50
+.code initDev9HardDiscAndNetwork

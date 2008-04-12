@@ -1,8 +1,26 @@
+1.0
+- Added support for CDVD (Playstation CD and Playstation DVD can be read).
+- Finished dmarelay.irx, I am unsure about the correctness of function
+  read_thread() in the ATA part.
+- Code for hard disc and network can be activated if ps2link is deactivated by
+  configuration.
+- Ethernet frames can be send, but not received.
+- Hard disc is not yet working.
+- Fixed bug in interrupt handling of SIF RPC.
+- Add configuration switch for new and old ROM modules, CDVD is not working with
+  new modules.
+- Fixed cache aliasing problem in sifdma.c (sif1_dmatags).
+- Added RPC printf debug support (using fileio.c).
+- Print module initialisation messages from IOP on EE GS screen.
+- Added menu system to kernelloader.
+
 0.9
 - Support for PAD.
+
 0.8
 - Support memory card in linux.
 - Support USB in linux also when ps2link is loaded.
+
 0.7
 - SIFRPC is working with linux (but code is incomplete).
 - iopheap RPC is working with linux (complete).
@@ -10,6 +28,7 @@
 - USB is working with linux when ps2link and the network modules are
   deactivated.
 - Default configuration is a working USB linux.
+
 0.6
 - Get SIFRPC working in emulated ps2 kernel.
 - Added support for negative syscalls (syscalls with first letter "i", which can
@@ -17,6 +36,7 @@
 - Added support for semaphores in single thread environment including
   interrupts.
 - Configured "Hello World!" as default example for emulated ps2 kernel.
+
 0.5
 - Added graphic support in loader using gsKit.
 - Added configure option in config.mk for selecting SBIOS type RTE or TGE.
@@ -36,9 +56,11 @@
 - Added some syscall to emulated PS2 kernel.
 - Added handling of INTC and DMAC to emulated PS2 kernel.
 - Added timer interrupt handling to emulated PS2 kernel.
+
 0.4
 - Use gsKit for graphic output.
 - Use normal malloc() instead of mempool.
+
 0.3
 - Use higher load address (maximum kernel size is now 5 MB).
 - Set mempool automatically to the end of the elf file.

@@ -32,6 +32,9 @@
 #include "ps2lib_err.h"
 #include "iopmem.h"
 #include "stdio.h"
+#ifdef FILEIO_DEBUG
+#include "fileio.h"
+#endif
 
 #define RPC_PACKET_SIZE	64
 
@@ -193,8 +196,9 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 			call->rmode = 0;
 
 		if (!SifSendCmd(0x8000000a, call, RPC_PACKET_SIZE, sendbuf,
-					cd->buff, ssize))
+					cd->buff, ssize)) {
 			return -E_SIF_PKT_SEND;
+		}
 
 		return 0;
 	}
@@ -288,7 +292,9 @@ static void rpc_packet_free(void *packet)
 static void _request_end(SifRpcRendPkt_t *request, void *data)
 {
 	SifRpcClientData_t *client = request->client;
+	void *pkt_addr;
 
+	pkt_addr = client->hdr.pkt_addr;
 	if (request->cid == 0x8000000a) {
 		if (client->end_function)
 			client->end_function(client->end_param);
@@ -307,8 +313,11 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	/* Interrupts are disabled, so it is safe to increment it. */
 	client->hdr.sema_id++;
 
-	rpc_packet_free(client->hdr.pkt_addr);
-	client->hdr.pkt_addr = NULL;
+	rpc_packet_free(pkt_addr);
+	/* If end function calls SifRpc, pkt_addr changed already. */
+	if (client->hdr.pkt_addr == pkt_addr) {
+		client->hdr.pkt_addr = NULL;
+	}
 }
 
 static void *search_svdata(u32 sid, struct rpc_data *rpc_data)
@@ -633,6 +642,9 @@ int SifCheckStatRpc(SifRpcClientData_t *cd)
 int sbcall_sifinitrpc(void)
 {
 	SifInitRpc(0);
+#ifdef FILEIO_DEBUG
+	fioInit();
+#endif
 	return 0;
 }
 

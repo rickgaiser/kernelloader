@@ -16,8 +16,8 @@
 #define PHYSADDR(addr)		(((u32)(addr)) & 0x1fffffff)
 
 /* Convert a pointer to an address in KSEG0 or KSEG1.  */
-#define KSEG0ADDR(addr)		((__typeof__(addr))(PHYSADDR(addr) | K0BASE))
-#define KSEG1ADDR(addr)		((__typeof__(addr))(PHYSADDR(addr) | K1BASE))
+#define KSEG0ADDR(addr)		((void *)(PHYSADDR(addr) | K0BASE))
+#define KSEG1ADDR(addr)		((void *)(PHYSADDR(addr) | K1BASE))
 #define UNCACHED_SEG(addr) KSEG1ADDR(addr)
 
 /* Disable interrupts and save the previous contents of COP0 Status.  */

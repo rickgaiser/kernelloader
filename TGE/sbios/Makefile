@@ -10,14 +10,31 @@ SBIOS_ADDR = 0x80001000
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
 
 EE_OBJS = prologue.o sbios.o misc.o sifdma.o core.o sifcmd.o sifrpc.o iopheap.o mc.o cache.o \
-	strlen.o strncpy.o memcpy.o pad.o memset.o strcpy.o
+	strlen.o strncpy.o memcpy.o pad.o memset.o strcpy.o cdvd.o ncmd.o scmd.o
+ifeq ($(FILEIO_DEBUG),yes)
+EE_CFLAGS += -DFILEIO_DEBUG
+EE_OBJS += fileio.o
+endif
+ifeq ($(SHARED_MEM_DEBUG),yes)
+EE_OBJS += printf.o snprintf.o
+else
+ifeq ($(FILEIO_DEBUG),yes)
+EE_OBJS += printf.o snprintf.o
+endif
+endif
 ifeq ($(SHARED_MEM_DEBUG),yes)
 EE_CFLAGS += -DSHARED_MEM_DEBUG
-EE_OBJS += iopmem.o printf.o snprintf.o
+EE_OBJS += iopmem.o
+endif
+ifeq ($(ROM_MODULE_VERSION),old)
+EE_CFLAGS += -DOLD_ROM_MODULE_VERSION
+else
+EE_CFLAGS += -DNEW_ROM_MODULE_VERSION
 endif
 
 install: all
-	cp sbios.elf ../../loader/
+	mkdir -p ../../loader/TGE
+	cp sbios.elf ../../loader/TGE/
 
 all: sbios.bin
 

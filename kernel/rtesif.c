@@ -55,9 +55,7 @@ static inline int sbios(int func, void *arg)
 	return _sbios(func, arg);
 }
 
-#ifdef RTE
 static int (*_sb_sif_reg_set)(int, int) = NULL;
-#endif
 
 int sif_reg_set(int reg, int val)
 {
@@ -66,42 +64,32 @@ int sif_reg_set(int reg, int val)
 		int	val;
 	} arg;
 
-#ifdef RTE
 	if (sbversion <= 0x200) {
-#endif
 		arg.reg = reg;
 		arg.val = val;
 		/* sceSifSetReg() */
 		return (int)_sbios(21, &arg);
-#ifdef RTE
 	} else if (sbversion <= 0x250) {
 		(int (**)(int, int))_sb_sif_reg_set = 0x80002700;
 		return _sb_sif_reg_set(reg, val);
 	}
-#endif
 
 	return 0;
 }
 
-#ifdef RTE
 static int (*_sb_sif_reg_get)(int) = NULL;
-#endif
 
 int sif_reg_get(int reg)
 {
-#ifdef RTE
 	if (sbversion <= 0x200) {
-#endif
 		/* sceSifGetReg() */
 		return (int)_sbios(22, &reg);
-#ifdef RTE
 	} else if (sbversion <= 0x250) {
 		(int (**)(int))_sb_sif_reg_get = 0x800027c0;
 		return _sb_sif_reg_get(reg);
 	}
 
 	return 0;
-#endif
 }
 
 int sif_dma_request(void *dmareq, int count)

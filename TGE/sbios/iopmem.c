@@ -1,4 +1,5 @@
 #include "iopmem.h"
+#include "core.h"
 
 /** IOP RAM is mysteriously mapped into EE HW space at this address. */
 #define SUB_VIRT_MEM    0xbc000000
@@ -40,14 +41,21 @@ static void iop_putc(unsigned char c)
 {
 #ifdef SBIOS_DEBUG
 	char buf[2];
+	u32 status;
 
+	core_save_disable(&status);
 	do {
 		iop_read(sharedMem, buf, 1);
+		if (buf[0] != 0) {
+			core_restore(status);
+			core_save_disable(&status);
+		}
 	} while(buf[0] != 0);
 	buf[0] = 0xFF;
 	buf[1] = c;
 	iop_write(&sharedMem[1], &buf[1], 1);
 	iop_write(&sharedMem[0], &buf[0], 1);
+	core_restore(status);
 #endif
 }
 
@@ -76,3 +84,10 @@ void iop_prints(const char *text)
 	}
 }
 
+int puts(const char *s)
+{
+	while(*s != 0) {
+		iop_putc(*s);
+		s++;
+	}
+}

@@ -34,6 +34,8 @@ typedef struct t_SifDmaTransfer
 u32 SifSetDma(SifDmaTransfer_t *sdd, s32 len);
 u32 iSifSetDma(SifDmaTransfer_t *sdd, s32 len);
 s32 SifDmaStat(u32 id);
+u32 sif_dma_get_hw_index(void);
+u32 sif_dma_get_sw_index(void);
 
 #ifdef __cplusplus
 }

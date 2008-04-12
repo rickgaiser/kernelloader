@@ -1,3 +1,4 @@
+
 /*
  * dmarelay.h -
  *
@@ -38,10 +39,10 @@
 #define ATA_BUFFER_SIZE		(512 * ATA_MAX_ENTRIES)
 
 typedef struct {
-	int	command;
-	int	size;
-	int	count;
-	int	devctrl;
+	int command;
+	int size;
+	int count;
+	int devctrl;
 	SifDmaTransfer_t dmat[ATA_MAX_ENTRIES];
 } ata_dma_transfer_t;
 
@@ -51,8 +52,8 @@ typedef struct {
 #define EF_SMAP_DONE		0x04
 
 struct eng_args {
-	int	semid;
-	int	evflg;
+	int semid;
+	int evflg;
 };
 
 extern struct eng_args eng_args;
@@ -66,6 +67,7 @@ extern struct eng_args eng_args;
 #define RPCS_ATA_DMA_END	0x2001
 
 #define RPCS_SMAP_TX_BEGIN	0x2002
+
 /* These are repeated for TX and RX */
 #define RPCF_SMAP_GetBufAddr	0
 #define RPCF_SMAP_Go		1

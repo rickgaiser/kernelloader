@@ -2,8 +2,6 @@ How to reverse engineer RTE sbios:
 ##################################
 
 Configure ../config.mk:
-- Set type
-TYPE = RTE
 - Set path to ps2 linux DVD 1
 PS2LINUXDVD = /media/dvd
 
