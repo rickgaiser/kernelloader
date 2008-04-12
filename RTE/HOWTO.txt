@@ -1,0 +1,22 @@
+How to reverse engineer RTE sbios:
+##################################
+
+Configure ../config.mk:
+- Set type
+TYPE = RTE
+- Set path to ps2 linux DVD 1
+PS2LINUXDVD = /media/dvd
+
+run make in this directory.
+Start ps2dis.exe (Under linux you can use wine).
+Select menu "File" -> "Open" and choose sbios.bin.
+Then don't change "Load from".
+Set "Address from" to 80001000.
+Select "File" -> "Load Label Definition File" and choose sbios.map.
+Then you can run "Analyzer" -> "Invoke Analyzer" and "Analyzer" -> "Analyze sifRPC" and try to reverse engineer a function.
+
+Files
+#####
+sbios.map -> for RTE sbios
+kernel.map -> for PS2 kernel version 0190EC20030623 (can be extracted with ps2bios_unpacker.exe file is called KERNEL and need to be loaded at 80000000)
+pbpx_955.09.map -> for RTE PS2 linux loader

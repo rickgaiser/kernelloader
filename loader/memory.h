@@ -1,0 +1,24 @@
+/* Copyright (c) 2007 Mega Man */
+#ifndef _MEMORY_H_
+#define _MEMORY_H_
+
+/** Mask to get kseg0 address from physical address. */
+#define KSEG0_MASK 0x80000000
+/** Address of KSEG0. */
+#define KSEG0 0x80000000
+/** Size of a memory page (TLB). */
+#define PAGE_SIZE 0x1000
+/** Size of data cache. */
+#define dcache_size 0x2000
+/** SIze of instruction cache. */
+#define icache_size 0x4000
+
+/**
+ * Convert userspace address to kernelspace address.
+ * Macro is required to use constant strings in kernel mode.
+ * @param x Userspace address.
+ * @returns Kernelspace address.
+ */
+#define U2K(x)	((__typeof__(*x) *) (((uint32_t) x) | KSEG0_MASK))
+
+#endif /* _MEMORY_H_ */

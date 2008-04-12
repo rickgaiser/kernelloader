@@ -1,0 +1,92 @@
+# Map file for PS2 linux RTE.
+010341b0
+.word load_pointer_to_sbios_entry
+.word load_signature
+.word load_sbios_iopaddr
+.word load_sbios_osdparam
+0102b230
+.code printf
+01023f28
+.code SifBindRPC
+010240d8
+.code SifCallRpc
+010000c0
+.code main
+01022290
+.code DisableDmac
+01023470
+.code SifExitCmd
+01023a78
+.code SifExitRPC
+01025d38
+.code SifIopReset
+010022e0
+.code USB_OHCISetup
+01011b80
+.code cp0GetStatusRegister
+01011b90
+.code cp0DisableInterruptsAndSetStatusRegister
+01023808
+.code SifWriteBackDCache
+0102af6c
+.code memcpy
+0100b718
+.code installSBIOS
+0105e474
+.code setupSystemAt80000018
+.code setupSystemAt8000001c
+.code setupSystemAt80000020
+.code setupSystemAt80000024
+.code setupSystemAt80000028
+.code setupSystemAt8000002c
+.code setupSystemAt80000030
+.code setupSystemAt80000034
+.code setupSystemAt80000038
+.code setupSystemAt8000003c
+.code setupSystemAt80000040
+.code setupSystemAt80000044
+.code setupSystemAt80000048
+.code setupSystemAt8000004c
+.code setupSystemAt80000050
+.code setupSystemAt80000054
+.code setupSystemAt80000058
+#
+# SBIOS
+#
+80001000
+.word pointer_to_sbios_entry
+.word signature
+.word sbios_iopaddr
+.word sbios_osdparam
+#
+# Linux kernel
+#
+80010000
+.code linux_kernel_start
+#
+# USB
+#
+bf801600
+.word HcRevision
+.word HcControl
+.word HcCommandStatus
+.word HcInterruptStatus
+.word HcInterruptEnable
+.word HcInterruptDisable
+.word p_HcHCCA
+.word p_HcPeriodCurrentEd
+.word p_HcControlHeadEd
+.word p_HcControlCurrentEd
+.word p_HcBulkHeadEd
+.word p_HcBulkCurrentEd
+.word HcDoneHead
+.word HcFmInterval
+.word HcFmRemaining
+.word HcFmNumber
+.word HcPeriodicStart
+.word HcLsThreshold
+.word HcRhDescriptorA
+.word HcRhDescriptorB
+.word HcRhStatus
+.word HcRhPortStatus[0]
+.word HcRhPortStatus[1]

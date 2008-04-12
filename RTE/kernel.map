@@ -1,0 +1,12 @@
+# Mapping for PS2 kernel from ROM Version 0190EC20030623.
+80000280
+.code SyscallException
+80014f40
+.word syscallTable[0]
+.word syscallTable[1]
+.word syscallTable[2]
+.word syscallTable[3]
+.word syscallTable[4]
+.word syscallTable[5]
+8000bd58
+.code gs_set_crtc

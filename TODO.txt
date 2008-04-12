@@ -1,0 +1,6 @@
+Linux patch: first 2 instructions of exception handler need to be nop and after
+patched jump must be also a nop.
+
+USB doesn't work, because SBR_IOPH_ALLOC is not working, which is used in
+"arch/mips/ps2/pci.c" by GrowLocalMem() <- AllocLocalMem() <-
+pci_alloc_consistent() <- hc_alloc_ohci() <- hc_add_ohci().

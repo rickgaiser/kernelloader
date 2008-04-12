@@ -1,0 +1,109 @@
+Kernelloader for ps2 linux
+##########################
+
+This program can load a linux kernel and start it. You need linux kernel
+2.4.17 for ps2 from the sony website. You also need to get a mips cross
+compiler. You can download it here:
+
+Linux 2.4.17_mvl21:
+http://www.sony.net/Products/Linux/Download/PlayStation_BB_Navigator.html
+
+Select Playstation 2 and download the following files:
+kernel-headers-2.4.17_ps2-26.mipsel.rpm
+kernel-source-2.4.17_ps2-26.mipsel.rpm
+
+Toolchain:
+https://playstation2-linux.com/files/ps2stuff/gcc-2.95.2-cross.tar.gz
+https://playstation2-linux.com/files/ps2stuff/binutils-2.9EE-cross.tar.gz
+
+initrd:
+http://playstation2-linux.com/files/diskless/ps2boot-1.tar.gz
+
+sh # su
+sh # tar -xzf gcc-2.95.2-cross.tar.gz -C /usr/local
+sh # tar -xzf binutils-2.9EE-cross.tar.gz -C /usr/local
+
+Install it and change to kernel directory:
+
+sh # rpm2cpio kernel-headers-2.4.17_ps2-26.mipsel.rpm | cpio -idmv
+sh # rpm2cpio kernel-source-2.4.17_ps2-26.mipsel.rpm | cpio -idmv
+sh # cd usr/src/linux-2.4.17_ps2
+
+There is no patch required to start linux.
+
+The patch adds support for initrd in linux:
+
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-initrd.patch
+
+You can also add support for printk over ps2link by patching linux (system
+start is slower):
+
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-printk.patch
+
+Then set the toolchain:
+
+sh # echo "/usr/local/ps2/bin/ee-" >.hhl_cross_compile-mips-r5900
+sh # ./setup-ps2
+
+
+Status: Kerneloader doesn't print anything on screen. Debug information is
+printed using ps2link. Kernel is starting, graphic is working, initrd not
+tested. No support for other hardware (usb keyboard is not working).
+
+INSTALL:
+First you need to compile ps2smap and ps2link from ps2dev svn and copy the
+modules "ps2smap.irx" and "ps2link.irx" to the directory "$PS2SDK/iop/irx/".
+Then run make for a test (You should change the ip address in
+"loader/Makefile" and in "loader/loader.c" variable "ifcfg"):
+
+sh # make
+sh # make test
+
+You should see the output of example kernel on ps2link output. The kernel
+tries to emulate the original PS2 kernel and start a graphic demo. SIFRPC
+is not yet working correctly in this kernel. Only IOP reset is working.
+
+Now you should compile the linux kernel. Run menu config and deactivate
+old bootinfo support.
+
+sh # make menuconfig
+
+For initrd support:
+Deactivate "Machine selection"  ---> "Support for old style boot information"
+Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
+Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
+Activate "Block devices" ---> "Initial RAM disk (initrd) support"
+
+Save configuration and then run:
+
+sh # make dep
+sh # make
+sh # cp ../usr/src/linux-2.4.17_ps2/vmlinux ../kernelloader/loader/kernel.elf
+
+Make an "initrd.gz":
+
+Extract "ps2boot-1.tar.gz" as root user.
+
+Generate "initrd.gz" as root user.
+
+sh # ./mkbootcd.sh
+
+Then copy "initrd.gz" to "kernelloader/loader".
+
+sh # cp initrd.gz ../kernelloader/loader/
+
+Go back to kernelloader dir and run make test again.
+
+sh # make test
+
+Maximum size of kernel is 5 MB.
+The loader sets maximum "initrd.gz" decompressed size to 16 MB (using
+"ramdisk_size=16384").
+
+Remarks:
+########
+
+You can select the SBIOS type by changing variable TYPE in config.mk
+from "TGE" to "RTE".  Then you need to put in the original PS2 linux
+DVD disc 1. The SBIOS will be automatically extracted. Linux will not
+start with this version, but my test kernel will work.

@@ -1,0 +1,25 @@
+/* Copyright (c) 2007 Mega Man */
+#ifndef _IOPMEM_H_
+#define _IOPMEM_H_
+
+#include "kernel.h"
+#include "stdint.h"
+
+#ifdef USER_SPACE_SUPPORT
+/** iopmem module need to be informed when in kernel mode, to handle it correctly. */
+void iop_kmode_enter(void);
+#endif
+/** Read iop memory. */
+u32 iop_read(void *addr, void *buf, u32 size);
+/** Write to iop memory. */
+u32 iop_write(void *addr, void *buf, u32 size);
+/** Print one character using sharedmem.irx (without rpc for testing). */
+void iop_putc(unsigned char c);
+/** Print one string using sharedmem.irx (without rpc for testing). */
+void iop_prints(const char *text);
+/** Printf function using sharedmem.irx (without rpc for testing). */
+int iop_printf(const char *format, ...);
+/** Print 32-bit value as hexadecimal. */
+void iop_printx(uint32_t val);
+
+#endif /* _IOPMEM_H_ */

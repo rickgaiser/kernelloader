@@ -1,0 +1,13 @@
+--- sbios.S.orig	2007-09-16 15:39:42.000000000 +0200
++++ sbios.S	2007-09-16 15:40:07.000000000 +0200
+@@ -1,9 +1,4 @@
+-.sdata
+-
+-.globl size_sbios
+-size_sbios:	.word 47888
+-
+-.data
++.text
+ 
+ .balign 16
+ 

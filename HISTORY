@@ -1,0 +1,38 @@
+0.5
+- Added graphic support in loader using gsKit.
+- Added configure option in config.mk for selecting SBIOS type RTE or TGE.
+- Added script that can extract the sbios.bin from PS2 Linux DVD 1.
+- Implemented some functions of the sifcmd level.
+- Extended my example kernel to emulate real PS2 kernel.
+- Simple examples using graphic are working with emulated PS2 kernel.
+- Use PS2 tutorial demo as example.
+- Use "hello world" demo as second example.
+- Changed DOS line endings to linux line endings.
+- Fixed setup of stack in example kernel.
+- Flush TLBs in example kernel.
+- Map memory in example kernel like real PS2.
+- Rewritten cache flush and invalidate functions.
+- Handle some PS2 syscalls in example kernel.
+- Added map files for analysing SBIOS, RTE PS2 linux loader and PS2 kernel.
+- Added some syscall to emulated PS2 kernel.
+- Added handling of INTC and DMAC to emulated PS2 kernel.
+- Added timer interrupt handling to emulated PS2 kernel.
+0.4
+- Use gsKit for graphic output.
+- Use normal malloc() instead of mempool.
+0.3
+- Use higher load address (maximum kernel size is now 5 MB).
+- Set mempool automatically to the end of the elf file.
+- Disable RPC DMA channel before starting linux.
+- Fix problem in exception handler that leads to random bus errors and page faults (at 0x80000204 must be a "nop" instruction).
+- Setup some cp0 registers, just to be sure.
+
+0.2
+- Removed graphic support in loader.
+- Added support to use iop printf over shared memory.
+- Output is redireceted via ps2link.
+- Modules loaded from host and iop is reset before starting kernel.
+- Exception handler is installed by loader to handle errors while booting.
+
+0.1
+- First release, patch required for linux to handle exception at startup.

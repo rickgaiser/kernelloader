@@ -1,0 +1,295 @@
+Memory mapping used by PS2 Kernel
+#################################
+
+TLB Setup:
+
+wired 31
+
+index 0
+entryhi 0x70000000 vaddr 0x70000000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x8000001f paddr 0x0 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x1f paddr 0x0 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 1
+entryhi 0xffff8000 vaddr 0xffff8000 asid 0
+pagemask 0x6000 16 Kbyte
+entrylo0 0x1e1f paddr 0x78000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x1f1f paddr 0x7c000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 2
+entryhi 0x10000000 vaddr 0x10000000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400017 paddr 0x10000000 valid, Uncached, dirty, global
+entrylo1 0x400053 paddr 0x10001000 valid, Uncached, not dirty, global
+
+index 3
+entryhi 0x10002000 vaddr 0x10002000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400097 paddr 0x10002000 valid, Uncached, dirty, global
+entrylo1 0x4000d7 paddr 0x10003000 valid, Uncached, dirty, global
+
+index 4
+entryhi 0x10004000 vaddr 0x10004000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400117 paddr 0x10004000 valid, Uncached, dirty, global
+entrylo1 0x400157 paddr 0x10005000 valid, Uncached, dirty, global
+
+index 5
+entryhi 0x10006000 vaddr 0x10006000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400197 paddr 0x10006000 valid, Uncached, dirty, global
+entrylo1 0x4001d7 paddr 0x10007000 valid, Uncached, dirty, global
+
+index 6
+entryhi 0x10008000 vaddr 0x10008000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400217 paddr 0x10008000 valid, Uncached, dirty, global
+entrylo1 0x400257 paddr 0x10009000 valid, Uncached, dirty, global
+
+index 7
+entryhi 0x1000a000 vaddr 0x1000a000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400297 paddr 0x1000a000 valid, Uncached, dirty, global
+entrylo1 0x4002d7 paddr 0x1000b000 valid, Uncached, dirty, global
+
+index 8
+entryhi 0x1000c000 vaddr 0x1000c000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400313 paddr 0x1000c000 valid, Uncached, not dirty, global
+entrylo1 0x400357 paddr 0x1000d000 valid, Uncached, dirty, global
+
+index 9
+entryhi 0x1000e000 vaddr 0x1000e000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x400397 paddr 0x1000e000 valid, Uncached, dirty, global
+entrylo1 0x4003d7 paddr 0x1000f000 valid, Uncached, dirty, global
+
+index 10
+entryhi 0x11000000 vaddr 0x11000000 asid 0
+pagemask 0x1e000 64 Kbyte
+entrylo0 0x440017 paddr 0x11000000 valid, Uncached, dirty, global
+entrylo1 0x440415 paddr 0x11010000 invalid, Uncached, dirty, global
+
+index 11
+entryhi 0x12000000 vaddr 0x12000000 asid 0
+pagemask 0x1e000 64 Kbyte
+entrylo0 0x480017 paddr 0x12000000 valid, Uncached, dirty, global
+entrylo1 0x480415 paddr 0x12010000 invalid, Uncached, dirty, global
+
+index 12
+entryhi 0x1e000000 vaddr 0x1e000000 asid 0
+pagemask 0x1ffe000 16 MByte
+entrylo0 0x780017 paddr 0x1e000000 valid, Uncached, dirty, global
+entrylo1 0x7c0017 paddr 0x1f000000 valid, Uncached, dirty, global
+
+index 13
+entryhi 0x80000 vaddr 0x80000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x201f paddr 0x80000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x301f paddr 0xc0000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 14
+entryhi 0x100000 vaddr 0x100000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x401f paddr 0x100000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x501f paddr 0x140000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 15
+entryhi 0x180000 vaddr 0x180000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x601f paddr 0x180000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x701f paddr 0x1c0000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 16
+entryhi 0x200000 vaddr 0x200000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x801f paddr 0x200000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0xc01f paddr 0x300000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 17
+entryhi 0x400000 vaddr 0x400000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x1001f paddr 0x400000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x1401f paddr 0x500000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 18
+entryhi 0x600000 vaddr 0x600000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x1801f paddr 0x600000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x1c01f paddr 0x700000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 19
+entryhi 0x800000 vaddr 0x800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x2001f paddr 0x800000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x3001f paddr 0xc00000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 20
+entryhi 0x1000000 vaddr 0x1000000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x4001f paddr 0x1000000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x5001f paddr 0x1400000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 21
+entryhi 0x1800000 vaddr 0x1800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x6001f paddr 0x1800000 valid, Cacheable, write-back, write allocate, dirty, global
+entrylo1 0x7001f paddr 0x1c00000 valid, Cacheable, write-back, write allocate, dirty, global
+
+index 22
+entryhi 0x20080000 vaddr 0x20080000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x2017 paddr 0x80000 valid, Uncached, dirty, global
+entrylo1 0x3017 paddr 0xc0000 valid, Uncached, dirty, global
+
+index 23
+entryhi 0x20100000 vaddr 0x20100000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x4017 paddr 0x100000 valid, Uncached, dirty, global
+entrylo1 0x5017 paddr 0x140000 valid, Uncached, dirty, global
+
+index 24
+entryhi 0x20180000 vaddr 0x20180000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x6017 paddr 0x180000 valid, Uncached, dirty, global
+entrylo1 0x7017 paddr 0x1c0000 valid, Uncached, dirty, global
+
+index 25
+entryhi 0x20200000 vaddr 0x20200000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x8017 paddr 0x200000 valid, Uncached, dirty, global
+entrylo1 0xc017 paddr 0x300000 valid, Uncached, dirty, global
+
+index 26
+entryhi 0x20400000 vaddr 0x20400000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x10017 paddr 0x400000 valid, Uncached, dirty, global
+entrylo1 0x14017 paddr 0x500000 valid, Uncached, dirty, global
+
+index 27
+entryhi 0x20600000 vaddr 0x20600000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x18017 paddr 0x600000 valid, Uncached, dirty, global
+entrylo1 0x1c017 paddr 0x700000 valid, Uncached, dirty, global
+
+index 28
+entryhi 0x20800000 vaddr 0x20800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x20017 paddr 0x800000 valid, Uncached, dirty, global
+entrylo1 0x30017 paddr 0xc00000 valid, Uncached, dirty, global
+
+index 29
+entryhi 0x21000000 vaddr 0x21000000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x40017 paddr 0x1000000 valid, Uncached, dirty, global
+entrylo1 0x50017 paddr 0x1400000 valid, Uncached, dirty, global
+
+index 30
+entryhi 0x21800000 vaddr 0x21800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x60017 paddr 0x1800000 valid, Uncached, dirty, global
+entrylo1 0x70017 paddr 0x1c00000 valid, Uncached, dirty, global
+
+index 31
+entryhi 0x30100000 vaddr 0x30100000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x403f paddr 0x100000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x503f paddr 0x140000 valid, Uncached Accelerated, dirty, global
+
+index 32
+entryhi 0x30180000 vaddr 0x30180000 asid 0
+pagemask 0x7e000 256 Kbyte
+entrylo0 0x603f paddr 0x180000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x703f paddr 0x1c0000 valid, Uncached Accelerated, dirty, global
+
+index 33
+entryhi 0x30200000 vaddr 0x30200000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x803f paddr 0x200000 valid, Uncached Accelerated, dirty, global
+entrylo1 0xc03f paddr 0x300000 valid, Uncached Accelerated, dirty, global
+
+index 34
+entryhi 0x30400000 vaddr 0x30400000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x1003f paddr 0x400000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x1403f paddr 0x500000 valid, Uncached Accelerated, dirty, global
+
+index 35
+entryhi 0x30600000 vaddr 0x30600000 asid 0
+pagemask 0x1fe000 1 MByte
+entrylo0 0x1803f paddr 0x600000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x1c03f paddr 0x700000 valid, Uncached Accelerated, dirty, global
+
+index 36
+entryhi 0x30800000 vaddr 0x30800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x2003f paddr 0x800000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x3003f paddr 0xc00000 valid, Uncached Accelerated, dirty, global
+
+index 37
+entryhi 0x31000000 vaddr 0x31000000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x4003f paddr 0x1000000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x5003f paddr 0x1400000 valid, Uncached Accelerated, dirty, global
+
+index 38
+entryhi 0x31800000 vaddr 0x31800000 asid 0
+pagemask 0x7fe000 4 MByte
+entrylo0 0x6003f paddr 0x1800000 valid, Uncached Accelerated, dirty, global
+entrylo1 0x7003f paddr 0x1c00000 valid, Uncached Accelerated, dirty, global
+
+index 39
+entryhi 0xe004c000 vaddr 0xe004c000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 40
+entryhi 0xe004e000 vaddr 0xe004e000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 41
+entryhi 0xe0050000 vaddr 0xe0050000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 42
+entryhi 0xe0052000 vaddr 0xe0052000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 43
+entryhi 0xe0054000 vaddr 0xe0054000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 44
+entryhi 0xe0056000 vaddr 0xe0056000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 45
+entryhi 0xe0058000 vaddr 0xe0058000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 46
+entryhi 0xe005a000 vaddr 0xe005a000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+
+index 47
+entryhi 0xe005c000 vaddr 0xe005c000 asid 0
+pagemask 0x0 4 Kbyte
+entrylo0 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+entrylo1 0x10 paddr 0x0 invalid, Uncached, not dirty, not global
+

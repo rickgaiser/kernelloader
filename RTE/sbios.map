@@ -1,0 +1,675 @@
+80001000
+.word pointer_to_sbios_entry
+.word signature
+.word sbios_iopaddr
+.word sbios_osdparam
+80001020
+.word dispatch0
+.word dispatch1
+.word dispatch2
+.word dispatch3
+.word dispatch4
+.word dispatch5
+.word dispatch6
+.word dispatch7
+.word dispatch8
+.word dispatch9
+.word dispatch10
+.word dispatch11
+.word dispatch12
+.word dispatch13
+.word dispatch14
+.word dispatch15
+.word dispatch16
+.word dispatch17
+.word dispatch18
+.word dispatch19
+.word dispatch20
+.word dispatch21
+.word dispatch22
+.word dispatch23
+.word dispatch24
+.word dispatch25
+.word dispatch26
+.word dispatch27
+.word dispatch28
+.word dispatch29
+.word dispatch30
+.word dispatch31
+.word dispatch32
+.word dispatch33
+.word dispatch34
+.word dispatch35
+.word dispatch36
+.word dispatch37
+.word dispatch38
+.word dispatch39
+.word dispatch40
+.word dispatch41
+.word dispatch42
+.word dispatch43
+.word dispatch44
+.word dispatch45
+.word dispatch46
+.word dispatch47
+.word dispatch48
+.word dispatch49
+.word dispatch50
+.word dispatch51
+.word dispatch52
+.word dispatch53
+.word dispatch54
+.word dispatch55
+.word dispatch56
+.word dispatch57
+.word dispatch58
+.word dispatch59
+.word dispatch60
+.word dispatch61
+.word dispatch62
+.word dispatch63
+.word dispatch64
+.word dispatch65
+.word dispatch66
+.word dispatch67
+.word dispatch68
+.word dispatch69
+.word dispatch70
+.word dispatch71
+.word dispatch72
+.word dispatch73
+.word dispatch74
+.word dispatch75
+.word dispatch76
+.word dispatch77
+.word dispatch78
+.word dispatch79
+.word dispatch80
+.word dispatch81
+.word dispatch82
+.word dispatch83
+.word dispatch84
+.word dispatch85
+.word dispatch86
+.word dispatch87
+.word dispatch88
+.word dispatch89
+.word dispatch90
+.word dispatch91
+.word dispatch92
+.word dispatch93
+.word dispatch94
+.word dispatch95
+.word dispatch96
+.word dispatch97
+.word dispatch98
+.word dispatch99
+.word dispatch100
+.word dispatch101
+.word dispatch102
+.word dispatch103
+.word dispatch104
+.word dispatch105
+.word dispatch106
+.word dispatch107
+.word dispatch108
+.word dispatch109
+.word dispatch110
+.word dispatch111
+.word dispatch112
+.word dispatch113
+.word dispatch114
+.word dispatch115
+.word dispatch116
+.word dispatch117
+.word dispatch118
+.word dispatch119
+.word dispatch120
+.word dispatch121
+.word dispatch122
+.word dispatch123
+.word dispatch124
+.word dispatch125
+.word dispatch126
+.word dispatch127
+.word dispatch128
+.word dispatch129
+.word dispatch130
+.word dispatch131
+.word dispatch132
+.word dispatch133
+.word dispatch134
+.word dispatch135
+.word dispatch136
+.word dispatch137
+.word dispatch138
+.word dispatch139
+.word dispatch140
+.word dispatch141
+.word dispatch142
+.word dispatch143
+.word dispatch144
+.word dispatch145
+.word dispatch146
+.word dispatch147
+.word dispatch148
+.word dispatch149
+.word dispatch150
+.word dispatch151
+.word dispatch152
+.word dispatch153
+.word dispatch154
+.word dispatch155
+.word dispatch156
+.word dispatch157
+.word dispatch158
+.word dispatch159
+.word dispatch160
+.word dispatch161
+.word dispatch162
+.word dispatch163
+.word dispatch164
+.word dispatch165
+.word dispatch166
+.word dispatch167
+.word dispatch168
+.word dispatch169
+.word dispatch170
+.word dispatch171
+.word dispatch172
+.word dispatch173
+.word dispatch174
+.word dispatch175
+.word dispatch176
+.word dispatch177
+.word dispatch178
+.word dispatch179
+.word dispatch180
+.word dispatch181
+.word dispatch182
+.word dispatch183
+.word dispatch184
+.word dispatch185
+.word dispatch186
+.word dispatch187
+.word dispatch188
+.word dispatch189
+.word dispatch190
+.word dispatch191
+.word dispatch192
+.word dispatch193
+.word dispatch194
+.word dispatch195
+.word dispatch196
+.word dispatch197
+.word dispatch198
+.word dispatch199
+.word dispatch200
+.word dispatch201
+.word dispatch202
+.word dispatch203
+.word dispatch204
+.word dispatch205
+.word dispatch206
+.word dispatch207
+.word dispatch208
+.word dispatch209
+.word dispatch210
+.word dispatch211
+.word dispatch212
+.word dispatch213
+.word dispatch214
+.word dispatch215
+.word dispatch216
+.word dispatch217
+.word dispatch218
+80001420
+.code sbios_entry
+80001460
+.code sbcall_getver
+800014b8
+.code sbcall_halt
+80001540
+.code sbcall_setdve
+80001af8
+.code sbcall_putc
+80001af0
+.code sbcall_getc
+80001af0
+.code sbcall_setgscrt
+80001810
+.code sbcall_setrgbyc
+80002890
+.code sbcall_sifinit
+80001c00
+.code _sbcall_sifinit
+800028b0
+.code sbcall_sifexit
+80001e20
+.code _sbcall_sifexit
+80001cf8
+.code _sbcall_sifexit
+800028d0
+.code sbcall_sifsetdma
+800021e0
+.code _sbcall_sifsetdma
+800028f8
+.code sbcall_sifdmastat
+800023f8
+.code _sbcall_sifdmastat
+80002918
+.code sbcall_sifsetdchain
+80001d18
+.code _sbcall_sifsetdchain
+80002938
+.code sbcall_sifsetreg
+80002940
+.code sbcall_sifgetreg
+80002948
+.code sbcall_sifstopdma
+80002fd8
+.code sbcall_sifinitcmd
+800029c8
+.code _sbcall_sifinitcmd
+80002ff0
+.code sbcall_sifexitcmd
+80002b98
+.code _sbcall_sifexitcmd
+80003010
+.code sbcall_sifsendcmd
+80002c58
+.code _sbcall_sifsendcmd
+80003058
+.code sbcall_sifcmdintrhdlr
+80002e08
+.code _sbcall_sifcmdintrhdlr
+80003078
+.code sbcall_sifaddcmdhandler
+80002bd8
+.code _sbcall_sifaddcmdhandler
+800030a8
+.code sbcall_sifremovecmdhandler
+80002c28
+.code _sbcall_sifremovecmdhandler
+800030c8
+.code sbcall_sifsetcmdbuffer
+80002ba8
+.code _sbcall_sifsetcmdbuffer
+800030f0
+.code sbcall_sifsetsreg
+800030f8
+.code sbcall_sifgetsreg
+80003100
+.code sbcall_sifgetdatatable
+80003108
+.code sbcall_sifsetsyscmdbuffer
+80003f78
+.code sbcall_sifinitrpc
+80003f98
+.code sb_sifexitrpc
+80003fb8
+.code sb_sifgetotherdata
+80004000
+.code sb_sifbindrpc
+80004038
+.code sb_sifcallrpc
+80004090
+.code sb_sifcheckstatrpc
+800040b0
+.code sb_sifsetrpcqueue
+800040e0
+.code sb_sifregisterrpc
+80004128
+.code sb_sifremoverpc
+80004150
+.code sb_sifremoverpcqueue
+80004170
+.code sb_sifgetnextrequest
+80004190
+.code sb_sifexecrequest
+80004200
+.code sbr_ioph_init
+80004280
+.code sbr_ioph_alloc
+80004330
+.code sbr_ioph_free
+80004448
+.code sbr_pad_init
+80004610
+.code sbr_pad_end
+80004730
+.code sbr_pad_portopen
+80004848
+.code sbr_pad_portclose
+80004d80
+.code sbr_pad_setmainmode
+80004e30
+.code sbr_pad_setactdirect
+80004f30
+.code sbr_pad_setactalign
+80005018
+.code sbr_pad_infopressmode
+80005160
+.code sbr_pad_enterpressmode
+80005180
+.code sbr_pad_exitpressmode
+80004918
+.code sb_pad_read
+80004988
+.code sb_pad_getstate
+80004a08
+.code sb_pad_getreqstate
+80004a30
+.code sb_pad_infoact
+80004b20
+.code sb_pad_infocomb
+80004c08
+.code sb_pad_infomode
+80006350
+.code sbr_sound_init
+80006668
+.code sbr_sound_end
+80006700
+.code sb_sound_greg
+800067b8
+.code sb_sound_sreg
+80006898
+.code sbr_sound_gcoreattr
+80006930
+.code sbr_sound_scoreattr
+800069d8
+.code sbr_sound_trans
+80006a98
+.code sbr_sound_transstat
+80006c48
+.code sbr_sound_transcallback
+800052e0
+.code sbr_mc_init
+80005410
+.code sbr_mc_open
+80005508
+.code sbr_mc_mkdir
+80005600
+.code sbr_mc_close
+80005688
+.code sbr_mc_seek
+800057e0
+.code sbr_mc_read
+800058c0
+.code sbr_mc_write
+80005a78
+.code sbr_mc_getinfo
+80005ba8
+.code sbr_mc_getdir
+80005cd0
+.code sbr_mc_format
+80005d60
+.code sbr_mc_delete
+80005e50
+.code sbr_mc_flush
+80005ed8
+.code sbr_mc_setfileinfo
+80006028
+.code sbr_mc_rename
+800061b0
+.code sbr_mc_unformat
+80006240
+.code sbr_mc_getentspace
+80006e00
+.code sbr_cdvd_init
+80007238
+.code sbr_cdvd_reset
+800073c8
+.code sbr_cdvd_ready
+80007520
+.code sbr_cdvd_read
+800076c8
+.code sbr_cdvd_stop
+800077d0
+.code sbr_cdvd_gettoc
+800078c0
+.code sbr_cdvd_readrtc
+80007948
+.code sbr_cdvd_writertc
+80007be8
+.code sbr_cdvd_mmode
+80007c80
+.code sbr_cdvd_geterror
+80007d08
+.code sbr_cdvd_gettype
+80007db0
+.code sbr_cdvd_trayreq
+80007e18
+.code sb_cdvd_powerhook
+800027c0
+.code _sb_sif_reg_get
+80002700
+.code _sb_sif_reg_set
+80007f90
+.word sif_initialized
+800081c0
+.word sif_init_unknown_dma_table_8x4words
+800082bc
+.word sif_reg_table
+80001db8
+.code sif_dma_init
+80008300
+.word sif1_dmatags[0].id_qwc
+.word sif1_dmatags[0].addr
+.dword sif1_dmatags[0].pad64
+.word sif1_dmatags[1].id_qwc
+.word sif1_dmatags[1].addr
+.dword sif1_dmatags[1].pad64
+.word sif1_dmatags[2].id_qwc
+.word sif1_dmatags[2].addr
+.dword sif1_dmatags[2].pad64
+.word sif1_dmatags[3].id_qwc
+.word sif1_dmatags[3].addr
+.dword sif1_dmatags[3].pad64
+.word sif1_dmatags[4].id_qwc
+.word sif1_dmatags[4].addr
+.dword sif1_dmatags[4].pad64
+.word sif1_dmatags[5].id_qwc
+.word sif1_dmatags[5].addr
+.dword sif1_dmatags[5].pad64
+.word sif1_dmatags[6].id_qwc
+.word sif1_dmatags[6].addr
+.dword sif1_dmatags[6].pad64
+.word sif1_dmatags[7].id_qwc
+.word sif1_dmatags[7].addr
+.dword sif1_dmatags[7].pad64
+.word sif1_dmatags[8].id_qwc
+.word sif1_dmatags[8].addr
+.dword sif1_dmatags[8].pad64
+.word sif1_dmatags[9].id_qwc
+.word sif1_dmatags[9].addr
+.dword sif1_dmatags[9].pad64
+.word sif1_dmatags[10].id_qwc
+.word sif1_dmatags[10].addr
+.dword sif1_dmatags[10].pad64
+.word sif1_dmatags[11].id_qwc
+.word sif1_dmatags[11].addr
+.dword sif1_dmatags[11].pad64
+.word sif1_dmatags[12].id_qwc
+.word sif1_dmatags[12].addr
+.dword sif1_dmatags[12].pad64
+.word sif1_dmatags[13].id_qwc
+.word sif1_dmatags[13].addr
+.dword sif1_dmatags[13].pad64
+.word sif1_dmatags[14].id_qwc
+.word sif1_dmatags[14].addr
+.dword sif1_dmatags[14].pad64
+.word sif1_dmatags[15].id_qwc
+.word sif1_dmatags[15].addr
+.dword sif1_dmatags[15].pad64
+.word sif1_dmatags[16].id_qwc
+.word sif1_dmatags[16].addr
+.dword sif1_dmatags[16].pad64
+.word sif1_dmatags[17].id_qwc
+.word sif1_dmatags[17].addr
+.dword sif1_dmatags[17].pad64
+.word sif1_dmatags[18].id_qwc
+.word sif1_dmatags[18].addr
+.dword sif1_dmatags[18].pad64
+.word sif1_dmatags[19].id_qwc
+.word sif1_dmatags[19].addr
+.dword sif1_dmatags[19].pad64
+.word sif1_dmatags[20].id_qwc
+.word sif1_dmatags[20].addr
+.dword sif1_dmatags[20].pad64
+.word sif1_dmatags[21].id_qwc
+.word sif1_dmatags[21].addr
+.dword sif1_dmatags[21].pad64
+.word sif1_dmatags[22].id_qwc
+.word sif1_dmatags[22].addr
+.dword sif1_dmatags[22].pad64
+.word sif1_dmatags[23].id_qwc
+.word sif1_dmatags[23].addr
+.dword sif1_dmatags[23].pad64
+.word sif1_dmatags[24].id_qwc
+.word sif1_dmatags[24].addr
+.dword sif1_dmatags[24].pad64
+.word sif1_dmatags[25].id_qwc
+.word sif1_dmatags[25].addr
+.dword sif1_dmatags[25].pad64
+.word sif1_dmatags[26].id_qwc
+.word sif1_dmatags[26].addr
+.dword sif1_dmatags[26].pad64
+.word sif1_dmatags[27].id_qwc
+.word sif1_dmatags[27].addr
+.dword sif1_dmatags[27].pad64
+.word sif1_dmatags[28].id_qwc
+.word sif1_dmatags[28].addr
+.dword sif1_dmatags[28].pad64
+.word sif1_dmatags[29].id_qwc
+.word sif1_dmatags[29].addr
+.dword sif1_dmatags[29].pad64
+.word sif1_dmatags[30].id_qwc
+.word sif1_dmatags[30].addr
+.dword sif1_dmatags[30].pad64
+.word sif1_dmatags[31].id_qwc
+.word sif1_dmatags[31].addr
+.dword sif1_dmatags[31].pad64
+800082c2
+.half sif1_dma_count
+800082c0
+.byte sif1_dmatag_index
+800020a8
+.code sif_dma_index
+80002130
+.code sif_dma_setup_tag
+80001e28
+.code sif_dma_transfer
+80007fa0
+.word sif_cmd_initialized
+80007fb0
+.word sif_rpc_initialized
+80003110
+.code _sbcall_sifinitrpc
+80003278
+.code _sbcall_sifexit_rpc
+800035e8
+.code _sbcall_sifgetotherdata
+800037c0
+.code _sbcall_sifbindrpc
+80003910
+.code _sbcall_sifcallrpc
+80003a60
+.code _sbcall_sifcheckstatrpc
+80003ad0
+.code _sbcall_sifsetrpcqueue
+80003b70
+.code _sbcall_sifregisterrpc
+80003c18
+.code _sbcall_sifremoverpc
+80003ca8
+.code _sbcall_sifremoverpcqueue
+80003d40
+.code _sbcall_sifgetnextrpc
+80003da0
+.code _sbcall_sifexecrequest
+80009560
+.word sifCmdHandlerTable1
+.word sifCmdHandlerTable1size
+80009568
+.word sifCmdHandlerTable2
+.word sifCmdHandlerTable2size
+80002bc0
+.code sif_cmd_set_sys_buffer
+80009578
+.word sifCmdSysBuffer[0].handler
+.word sifCmdSysBuffer[0].harg
+.word sifCmdSysBuffer[1].handler
+.word sifCmdSysBuffer[1].harg
+.word sifCmdSysBuffer[2].handler
+.word sifCmdSysBuffer[2].harg
+.word sifCmdSysBuffer[3].handler
+.word sifCmdSysBuffer[3].harg
+.word sifCmdSysBuffer[4].handler
+.word sifCmdSysBuffer[4].harg
+.word sifCmdSysBuffer[5].handler
+.word sifCmdSysBuffer[5].harg
+.word sifCmdSysBuffer[6].handler
+.word sifCmdSysBuffer[6].harg
+.word sifCmdSysBuffer[7].handler
+.word sifCmdSysBuffer[7].harg
+.word sifCmdSysBuffer[8].handler
+.word sifCmdSysBuffer[8].harg
+.word sifCmdSysBuffer[9].handler
+.word sifCmdSysBuffer[9].harg
+.word sifCmdSysBuffer[10].handler
+.word sifCmdSysBuffer[10].harg
+.word sifCmdSysBuffer[11].handler
+.word sifCmdSysBuffer[11].harg
+.word sifCmdSysBuffer[12].handler
+.word sifCmdSysBuffer[12].harg
+.word sifCmdSysBuffer[13].handler
+.word sifCmdSysBuffer[13].harg
+.word sifCmdSysBuffer[14].handler
+.word sifCmdSysBuffer[14].harg
+.word sifCmdSysBuffer[15].handler
+.word sifCmdSysBuffer[15].harg
+.word sifCmdSysBuffer[16].handler
+.word sifCmdSysBuffer[16].harg
+.word sifCmdSysBuffer[17].handler
+.word sifCmdSysBuffer[17].harg
+.word sifCmdSysBuffer[18].handler
+.word sifCmdSysBuffer[18].harg
+.word sifCmdSysBuffer[19].handler
+.word sifCmdSysBuffer[19].harg
+.word sifCmdSysBuffer[20].handler
+.word sifCmdSysBuffer[20].harg
+.word sifCmdSysBuffer[21].handler
+.word sifCmdSysBuffer[21].harg
+.word sifCmdSysBuffer[22].handler
+.word sifCmdSysBuffer[22].harg
+.word sifCmdSysBuffer[23].handler
+.word sifCmdSysBuffer[23].harg
+.word sifCmdSysBuffer[24].handler
+.word sifCmdSysBuffer[24].harg
+.word sifCmdSysBuffer[25].handler
+.word sifCmdSysBuffer[25].harg
+.word sifCmdSysBuffer[26].handler
+.word sifCmdSysBuffer[26].harg
+.word sifCmdSysBuffer[27].handler
+.word sifCmdSysBuffer[27].harg
+.word sifCmdSysBuffer[28].handler
+.word sifCmdSysBuffer[28].harg
+.word sifCmdSysBuffer[29].handler
+.word sifCmdSysBuffer[29].harg
+.word sifCmdSysBuffer[30].handler
+.word sifCmdSysBuffer[30].harg
+.word sifCmdSysBuffer[31].handler
+.word sifCmdSysBuffer[31].harg
+80002a24
+.code _sbcall_sifinit_not_yet_initialised
+80002b84
+.code _sbcall_sifinit_function_return
+80002ab0
+.code loop_init_sifCmdSysBuffer
+80002b0c
+.code sifinitcmd_core_restore_start
+80002b28
+.code sifinitcmd_core_restore_end
+80002d88
+.code internal_sif_cmd_send

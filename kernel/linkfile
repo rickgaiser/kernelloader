@@ -1,0 +1,64 @@
+offset = 0x80000000;
+phys = 0x10000;
+
+ENTRY(_start)
+SECTIONS {
+
+	. = phys + offset;
+	.text : AT(s_text_start) {
+		s_text_start = .;
+		*(.rodata)
+		*(.text)
+		s_text_end = .;
+
+		. = ALIGN(128);
+		s_reginfo_start = .;
+		*(.reginfo)
+		s_reginfo_end = .;
+
+		. = ALIGN(128);
+		*(.data)
+
+		. = ALIGN(128);
+		*(.rdata)
+
+		. = ALIGN(128);
+		*(.lit4)
+
+		. = ALIGN(128);
+		*(.lit8)
+
+		. = ALIGN(128);
+		*(.sdata)
+
+		. = ALIGN(128);
+		_fbss = . ;
+		*(.scommon)
+		*(.sbss)
+
+		. = ALIGN(128);
+		*(.bss)
+
+		. = ALIGN(128);
+		*(COMMON)
+	}
+
+	. = ALIGN(32);
+	_end = . ;
+	PROVIDE(end = .);
+
+	/* Only listed to get it not interfere with above sections: */
+        .note : {
+                *(.note)
+        }
+        .stab : {
+                *(.stab)
+        }
+        .stabstr : {
+                *(.stabststr)
+        }
+        .comment : {
+                *(.comment)
+        }
+}
+

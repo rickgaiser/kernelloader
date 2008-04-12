@@ -1,0 +1,96 @@
+--- linux-2.4.17_ps2.orig/kernel/iopmem.c	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.4.17_ps2.test1/kernel/iopmem.c	2007-07-21 23:54:07.000000000 +0200
+@@ -0,0 +1,52 @@
++/** IOP RAM is mysteriously mapped into EE HW space at this address. */
++#define SUB_VIRT_MEM    0xbc000000
++
++static unsigned char *sharedMem = (unsigned char *) 0x001ff000;
++
++/** Memory copy function like in libc. */
++static void memcpy(unsigned char *dst, unsigned char *src, unsigned int size)
++{
++	unsigned int n;
++
++	for (n = 0; n < size; n++) {
++		dst[n] = src[n];
++	}
++}
++
++/** Read iop memory address. */
++static unsigned int iop_read(void *addr, void *buf, unsigned int size)
++{
++	memcpy(buf, addr + SUB_VIRT_MEM, size);
++
++	return size;
++}
++
++/** Write to iop memory address. */
++static unsigned int iop_write(void *addr, void *buf, unsigned int size)
++{
++	memcpy(addr + SUB_VIRT_MEM, buf, size);
++
++	return size;
++}
++
++static void iop_putc(unsigned char c)
++{
++	char buf[2];
++
++	do {
++		iop_read(sharedMem, buf, 1);
++	} while(buf[0] != 0);
++	buf[0] = 0xFF;
++	buf[1] = c;
++	iop_write(&sharedMem[1], &buf[1], 1);
++	iop_write(&sharedMem[0], &buf[0], 1);
++}
++
++void iop_prints(const char *text)
++{
++	while(*text != 0) {
++		iop_putc(*text);
++		text++;
++	}
++}
++
+--- linux-2.4.17_ps2.orig/kernel/iopmem.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.4.17_ps2.test1/kernel/iopmem.h	2007-07-21 23:54:09.000000000 +0200
+@@ -0,0 +1,7 @@
++#ifndef _IOPMEM_H_
++#define _IOPMEM_H_
++
++/** Print string using iop memory (for debugging). */
++void iop_prints(const char *text);
++
++#endif /* _IOPMEM_H_ */
+--- linux-2.4.17_ps2.orig/kernel/Makefile	2002-03-04 11:32:30.000000000 +0100
++++ linux-2.4.17_ps2.test1/kernel/Makefile	2007-07-21 23:55:05.000000000 +0200
+@@ -15,7 +15,7 @@ export-objs = signal.o sys.o kmod.o cont
+ obj-y     = sched.o fork.o exec_domain.o panic.o printk.o \
+ 	    module.o exit.o itimer.o info.o time.o softirq.o resource.o \
+ 	    sysctl.o acct.o capability.o ptrace.o timer.o user.o \
+-	    signal.o sys.o kmod.o context.o
++	    signal.o sys.o kmod.o context.o iopmem.o
+ 
+ obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
+ obj-$(CONFIG_UID16) += uid16.o
+--- linux-2.4.17_ps2.orig/kernel/printk.c	2002-11-08 12:30:34.000000000 +0100
++++ linux-2.4.17_ps2.test1/kernel/printk.c	2007-07-21 23:53:51.000000000 +0200
+@@ -29,6 +29,8 @@
+ 
+ #include <asm/uaccess.h>
+ 
++#include "iopmem.h"
++
+ #ifdef CONFIG_MULTIQUAD
+ #define LOG_BUF_LEN	(65536)
+ #elif defined(CONFIG_SMP)
+@@ -428,6 +430,8 @@ asmlinkage int printk(const char *fmt, .
+ 	printed_len = vsnprintf(printk_buf, sizeof(printk_buf), fmt, args);
+ 	va_end(args);
+ 
++	iop_prints(printk_buf);
++
+ 	/*
+ 	 * Copy the output into log_buf.  If the caller didn't provide
+ 	 * appropriate log level tags, we insert them here
