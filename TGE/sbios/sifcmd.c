@@ -20,7 +20,7 @@
 #include "sif.h"
 #include "hwreg.h"
 #include "core.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 #include "stdio.h"
 
 /** Maximum packet data size when calling sif_cmd_send(). */

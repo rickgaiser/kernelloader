@@ -7,6 +7,9 @@
 #include <cdvdman.h>
 #include <sysclib.h>
 
+#define MODNAME "sharedmem"
+IRX_ID(MODNAME, 1, 1);
+
 static void ioThread(void *param);
 
 /** IOP memory address used as shared memory. */
@@ -17,8 +20,6 @@ int _start(int argc, char **argv)
 {
 	iop_thread_t param;
 	int th;
-
-	printf("Hello World from IOP!\n");
 
 	printf("sharedMem = 0x%02x\n", *sharedMem);
 	sharedMem[0] = 0;

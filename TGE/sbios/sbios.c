@@ -7,7 +7,7 @@
  */
 
 #include "sbcalls.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 #include "stdio.h"
 
 #define SBCALL_MAX	256

@@ -33,7 +33,7 @@
 #include "mc.h"
 #include "sbcalls.h"
 #include "ps2lib_err.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 #include "stdio.h"
 #include "string.h"
 #include "cdvd.h"

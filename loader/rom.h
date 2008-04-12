@@ -13,6 +13,9 @@ typedef struct rom_entry
 	unsigned char filename[ROM_MAX_FILENAME];
 	void *start;
 	int size;
+	int width;
+	int height;
+	int depth;
 } rom_entry_t;
 
 typedef struct rom_stream

@@ -1,3 +1,18 @@
+1.1
+- Better graphical look and style of boot screen.
+- Fixed error when switching mc directories to often.
+- Autodetect memory card module version in SBIOS.
+- Fixed problem that debug output was lost in eedebug.irx.
+- Needed to move load address of kernelloader from 5 MB to ~4 MB,
+  because kernel has problems with initrd loaded at a high address.
+  Maximum kernel size is ~4 MB.
+- Check ELF files for correct section location before startin. Can be
+  deactivated in menu ("Enable IOP debug output").
+- Print debug output on screen when kernelloader is started.
+- Added USB keyboard support in kernelloader, you can select menu
+  by using CURSOR KEYS and RETURN.
+- Kernel parameter can be changed with USB keyboard.
+
 1.0
 - Added support for CDVD (Playstation CD and Playstation DVD can be read).
 - Finished dmarelay.irx, I am unsure about the correctness of function

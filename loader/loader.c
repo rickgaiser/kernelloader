@@ -8,6 +8,7 @@
 #include <sifrpc.h>
 #include <iopcontrol.h>
 #include <debug.h>
+#include "libkbd.h"
 
 #include "cache.h"
 #include "elf.h"
@@ -25,10 +26,10 @@
 #include "smod.h"
 #include "usb.h"
 #include "ps2dev9.h"
-#include "iopprintdata.h"
 #include "debug.h"
 #include "pad.h"
 #include "rom.h"
+#include "eedebug.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -80,10 +81,6 @@ typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
-/** Linux parameter for PAL mode. */
-const char commandline_pal[] = "crtmode=pal ramdisk_size=16384";
-/** Linux parameter for NTSC mode. */
-const char commandline_ntsc[] = "crtmode=ntsc ramdisk_size=16384";
 
 #ifdef PS2LINK
 #define LOAD_ON_PS2LINK 1
@@ -250,6 +247,14 @@ moduleEntry_t modules[] = {
 		.debug = 1
 	},
 	{
+		.path = "host:poweroff.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_PS2LINK,
+		.ps2link = -1
+	},
+	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
 		.argLen = 0,
@@ -268,18 +273,11 @@ moduleEntry_t modules[] = {
 	{
 		.path = "host:ps2smap.irx",
 		.buffered = -1,
-		.argLen = sizeof(ifcfg),
-		.args = ifcfg,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
-	},
-	{
-		.path = "host:poweroff.irx",
-		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
+		.ps2link = -1,
+		.ps2smap = 1
 	},
 	{
 		.path = "host:ps2link.irx",
@@ -308,7 +306,9 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
+#if 0 /* Only USB is working. */
 		.ps2link = 1,
+#endif
 		.rte = 1
 	},
 #endif
@@ -318,7 +318,9 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.load = LOAD_ON_NOT_PS2LINK,
+#if 0 /* Only USB is working. */
 		.ps2link = 1,
+#endif
 		.tge = 1
 	},
 #ifdef RTE
@@ -379,6 +381,24 @@ moduleEntry_t modules[] = {
 		.rte = 1
 	},
 #endif
+	{
+		.path = "rom0:XCDVDFSV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1
+	},
+	{
+		.path = "rom0:CDVDFSV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+		.oldmods = 1
+	},
 };
 
 /** Start address of linker section ".text" of this loader. */
@@ -391,6 +411,111 @@ void panic()
 {
 	/* Nothing can be done here. */
 	while(1);
+}
+
+/**
+ * Check program sections of ELF file against memory range.
+ * @param Name of file
+ * @param buffer Pointer to ELF file.
+ * @param start Physical start address (included).
+ * @param end Physical end address (excluded).
+ */
+int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end)
+{
+	Elf32_Ehdr_t *file_header;
+	int pos = 0;
+	int i;
+	uint32_t entry = NULL;
+	uint32_t area;
+
+	start = start & 0x0FFFFFFF;
+	end = end & 0x0FFFFFFF;
+
+	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	pos += sizeof(Elf32_Ehdr_t);
+	if (file_header->magic != ELFMAGIC) {
+		error_printf("Magic 0x%08x is wrong.\n", file_header->magic);
+		return -1;
+	}
+	entry = file_header->entry;
+	printf("entry is 0x%08x\n", entry);
+	area = entry >> 28;
+	switch(area) {
+		case 0x8:
+		case 0xa:
+			/* Everything is fine. */
+			break;
+		default:
+			error_printf("Bad entry address 0x%08x of %s is not accessible by loader.",
+				entry, name);
+			return -20;
+	}
+	entry = entry & 0x0FFFFFFF;
+	if (entry < start) {
+		error_printf("Entry point 0x%08x of %s is before 0x%08x.",
+			entry, name, start);
+		return -21;
+	}
+	if (entry >= end) {
+		error_printf("Entry point 0x%08x of %s is after  0x%08x.",
+			entry, name, end);
+		return -21;
+	}
+	for (i = 0; i < file_header->phnum; i++)
+	{
+		Elf32_Phdr_t *program_header;
+		program_header = (Elf32_Phdr_t *) &buffer[pos];
+		pos += sizeof(Elf32_Phdr_t);
+		if ( (program_header->type == PT_LOAD)
+			&& (program_header->memsz != 0) )
+		{
+			uint32_t dest;
+			int size;
+
+			printf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
+				program_header->vaddr,
+				program_header->paddr,
+				program_header->offset,
+				program_header->filesz);
+
+			// Get physical address which can be accessed by loader.
+			dest = program_header->paddr;
+			size = program_header->memsz;
+			if (size < program_header->filesz) {
+				size = program_header->filesz;
+			}
+
+			if (size != 0) {
+				uint32_t last;
+				area = dest >> 28;
+				switch(area) {
+					case 0x8:
+					case 0xa:
+						/* Everything is fine. */
+						break;
+					default:
+						error_printf("Bad memory address 0x%08x of %s is not accessable by loader.",
+							dest, name);
+						return -2;
+				}
+				dest = dest & 0x0FFFFFFF;
+
+				if (dest < start) {
+					error_printf("The memory region start address 0x%08x of %s is before 0x%08x.",
+						dest, name, start);
+					return -3;
+				}
+
+				last = dest + size;
+				if (last >= end) {
+					error_printf("The memory region end address 0x%08x of %s is after 0x%08x.",
+						last, name, end);
+					return -4;
+				}
+			}
+		}
+	}
+	return 0;
 }
 
 /**
@@ -521,10 +646,12 @@ char *load_file(const char *filename, int *size)
 	if (size == NULL)
 		size = &s;
 
+	setEnableDisc(-1);
 	graphic_setPercentage(0, filename);
 	fin = fopen(filename, "rb");
 	if (fin == NULL) {
-		printf("Error cannot open file \"%s\".\n", filename);
+		error_printf("Error cannot open file %s.", filename);
+		setEnableDisc(0);
 		return NULL;
 	}
 
@@ -537,11 +664,13 @@ char *load_file(const char *filename, int *size)
 	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
 	if (buffer == NULL) {
 		fclose(fin);
+		setEnableDisc(0);
 		return NULL;
 	}
 	if ((u32) buffer < (u32) &_end) {
 		/* This will lead to problems. */
-		printf("memalign() is unusable!\n");
+		error_printf("memalign() is unusable!");
+		setEnableDisc(0);
 		panic();
 	}
 
@@ -561,6 +690,7 @@ char *load_file(const char *filename, int *size)
 		graphic_setPercentage(pos / (filesize / 100), filename);
 	}
 	fclose(fin);
+	setEnableDisc(0);
 	dprintf("Loaded %d\n", pos);
 	graphic_setPercentage(100, filename);
 
@@ -598,7 +728,7 @@ int loadModules(void)
 				modules[i].buffer = load_file(modules[i].path, &modules[i].size);
 				modules[i].allocated = 1;
 				if (modules[i].buffer == NULL) {
-					error_printf("Failed to load module '%s'.\n", modules[i].path);
+					error_printf("Failed to load module '%s'.", modules[i].path);
 
 					/* Free memory. */
 					for (j = 0; j < i; j++) {
@@ -633,10 +763,21 @@ void startModules(void)
 	for (i = 0; i < getNumberOfModules(); i++)
 	{
 		if (modules[i].load) {
+			if (modules[i].ps2smap) {
+				modules[i].args = getPS2MAPParameter(&modules[i].argLen);
+			}
 			if (modules[i].buffered) {
-				SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
+				int ret;
+
+				ret = SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
+				if (ret < 0) {
+					rv = ret;
+				}
 			} else {
-				SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
+				rv = SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
+			}
+			if (rv < 0) {
+				error_printf("Failed to load module \"%s\".", modules[i].path);
 			}
 		}
 	}
@@ -822,33 +963,12 @@ void printAllModules(void)
 	i = 0;
 	while (smod_get_next_mod(current, &module) != 0)
 	{
-		printf("modules id %d\n", module.id);
 		smem_read(module.name, name, 256);
-		printf("Name: %s\n", name);
-#if 1
-		printf("mod: %s\n", name);
-#else
-		scr_printf("mod: %s\n", name);
-#endif
+		printf("modules id %d \"%s\" version 0x%02x\n", module.id, name, module.version);
 		current = &module;
 		i++;
 	}
 }
-
-#ifndef PS2LINK
-#define QUEUE_DEPTH 256
-iop_text_data_t textQueue[QUEUE_DEPTH];
-int queueReadPos = 0;
-int queueWritePos = 0;
-
-static void print_iop_data(iop_text_data_t *data, void *arg)
-{
-	if (((queueWritePos + 1) % QUEUE_DEPTH)!= queueReadPos) {
-		memcpy(&textQueue[queueWritePos], data, sizeof(iop_text_data_t));
-		queueWritePos = (queueWritePos + 1) % QUEUE_DEPTH;
-	}
-}
-#endif
 
 char magic_string[] = "PS2b";
 uint32_t *magic_check = (uint32_t *) magic_string;
@@ -872,7 +992,7 @@ uint32_t *getSBIOSCallTable(char *addr)
 	printf("Entrypoint 0x%08x magic 0x%08x\n", *entrypoint, *magic);
 
 	if (*magic != *magic_check) {
-		error_printf("SBIOS file is incorrect (magic is wrong).\n");
+		error_printf("SBIOS file is incorrect (magic is wrong).");
 		return NULL;
 	}
 
@@ -1014,19 +1134,14 @@ int loader(void *arg)
 	const char *commandline;
 	uint32_t *patch;
 	uint32_t iopaddr;
-	uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
-	uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
+	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
+	volatile uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
 	graphic_mode_t mode = (int) arg;
 	int sbios_size = 0;
 	const char *sbios_filename = NULL;
 	const char *kernel_filename = NULL;
 
-	/* Set commandline for correct video mode. */
-	if(mode == MODE_NTSC) {
-		commandline = commandline_ntsc;
-	} else {
-		commandline = commandline_pal;
-	}
+	commandline = getKernelParameter();
 
 	/* Initialize memboot parameter. */
 	memset(bootinfo, 0, sizeof(struct ps2_bootinfo));
@@ -1073,6 +1188,12 @@ int loader(void *arg)
 
 		graphic_setStatusMessage("Checking SBIOS...");
 
+		/* Check for errors in ELF file. */
+		if (check_sections("SBIOS", sbios, 0x1000, 0x10000) != 0) {
+			free(sbios);
+			return -2;
+		}
+
 		for (i = 0; i < sbios_size; i++) {
 			if (((uint32_t *) sbios)[i] == *magic_check) {
 				found = 1;
@@ -1084,7 +1205,7 @@ int loader(void *arg)
 		}
 		if (SBIOSCallTable == NULL) {
 			if (!found) {
-				error_printf("SBIOS file is invalid, magic not found.\n");
+				error_printf("SBIOS file is invalid, magic not found.");
 			}
 			return -3;
 		} else {
@@ -1111,8 +1232,24 @@ int loader(void *arg)
 	}
 	if (buffer != NULL) {
 		const char *initrd_filename;
+		uint32_t lowestAddress;
+
+		lowestAddress = (uint32_t) _ftext;
+		if (lowestAddress > ((uint32_t) buffer)) {
+			lowestAddress = (uint32_t) buffer;
+		}
+
+		/* Check for errors in ELF file. */
+		graphic_setStatusMessage("Checking Kernel...");
+		if (check_sections("kernel", buffer, 0x10000, lowestAddress) != 0) {
+			free(((unsigned int) sbios) & 0x0FFFFFFF);
+			free(buffer);
+			return -2;
+		}
+
 		/* Access data from kernel space, because TLB misses can't be handled here. */
 		buffer = (char *) (((unsigned int) buffer) | KSEG0_MASK);
+		graphic_setStatusMessage(NULL);
 		if (loadModules()) {
 			free(((unsigned int) sbios) & 0x0FFFFFFF);
 			free(((unsigned int) buffer) & 0x0FFFFFFF);
@@ -1122,8 +1259,16 @@ int loader(void *arg)
 		initrd_filename = getInitRdFilename();
 		if (initrd_filename != NULL) {
 			bootinfo->initrd_start = ((unsigned int) load_file(initrd_filename, &bootinfo->initrd_size));
-			if (bootinfo->initrd_size != 0) {
-				bootinfo->initrd_start |= KSEG0_MASK;
+			if (bootinfo->initrd_start != NULL) {
+				if (bootinfo->initrd_size != 0) {
+					bootinfo->initrd_start |= KSEG0_MASK;
+				} else {
+					error_printf("Loading of initrd failed (1).");
+					return -9;
+				}
+			} else {
+				error_printf("Loading of initrd failed (2).");
+				return -10;
 			}
 			printf("initrd_start 0x%08x 0x%08x\n", bootinfo->initrd_start, bootinfo->initrd_size);
 		}
@@ -1132,6 +1277,7 @@ int loader(void *arg)
 		graphic_setStatusMessage("Reseting IOP");
 		FlushCache(0);
 
+		PS2KbdClose();
 		padEnd();
 
 		SifExitIopHeap();
@@ -1152,11 +1298,9 @@ int loader(void *arg)
 		graphic_setStatusMessage("Patching disable prefix check");
 		sbv_patch_disable_prefix_check();
 
-#ifndef PS2LINK
 		graphic_setStatusMessage("Adding eedebug handler");
-		/* Register eedebug handler. */
-		SifAddCmdHandler(0x00000010, print_iop_data, NULL);
-#endif
+
+		addEEDebugHandler();
 
 		graphic_setStatusMessage("Starting modules");
 		printf("Starting modules\n");
@@ -1164,24 +1308,16 @@ int loader(void *arg)
 		startModules();
 
 		graphic_setStatusMessage("Started all modules");
-#if 0 //ndef PS2LINK
-		init_scr();
-
-		/* Print queued eedebug messages. (Anything printed by IOP. */
-		while(queueWritePos != queueReadPos) {
-			if (queueWritePos != queueReadPos) {
-			textQueue[queueReadPos].text[79] = 0;
-				scr_printf("%s", textQueue[queueReadPos].text);
-				queueReadPos = (queueReadPos + 1) % QUEUE_DEPTH;
-			}
-			DelayThread(1000);
-		}
-#endif
 
 		printf("Started modules\n");
 
 		printAllModules();
 		iopaddr = SifGetReg(0x80000000);
+
+		if (!isInfoBufferEmpty()) {
+			/* Print queued eedebug messages. (Anything printed by IOP). */
+			waitForUser();
+		}
 
 		graphic_setStatusMessage("Stop RPC");
 

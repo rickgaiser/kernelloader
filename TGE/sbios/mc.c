@@ -28,9 +28,10 @@
 #include "mc.h"
 #include "sbcalls.h"
 #include "ps2lib_err.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 #include "stdio.h"
 #include "string.h"
+#include "smod.h"
 
 //#define MC_DEBUG
 
@@ -1133,11 +1134,28 @@ int mcSync(int mode, int *cmd, int *result)
 
 int sbcall_mcinit(tge_sbcall_rpc_arg_t *carg)
 {
-#ifdef OLD_ROM_MODULE_VERSION
-	return mcInit(MC_TYPE_MC, carg->endfunc, carg->efarg, &carg->result);
-#else
-	return mcInit(MC_TYPE_XMC, carg->endfunc, carg->efarg, &carg->result);
-#endif
+	smod_mod_info_t mod;
+
+	/* Detect module loaded on IOP. */
+	if (smod_get_mod_by_name("mcserv", &mod) > 0) {
+		int type;
+		int rv;
+
+		if ((mod.version >> 8) > 1) {
+			printf("MCSERV new version 0x%x.\n", mod.version);
+			type = MC_TYPE_XMC;
+		} else {
+			printf("MCSERV old version 0x%x.\n", mod.version);
+			type = MC_TYPE_MC;
+		}
+		rv = mcInit(type, carg->endfunc, carg->efarg, &carg->result);
+
+		printf("mcInit() result %d.\n", rv);
+		return rv;
+	} else {
+		printf("Error: MCSERV not loaded.\n");
+		return -1;
+	}
 }
 
 int sbcall_mcgetinfo(tge_sbcall_rpc_arg_t *carg)

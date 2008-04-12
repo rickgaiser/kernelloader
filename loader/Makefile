@@ -4,9 +4,9 @@ include ../config.mk
 
 EE_BIN = $(PROGRAM).elf
 EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o ps2dev9.o
-EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o
+EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
-EE_LIBS += -lpad -lmc -lfileXio
+EE_LIBS += -lpad -lmc -lfileXio -lkbd
 ifneq ($(LIBJPG),)
 EE_LIBS += -L$(LIBJPG)/lib -ljpg
 endif
@@ -23,37 +23,52 @@ endif
 ifeq ($(LOAD_PS2LINK),yes)
 EE_CFLAGS += -DPS2LINK
 endif
-ifeq ($(ROM_MODULE_VERSION),old)
-EE_CFLAGS += -DOLD_ROM_MODULE_VERSION
-else
-EE_CFLAGS += -DNEW_ROM_MODULE_VERSION
+ifeq ($(RESET_IOP),yes)
+EE_CFLAGS += -DRESET_IOP
 endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
 
+# Autodetect if RTE is available.
 EE_CFLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
 
 EE_CXXFLAGS = $(EE_CFLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
 
 MODULES = ioptrap.irx iomanX.irx ps2dev9.irx ps2ip.irx ps2smap.irx poweroff.irx \
-	ps2link.irx usbd.irx usb_mass.irx fileXio.irx
+	ps2link.irx usbd.irx usb_mass.irx fileXio.irx ps2kbd.irx
 
 ROM_FILES = \
+	ps2dev9.irx \
 	eedebug.irx \
 	fileXio.irx \
 	iomanX.irx \
 	ioptrap.irx \
 	poweroff.irx \
-	ps2dev9.irx \
 	ps2ip.irx \
 	ps2link.irx \
 	ps2smap.irx \
 	sharedmem.irx \
 	usbd.irx \
 	usb_mass.irx \
+	ps2kbd.irx \
 	TGE/dmarelay.irx \
 	TGE/intrelay.irx \
-	TGE/sbios.elf \
-	kernel.elf
+	TGE/sbios_old.elf \
+	TGE/sbios_new.elf \
+	kernel.elf \
+	$(RGB_FILES)
+
+RGB_FILES = \
+	folder.rgb \
+	penguin.rgb \
+	up.rgb \
+	back.rgb \
+	selected.rgb \
+	unselected.rgb \
+	disc.rgb \
+	cloud.rgb
+
+RGB_HEADERS = \
+	$(subst .rgb,.h, $(RGB_FILES))
 
 RTE_FILES += \
 	RTE/cdvdfsv.irx \
@@ -89,14 +104,20 @@ reset: $(PROGRAM).elf
 
 clean:
 	rm -f $(EE_BIN) *.o
-	rm -f sbios.elf kernel.elf sharedmem.irx $(MODULES) intrelay.irx dmarelay.irx iopintr.irx cdvdman.irx cdvdfsv.irx
+	rm -f kernel.elf sharedmem.irx $(MODULES) intrelay.irx dmarelay.irx iopintr.irx cdvdman.irx cdvdfsv.irx
 	rm -f romfilelist.h romdefinitions.h rominitialize.h
+	rm -f $(RGB_HEADERS) $(RGB_FILES)
 	rm -f $(PACKEDFILE)
+	rm -f $(ROM_FILES)
+	rm -f $(addsuffix .s,$(subst .,_,$(ROM_FILES)))
+	rm -f $(addsuffix .o,$(subst .,_,$(ROM_FILES)))
+	rm -rf .depend
+	rm -rf TGE RTE
 
-romfilelist.h:
+romfilelist.h: $(RGB_HEADERS) $(RGB_FILES)
 	rm -f romfilelist.h
 	for file in $(ROM_FILES); do \
-		echo "{ \"$$file\", NULL, 0}," >> romfilelist.h; \
+		echo "{ \"$$file\", NULL, 0, 0, 0, 0}," >> romfilelist.h; \
 	done
 
 romdefinitions.h:
@@ -106,20 +127,58 @@ romdefinitions.h:
 		echo "extern int size_$$file;" >> romdefinitions.h; \
 	done
 
-rominitialize.h:
+rominitialize.h: $(RGBFILES)
 	rm -f rominitialize.h
+	for file in $(subst .,_,$(subst /,_,$(ROM_FILES))); do \
+		if [ "$${file: -3:3}" = "rgb" ]; then \
+			echo "#include \"$${file}\"" | sed -e "s/_rgb\"/\.h\"/g" >> rominitialize.h; \
+		fi; \
+	done
 	for file in $(subst .,_,$(subst /,_,$(ROM_FILES))); do \
 		echo "rom_files[i].start = $$file;" >> rominitialize.h; \
 		echo "rom_files[i].size = size_$$file;" >> rominitialize.h; \
+		if [ "$${file: -3:3}" = "rgb" ]; then \
+			ufile="`echo $$file | perl -n -e \"s/_rgb\$$//g; print uc($$@);\"`"; \
+			echo "rom_files[i].width = $${ufile}_WIDTH;" >> rominitialize.h; \
+			echo "rom_files[i].height = $${ufile}_HEIGHT;" >> rominitialize.h; \
+			echo "rom_files[i].depth = $${ufile}_DEPTH;" >> rominitialize.h; \
+		fi; \
 		echo "i++;" >> rominitialize.h; \
 	done
 
 %_irx.s: %.irx
-	bin2s $^ $@ $(subst /,_,$*)_irx
+	rm -f $@.tmp
+	rm -f $@
+	bin2s $^ $@.tmp $(subst /,_,$*)_irx
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
+	rm -f $@.tmp
 
 %_elf.s: %.elf
 	bin2s $^ $@ $(subst /,_,$*)_elf
 
+%_rgb.s: %.rgb
+	rm -f $@.tmp
+	rm -f $@
+	bin2s $^ $@.tmp $(subst /,_,$*)_rgb
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
+	rm -f $@.tmp
+
+%.rgb %.h: %.ppm ../ppm2rgb/ppm2rgb
+	../ppm2rgb/ppm2rgb $*.ppm $*.rgb $*.h $*
+
+%.rgb %.h: %.png ../png2rgb/png2rgb
+	../png2rgb/png2rgb $*.png $*.rgb $*.h $*
+
+.depend/%.d: %.c
+	mkdir -p .depend
+	$(EE_CC) -E -M -MG $(EE_CFLAGS) $(EE_INCS) $< >$@
+
+.depend/%.d: %.cpp
+	mkdir -p .depend
+	$(EE_CXX) -E -M -MG $(EE_CXXFLAGS) $(EE_INCS) $< >$@
+
 include Makefile.pref
 include Makefile.eeglobal
-
+ifneq ($(MAKECMDGOALS),clean)
+-include $(addprefix .depend/,$(subst .o,.d, $(EE_OBJS)))
+endif

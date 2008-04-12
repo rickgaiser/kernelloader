@@ -1,0 +1,40 @@
+PR#1
+Fix initialisation of ATA/Network/PCI in loader. Currently PS2SDK code is
+copied. Network frames can be send, but  not received. Hard disc is not working.
+
+PR#2
+Function sbcall_cdvdtrayrequestStage2() is sometimes not called after RPC Call.
+(When linux is working without debug then second RPC trayreq call leads to
+deadlock.) RPC call message is transfered to IOP, when I replace the handler
+with sceSifAddCmdHandler(0x8000000A, ...); the moment before, my handler is
+executed. It seems that message is lost in RPC or CDVD module.
+
+PR#3
+Reset is not working when loaded by ps2link.
+
+PR#4
+Memory card is not working when new module is loaded from ROM.
+
+PR#5
+CDVD driver version is not detected by TGE SBIOS.
+
+PR#6
+PAD driver version is not detected by TGE SBIOS.
+
+PR#7
+Initrd must be loaded to low memory address.
+
+PR#8
+Network can only send, but not receive.
+
+PR#9
+Hard disc can't be used.
+
+PR#10
+When loading of Linux failed, because file names where wrong and this is fixed
+after. Then it is possible that the initrd is loaded at a higher address, which
+leads to segmentation faults when starting system later.
+
+PR#11
+New ROM modules and TGE version with support for it leads to linux panic:
+Scheduling in interrupt.

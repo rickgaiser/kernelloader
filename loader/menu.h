@@ -22,14 +22,17 @@ class Menu {
 	int positionX;
 	int positionY;
 	const char *title;
+	/** Maximum number of menu items on one page (display). */
+	int numberOfMenuItems;
 
 	public:
-	Menu(GSGLOBAL *gsGlobal, GSFONT *gsFont) :
+	Menu(GSGLOBAL *gsGlobal, GSFONT *gsFont, int numberOfMenuItems) :
 		gsGlobal(gsGlobal),
 		gsFont(gsFont),
 		positionX(0),
 		positionY(0),
-		title(NULL)
+		title(NULL),
+		numberOfMenuItems(numberOfMenuItems)
 	{
 		selectedMenu = 0;
 		numberOfMenuEntries = 0;
@@ -41,7 +44,7 @@ class Menu {
 
 	void paint(void);
 
-	void addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg);
+	void addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex = NULL);
 	void addCheckItem(const char *name, int *value);
 
 	Menu *addSubMenu(const char *name);

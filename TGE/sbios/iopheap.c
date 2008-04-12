@@ -26,7 +26,7 @@
 #include "sifrpc.h"
 #include "sbcalls.h"
 #include "ps2lib_err.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 
 #include "iopheap.h"
 #include "stdio.h"

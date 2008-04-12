@@ -29,6 +29,9 @@
 #define SSBUS_R_141c		0xbf80141c
 #define SSBUS_R_1420		0xbf801420
 
+//#define DEV9_R_POWER DEV9_R_146C
+
+
 static int dev9type = -1;	/* 0 for PCMCIA, 1 for expansion bay */
 static int using_aif = 0;	/* 1 if using AIF on a T10K */
 
@@ -100,6 +103,9 @@ int ps2dev9_init()
 	
 	/* Normal termination.  */
 	M_PRINTF("Driver loaded.\n");
+	/* Activate network */
+	DEV9_REG(DEV9_R_1464) = 3;
+
 
 	return 0;
 }
@@ -165,14 +171,14 @@ void dev9Shutdown()
 	USE_DEV9_REGS;
 
 	if (dev9type == 0) {	/* PCMCIA */
-		DEV9_REG(DEV9_R_146C) = 0;
+		DEV9_REG(DEV9_R_POWER) = 0;
 		DEV9_REG(DEV9_R_1474) = 0;
 	} else if (dev9type == 1) {
 		DEV9_REG(DEV9_R_1466) = 1;
 		DEV9_REG(DEV9_R_1464) = 0;
 		DEV9_REG(DEV9_R_1460) = DEV9_REG(DEV9_R_1464);
-		DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) & 0xfffb;
-		DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) & 0xfffe;
+		DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & 0xfffb;
+		DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & 0xfffe;
 	}
 	iop_printf("DEV9 not working, stopping system.\n");
 	SleepThread();
@@ -436,20 +442,20 @@ static int pcic_power(int voltage, int flag)
 	u16 cstc1, cstc2;
 	u16 val = (voltage == 1) << 2;
 
-	DEV9_REG(DEV9_R_146C) = 0;
+	DEV9_REG(DEV9_R_POWER) = 0;
 
 	if (voltage == 2)
 		val |= 0x08;
 	if (flag == 1)
 		val |= 0x10;
 
-	DEV9_REG(DEV9_R_146C) = val;
+	DEV9_REG(DEV9_R_POWER) = val;
 	DelayThread(22000);
 
 	if (DEV9_REG(DEV9_R_1462) & 0x100)
 		return 0;
 
-	DEV9_REG(DEV9_R_146C) = 0;
+	DEV9_REG(DEV9_R_POWER) = 0;
 	DEV9_REG(DEV9_R_1464) = cstc1 = DEV9_REG(DEV9_R_1464);
 	DEV9_REG(DEV9_R_1466) = cstc2 = DEV9_REG(DEV9_R_1466);
 	return -1;
@@ -508,7 +514,7 @@ static int pcic_ssbus_mode(int voltage)
 	_sw(0xe01a3043, SSBUS_R_1418);
 
 	DelayThread(5000);
-	DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) & 0xfffe;
+	DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & 0xfffe;
 	return 0;
 }
 
@@ -543,10 +549,10 @@ static int pcmcia_device_reset(void)
 	if (pcic_power(pcic_voltage, 1) < 0)
 		return -1;
 
-	DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) | 0x02;
+	DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) | 0x02;
 	DelayThread(500000);
 
-	DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) | 0x01;
+	DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) | 0x01;
 	DEV9_REG(DEV9_R_1464) = cstc1 = DEV9_REG(DEV9_R_1464);
 	DEV9_REG(DEV9_R_1466) = cstc2 = DEV9_REG(DEV9_R_1466);
 	return 0;
@@ -673,8 +679,8 @@ static int pcmcia_init(void)
 	}
 #endif
 
-	if (DEV9_REG(DEV9_R_146C) == 0) {
-		DEV9_REG(DEV9_R_146C) = 0;
+	if (DEV9_REG(DEV9_R_POWER) == 0) {
+		DEV9_REG(DEV9_R_POWER) = 0;
 		DEV9_REG(DEV9_R_147E) = 1;
 		DEV9_REG(DEV9_R_1460) = 0;
 		DEV9_REG(DEV9_R_1474) = 0;
@@ -726,11 +732,11 @@ static int expbay_device_reset(void)
 	if (expbay_device_probe() < 0)
 		return -1;
 
-	DEV9_REG(DEV9_R_146C) = (DEV9_REG(DEV9_R_146C) & 0xfffe) | 0x04;
+	DEV9_REG(DEV9_R_POWER) = (DEV9_REG(DEV9_R_POWER) & 0xfffe) | 0x04;
 	DelayThread(500000);
 
 	DEV9_REG(DEV9_R_1460) = DEV9_REG(DEV9_R_1460) | 0x01;
-	DEV9_REG(DEV9_R_146C) = DEV9_REG(DEV9_R_146C) | 0x01;
+	DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) | 0x01;
 	DelayThread(500000);
 	return 0;
 }
@@ -758,7 +764,7 @@ static int expbay_init(void)
 	_sw(0xe01a3043, SSBUS_R_1418);
 	_sw(0xef1a3043, SSBUS_R_141c);
 
-	if ((DEV9_REG(DEV9_R_146C) & 0x04) == 0) {
+	if ((DEV9_REG(DEV9_R_POWER) & 0x04) == 0) {
 		DEV9_REG(DEV9_R_1466) = 1;
 		DEV9_REG(DEV9_R_1464) = 0;
 		DEV9_REG(DEV9_R_1460) = DEV9_REG(DEV9_R_1464);

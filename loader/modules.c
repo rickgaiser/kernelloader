@@ -12,6 +12,8 @@
 #include "graphic.h"
 #include "loader.h"
 #include "rom.h"
+#include "eedebug.h"
+#include "configuration.h"
 
 /** Structure describing module that should be loaded. */
 typedef struct
@@ -22,10 +24,18 @@ typedef struct
 	unsigned int argLen;
 	/** Module parameters. */
 	const char *args;
+	/** True, if ps2smap. */
+	int ps2smap;
 } moduleLoaderEntry_t;
 
 
 static moduleLoaderEntry_t moduleList[] = {
+	{
+		.path = "eedebug.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+#ifdef RESET_IOP
 	{
 		.path = "rom0:SIO2MAN",
 		.argLen = 0,
@@ -41,11 +51,13 @@ static moduleLoaderEntry_t moduleList[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
 	{
 		.path = "rom0:PADMAN",
 		.argLen = 0,
 		.args = NULL
 	},
+#ifdef RESET_IOP
 	{
 		.path = "rom0:CDVDMAN",
 		.argLen = 0,
@@ -63,6 +75,11 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 #ifdef PS2LINK
 	{
+		.path = "poweroff.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+	{
 		.path = "ps2dev9.irx",
 		.argLen = 0,
 		.args = NULL
@@ -74,19 +91,18 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 	{
 		.path = "ps2smap.irx",
-		.argLen = sizeof(ifcfg),
-		.args = ifcfg
-	},
-	{
-		.path = "poweroff.irx",
 		.argLen = 0,
-		.args = NULL
+		//.argLen = 39,
+		.args = NULL,
+		//.args = "192.168.0.10\000255.255.255.0\000192.168.0.1",
+		.ps2smap = 1
 	},
 	{
 		.path = "ps2link.irx",
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
 #endif
 	{
 		.path = "usbd.irx",
@@ -103,6 +119,11 @@ static moduleLoaderEntry_t moduleList[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+	{
+		.path = "ps2kbd.irx",
+		.argLen = 0,
+		.args = NULL
+	},
 };
 
 static int moduleLoaderNumberOfModules = sizeof(moduleList) / sizeof(moduleLoaderEntry_t);
@@ -115,6 +136,7 @@ int loadLoaderModules(void)
 	int i;
 	int rv;
 
+#ifdef RESET_IOP
 	graphic_setStatusMessage("Reseting IOP");
 	FlushCache(0);
 
@@ -134,11 +156,33 @@ int loadLoaderModules(void)
 	sbv_patch_enable_lmb();
 	graphic_setStatusMessage("Patching disable prefix check");
 	sbv_patch_disable_prefix_check();
+#else
+	SifInitRpc(0);
+#endif
+
+	graphic_setStatusMessage("Add eedebug handler");
+	addEEDebugHandler();
 
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {
 		rom_entry_t *romfile;
+#ifdef RESET_IOP
+		/* Load configuration after mc modules loaded. */
+		if (i == 4) {
+			loadConfiguration();
+		}
+#else
+		/* Load configuration after eedebug. */
+		if (i == 1) {
+			loadConfiguration();
+		}
+#endif
 		graphic_setStatusMessage(moduleList[i].path);
+		printf("Loading module %s)\n", moduleList[i].path);
+
+		if (moduleList[i].ps2smap) {
+			moduleList[i].args = getPS2MAPParameter(&moduleList[i].argLen);
+		}
 		romfile = rom_getFile(moduleList[i].path);
 		if (romfile != NULL) {
 			int ret;
@@ -152,7 +196,6 @@ int loadLoaderModules(void)
 		}
 		if (rv < 0) {
 			error_printf("Failed to load module \"%s\".", moduleList[i].path);
-			break;
 		}
 	}
 	graphic_setStatusMessage(NULL);

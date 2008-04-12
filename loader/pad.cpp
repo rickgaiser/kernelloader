@@ -60,13 +60,16 @@ void initializeController(void)
 
 	loadPadModules();
 
-	padInit(0);
+	if (padInit(0) != 0) {
+		printf("padInit() failed.\n");
+		return;
+	}
 
 	for (port = 0; port < PADCOUNT; port++)
 	{
 		if((ret = padPortOpen(port, slot, padBuf[port])) == 0) {
 			printf("padOpenPort failed: %d\n", ret);
-			SleepThread();
+			return;
 		}
 	
 		if(!initializePad(port, slot)) {

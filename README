@@ -144,12 +144,17 @@ sh # cd pc
 sh # make
 sh # cd ..
 sh # cp pc/sjcrunch_packer script
-sh # cp script
 sh # sed <sjcrunch -e s-SJCRUNCH_PATH=.*-SJCRUNCH_PATH=$(pwd)- -e s-SJCRUNCH_PACKER=.*-SJCRUNCH_PACKER=\$SJCRUNCH_PATH/sjcrunch_packer- >/usr/local/ps2dev/ps2sdk/bin/sjcrunch
 sh # chmod +x /usr/local/ps2dev/ps2sdk/bin/sjcrunch
 
 Kernelloader
 ############
+To compile kernelloader you need some additional libraries on your host:
+
+- libpng
+
+You need to check that you have the development package installed (on debian suffix "-dev", on SuSe "devel")
+
 Now you can go back to kernelloader for a test:
 
 sh # make
@@ -213,7 +218,7 @@ Go back to kernelloader dir and run make test again.
 
 sh # make test
 
-Maximum size of kernel is 5 MB.
+Maximum size of kernel is ~4 MB.
 The loader sets maximum "initrd.gz" decompressed size to 16 MB (using
 "ramdisk_size=16384").
 The linux kernel should start. USB keyboard is working. You can also

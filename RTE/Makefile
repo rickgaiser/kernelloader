@@ -42,7 +42,7 @@ sbios.elf: $(EE_OBJS)
 	$(EE_CC) $(EE_LDFLAGS) -o $@ $(EE_OBJS)
 
 clean:
-	rm -f sbios.S sbios.o getsbios getelf $(INSTALL_FILES)
+	rm -f sbios.bin sbios.S sbios.o getsbios getelf getsbioscalltableoffset $(INSTALL_FILES)
 
 %.o: %.S
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@

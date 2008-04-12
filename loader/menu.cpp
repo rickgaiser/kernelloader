@@ -1,10 +1,12 @@
 /* Copyright (c) 2007 Mega Man */
 #include "menu.h"
 #include "graphic.h"
+#include "configuration.h"
 
 void Menu::paint(void)
 {
 	int y, x;
+	int z;
 	vector<MenuEntry>::iterator i;
 	int start;
 	int c;
@@ -26,24 +28,26 @@ void Menu::paint(void)
 	}
 
 	start = 0;
-	if (numberOfMenuEntries > 8) {
-		if ((numberOfMenuEntries - start) < 8) {
-			start = numberOfMenuEntries - 8;
+	if (numberOfMenuEntries > numberOfMenuItems) {
+		if ((numberOfMenuEntries - start) < numberOfMenuItems) {
+			start = numberOfMenuEntries - numberOfMenuItems;
 		} else {
-			start = selectedMenu - 4;
+			start = selectedMenu - (numberOfMenuItems / 2);
 			if (start < 0) {
 				start = 0;
 			}
 		}
 	}
 	c = 0;
+	z = 2;
 	for (i = menuVector.begin(); i != menuVector.end(); i++) {
 		if (c >= start) {
-			i->paint(x, y);
+			i->paint(x, y, z);
 			y += 35;
+			z += 2;
 		}
 		c++;
-		if ((c - start) >= 8) {
+		if ((c - start) >= numberOfMenuItems) {
 			break;
 		}
 	}
@@ -51,9 +55,9 @@ void Menu::paint(void)
 
 int i;
 
-void Menu::addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg)
+void Menu::addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex)
 {
-	MenuEntry menuEntry(gsGlobal, gsFont, name, executeFn, executeArg);
+	MenuEntry menuEntry(gsGlobal, gsFont, name, executeFn, executeArg, tex);
 	menuVector.push_back(menuEntry);
 
 	selectMenuEntry(selectedMenu);
@@ -76,6 +80,7 @@ void Menu::addCheckItem(const char *name, int *value)
 	menuVector.push_back(menuEntry);
 
 	selectMenuEntry(selectedMenu);
+	addConfigCheckItem(name, value);
 
 	numberOfMenuEntries++;
 }
@@ -96,7 +101,7 @@ Menu *Menu::addSubMenu(const char *name)
 {
 	Menu *subMenu;
 
-	subMenu = new Menu(gsGlobal, gsFont);
+	subMenu = new Menu(gsGlobal, gsFont, numberOfMenuItems);
 	subMenu->setTitle(name);
 	subMenu->setPosition(positionX, positionY);
 
@@ -109,7 +114,7 @@ Menu *Menu::getSubMenu(const char *name)
 {
 	Menu *subMenu;
 
-	subMenu = new Menu(gsGlobal, gsFont);
+	subMenu = new Menu(gsGlobal, gsFont, numberOfMenuItems);
 	subMenu->setTitle(name);
 	subMenu->setPosition(positionX, positionY);
 

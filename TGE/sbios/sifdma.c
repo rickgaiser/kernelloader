@@ -12,7 +12,7 @@
 #include "tge_sbios.h"
 #include "tge_sifdma.h"
 #include "sifdma.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 
 #include "sbcalls.h"
 #include "sif.h"

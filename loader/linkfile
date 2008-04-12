@@ -14,7 +14,8 @@
 ENTRY(_start);
 
 SECTIONS {
-	.text 0x00500000: {
+	.text 0x00300000: {
+		*(.rom)
 		_ftext = . ;
 		*(.text)
 		*(.text.*)

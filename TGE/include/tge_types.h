@@ -9,6 +9,8 @@
 #ifndef TGE_TYPES_H
 #define TGE_TYPES_H
 
+#include "stdint.h"
+
 typedef	unsigned char 		u8;
 typedef unsigned short 		u16;
 typedef unsigned int 		u32;

@@ -15,7 +15,7 @@
 #include "hwreg.h"
 
 #include "cache.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 
 #include "core.h"
 

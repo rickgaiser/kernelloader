@@ -1,6 +1,8 @@
 include config.mk
 
 all:
+	make -C ppm2rgb
+	make -C png2rgb
 	make -C ps2tut_01
 	make -C hello
 	make -C kernel
@@ -27,3 +29,5 @@ clean:
 	make -C TGE clean
 	make -C RTE clean
 	make -C loader clean
+	make -C ppm2rgb clean
+	make -C png2rgb clean

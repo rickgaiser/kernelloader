@@ -1,7 +1,7 @@
 /* Copyright (c) 2007 Mega Man */
 #include <stdarg.h>
 #include "stdio.h"
-#include "iopmem.h"
+#include "iopmemdebug.h"
 #include "fileio.h"
 #include "string.h"
 

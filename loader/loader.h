@@ -40,6 +40,8 @@ extern "C" {
 		int debug;
 		/** True, if allocated memory is used. */
 		int allocated;
+		/** True, if ps2smap module. */
+		int ps2smap;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -49,11 +51,11 @@ extern "C" {
 		int enableDebug;
 		int enableSBIOSTGE;
 		int enableDev9;
+		int enableEEDebug;
+		int newModulesInTGE;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;
-	/* IP + Netmask + Gateway. */
-	static char ifcfg[] = "192.168.0.23\000255.255.255.0\000192.168.0.1";
 
 	int loader(void *arg);
 	int getNumberOfModules(void);
@@ -62,6 +64,9 @@ extern "C" {
 	const char *getSBIOSFilename(void);
 	const char *getKernelFilename(void);
 	const char *getInitRdFilename();
+	char *getKernelParameter(void);
+	void waitForUser(void);
+	const char *getPS2MAPParameter(int *len);
 #ifdef __cplusplus
 }
 #endif

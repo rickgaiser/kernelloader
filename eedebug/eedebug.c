@@ -11,20 +11,48 @@
 
 #include "iopprintdata.h"
 
+#define MODNAME "eedebug"
+
+IRX_ID(MODNAME, 1, 1);
+
+/** Maximum buffer size. */
+#define BUFFER_SIZE 1024
+
 static eePrint(const char *text);
 static int ttyMount(void);
+void eedebug_thread(void *unused);
+
+static volatile char buffer[BUFFER_SIZE];
+static volatile int bufferReadPos = 0;
+static volatile int bufferWritePos = 0;
+
 
 /** IOP Module entry point, install io driver redirecting every printf() to EE. */
 int _start(int argc, char **argv)
 {
-	iop_thread_t param;
+	iop_thread_t thread;
 	int th;
+	int res;
 
 	if (!sceSifCheckInit())
 		sceSifInit();
 	sceSifInitRpc(0);
 
 	printf("Started eedebug!\n");
+
+	thread.attr = TH_C;
+	thread.option = 0;
+	thread.thread = eedebug_thread;
+	thread.stacksize = 0x800;
+	thread.priority = 40;
+
+	if ((res = CreateThread(&thread)) < 0) {
+		printf("cannot create thread (%d).\n", res);
+		eePrint("cannot create thread\n");
+		return -1;
+	}
+
+	StartThread(res, NULL);
 
 	eePrint("EE debug start\n");
 
@@ -91,33 +119,26 @@ static int ttyClose( int fd)
 ////////////////////////////////////////////////////////////////////////
 static int ttyWrite(iop_file_t *file, char *buf, int size)
 {
-	static iop_text_data_t text_data __attribute__((aligned(64)));
-    int res;
-	int len;
-	int s;
-	int pos;
+	int i;
 
     WaitSema(tty_sema);
 
-	len = size;
-	pos = 0;
-	do {
-		s = len;
-		if (len > 79) {
-			s = 79;
+	for (i = 0; i < size; i++) {
+		int pos;
+
+		pos = (bufferWritePos + 1) % BUFFER_SIZE;
+		if (pos == bufferReadPos) {
+			eePrint("Loosing characters.\n");
+			/* Loosing characters, ionsert return for better display. */
+			break;
 		}
-		memcpy(&text_data.text, &buf[pos], s);
-		text_data.text[s] = 0;
-		pos += s;
-		len -= s;
-		while (!sceSifSendCmd(0x00000010, &text_data, sizeof(text_data), NULL,
-                NULL, 0)) {
-			//printf("Failed to send message.\n");
-		}
-	} while(len > 0);
+
+		buffer[bufferWritePos] = buf[i];
+		bufferWritePos = pos;
+	}
 
     SignalSema(tty_sema);
-    return res;
+    return i;
 }
 
 iop_device_ops_t tty_functarray = { ttyInit, dummy0, (void *)dummy,
@@ -127,7 +148,7 @@ iop_device_ops_t tty_functarray = { ttyInit, dummy0, (void *)dummy,
 	(void *)dummy, (void *)dummy, (void *)dummy,
 	(void *)dummy, (void *)dummy };
 
-iop_device_t tty_driver = { ttyname, 3, 1, "TTY via Udp",
+iop_device_t tty_driver = { ttyname, 3, 1, "TTY via EE",
 							&tty_functarray };
 
 ////////////////////////////////////////////////////////////////////////
@@ -142,4 +163,38 @@ static int ttyMount(void)
     if(open("tty00:", O_WRONLY) != 1) while(1);
 
     return 0;
+}
+
+void eedebug_thread(void *unused)
+{
+	static iop_text_data_t text_data __attribute__((aligned(64)));
+
+	eePrint("eedebug_thread running.\n");
+	while (1) {
+		if (bufferReadPos != bufferWritePos) {
+			int i;
+
+			i = 0;
+			while(bufferReadPos != bufferWritePos) {
+				text_data.text[i] = buffer[bufferReadPos];
+				bufferReadPos = (bufferReadPos + 1) % BUFFER_SIZE;
+				i++;
+				if (i >= (sizeof(text_data.text - 1))) {
+					break;
+				}
+			}
+			text_data.text[i] = 0;
+			
+//			text_data.text[0] = 'T';
+//			text_data.text[1] = 0;
+//			sprintf(text_data.text, "0x%02x\n", text_data.text[0]);
+			while (!sceSifSendCmd(0x00000010, &text_data, sizeof(text_data), NULL,
+                NULL, 0)) {
+				//printf("Failed to send message.\n");
+			}
+		} else {
+			/* Try in one millisecond again. */
+			DelayThread(1000);
+		}
+	}
 }

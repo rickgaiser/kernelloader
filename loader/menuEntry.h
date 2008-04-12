@@ -5,6 +5,7 @@
 #include "gsKit.h"
 #include "dmaKit.h"
 #include "vector"
+#include "gsKit.h"
 
 typedef int (executeMenuFn_t)(void *arg);
 
@@ -18,13 +19,15 @@ class MenuEntry {
 	void *executeArg;
 	bool checkItem;
 	int *checkValue;
+	GSTEXTURE *tex;
 
 	public:
-	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, void *executeArg) :
+	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(executeArg),
-		checkItem(false), checkValue(NULL)
+		checkItem(false), checkValue(NULL),
+		tex(tex)
 	{
 	}
 
@@ -32,7 +35,8 @@ class MenuEntry {
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(this),
-		checkItem(true), checkValue(checkValue)
+		checkItem(true), checkValue(checkValue),
+		tex(NULL)
 	{
 	}
 
@@ -43,7 +47,8 @@ class MenuEntry {
 		selected(other.selected),
 		executeFn(other.executeFn),
 		checkItem(other.checkItem),
-		checkValue(other.checkValue)
+		checkValue(other.checkValue),
+		tex(other.tex)
 	{
 		if (checkItem) {
 			executeArg = this;
@@ -71,7 +76,7 @@ class MenuEntry {
 		selected = state;
 	}
 
-	void paint(int x, int y);
+	void paint(int x, int y, int z);
 
 	int execute(void);
 
