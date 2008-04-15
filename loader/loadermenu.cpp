@@ -14,6 +14,8 @@
 #include "fileXio_rpc.h"
 #include "configuration.h"
 #include "pad.h"
+#include "SMS_CDVD.h"
+#include "SMS_CDDA.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -368,11 +370,27 @@ int fsFile(void *arg)
 
 	int len = strlen(rootParam->fileName) + strlen(param->name) + 2;
 	if (len < MAX_PATH_LEN) {
+		int i;
+#if 0
+		/* XXX: strcat() seems to have a bug. */
 		strcat(rootParam->fileName, "/");
 		strcat(rootParam->fileName, param->name);
+#else
+		i = strlen(rootParam->fileName);
+		rootParam->fileName[i] = '/';
+		i++;
+		strcpy(&rootParam->fileName[i], param->name);
+		i += strlen(param->name);
+		rootParam->fileName[i] = 0;
+#endif
 
 		strcpy(rootParam->target, rootParam->fileName);
-		printf("Filename is \"%s\"\n", rootParam->target);
+		printf("Filename is \"%s\"\n", rootParam->fileName);
+		if (strcmp(rootParam->fsName, "cdfs:") == 0) {
+			/* Stop CD when finished. */
+			CDVD_Stop();
+			CDVD_FlushCache();
+		}
 		setCurrentMenu(rootParam->mainMenu);
 		return 0;
 	} else  {
@@ -385,6 +403,9 @@ int fsDir(void *arg);
 
 void checkTGEandDebug(moduleEntry_t * module)
 {
+	if (module->dvdv) {
+		module->load = 1;
+	}
 	if (loaderConfig.enableTGE) {
 		if (module->rte) {
 			module->load = 0;
@@ -548,6 +569,14 @@ int defaultSBIOSCalls(void *arg)
 	return 0;
 }
 
+int setCurrentMenuAndStopCDVD(void *arg)
+{
+	CDVD_Stop();
+	CDVD_FlushCache();
+	setCurrentMenu(arg);
+
+	return 0;
+}
 
 void fsGenerateDirListMenu(fsRootParam_t * rootParam, bool isRoot)
 {
@@ -562,8 +591,14 @@ void fsGenerateDirListMenu(fsRootParam_t * rootParam, bool isRoot)
 		i = 0;
 		rootParam->fileMenu->deleteAll();
 		rootParam->fileMenu->setTitle(rootParam->fileName);
-		rootParam->fileMenu->addItem(rootParam->menu->getTitle(),
-			setCurrentMenu, rootParam->menu, getTexBack());
+		if (strcmp(rootParam->fsName, "cdfs:") == 0) {
+			/* CD must be stopped after accessing it. */
+			rootParam->fileMenu->addItem(rootParam->menu->getTitle(),
+				setCurrentMenuAndStopCDVD, rootParam->menu, getTexBack());
+		} else {
+			rootParam->fileMenu->addItem(rootParam->menu->getTitle(),
+				setCurrentMenu, rootParam->menu, getTexBack());
+		}
 		do {
 			rv = fileXioDread(dirFd, &dir);
 			if (rv > 0) {
@@ -647,6 +682,17 @@ int fsroot(void *arg)
 		rootParam->fileMenu = rootParam->menu->getSubMenu(rootParam->menuName);
 	}
 	strcpy(rootParam->fileName, rootParam->fsName);
+	if (strcmp(rootParam->fsName, "cdfs:") == 0) {
+		DiskType type;
+
+		type = CDDA_DiskType();
+
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
+	}
 	fsGenerateDirListMenu(rootParam, true);
 
 	return 0;
@@ -800,6 +846,16 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	};
 	linuxMenu->addItem(khostParam.menuName, fsroot, (void *) &khostParam);
 #endif
+	static fsRootParam_t kcdfsParam = {
+		kernelFilename,
+		menu,
+		linuxMenu,
+		NULL,
+		"CD/DVD",
+		"cdfs:",
+		""
+	};
+	linuxMenu->addItem(kcdfsParam.menuName, fsroot, (void *) &kcdfsParam);
 
 	Menu *initrdMenu = menu->addSubMenu("Select Initrd");
 
@@ -854,6 +910,17 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	};
 	initrdMenu->addItem(hostParam.menuName, fsroot, (void *) &hostParam);
 #endif
+
+	static fsRootParam_t cdfsParam = {
+		initrdFilename,
+		menu,
+		initrdMenu,
+		NULL,
+		"CD/DVD",
+		"cdfs:",
+		""
+	};
+	initrdMenu->addItem(cdfsParam.menuName, fsroot, (void *) &cdfsParam);
 
 	/* Config menu */
 	Menu *configMenu = menu->addSubMenu("Configuration Menu");

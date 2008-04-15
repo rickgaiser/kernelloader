@@ -47,6 +47,18 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL
 	},
 #endif
+	{
+		/* Module is required to access rom1: */
+		.path = "rom0:ADDDRV",
+		.argLen = 0,
+		.args = NULL
+	},
+	{
+		/* Module is required to access video DVDs */
+		.path = "eromdrvloader.irx",
+		.argLen = 0,
+		.args = NULL
+	},
 #if defined(RESET_IOP)
 	{
 		.path = "rom0:" MODPREFIX "SIO2MAN",
@@ -76,6 +88,18 @@ static moduleLoaderEntry_t moduleList[] = {
 		.argLen = 0,
 		.args = NULL
 	},
+#endif
+	{
+		.path = "SMSUTILS.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+	{
+		.path = "SMSCDVD.irx",
+		.argLen = 0,
+		.args = NULL
+	},
+#if defined(RESET_IOP)
 	{
 		.path = "ioptrap.irx",
 		.argLen = 0,

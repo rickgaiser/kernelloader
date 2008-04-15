@@ -12,6 +12,7 @@ all:
 	if [ -e $(PS2LINUXDVD)/pbpx_955.09 ]; then \
 		make -C RTE; \
 	fi
+	make -C modules
 	make -C loader
 
 test:
@@ -28,6 +29,7 @@ clean:
 	make -C eedebug clean
 	make -C TGE clean
 	make -C RTE clean
+	make -C modules clean
 	make -C loader clean
 	make -C ppm2rgb clean
 	make -C png2rgb clean

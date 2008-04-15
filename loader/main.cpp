@@ -11,6 +11,8 @@
 #include "smod.h"
 #include "libkbd.h"
 #include "fileXio_rpc.h"
+#include "SMS_CDVD.h"
+#include "SMS_CDDA.h"
 
 /**
  * Entry point for loader.
@@ -63,6 +65,9 @@ int main(int argc, char **argv)
 	initializeController();
 
 	PS2KbdInit();
+
+	CDDA_Init();
+	CDVD_Init();
 
 	setCurrentMenu(menu);
 

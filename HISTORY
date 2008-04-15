@@ -1,3 +1,6 @@
+1.8
+- Support video DVDs in kernelloader, for reading Linux kernel and initrd.
+
 1.7
 - Enabled screenshot feature. Screenshot in kernelloader can be done by
   pressing button "R1". Screenshot is saved on USB memory stick.

@@ -5,7 +5,7 @@ include ../config.mk
 EE_BIN = $(PROGRAM).elf
 EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o ps2dev9.o
 EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o hdd.o
-EE_OBJS += kernelgraphic.o
+EE_OBJS += kernelgraphic.o SMS_SIF.o SMS_CDVD.o SMS_CDDA.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
 EE_LIBS += -lmc -lfileXio -lkbd
 ifneq ($(LIBJPG),)
@@ -71,6 +71,9 @@ ROM_FILES += \
 	usbd.irx \
 	usb_mass.irx \
 	ps2kbd.irx \
+	SMSUTILS.irx \
+	SMSCDVD.irx \
+	eromdrvloader.irx \
 	TGE/dmarelay.irx \
 	TGE/intrelay-direct.irx \
 	TGE/intrelay-dev9.irx \

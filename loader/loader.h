@@ -4,7 +4,7 @@
 
 #include "stdint.h"
 
-#define LOADER_VERSION "1.7"
+#define LOADER_VERSION "1.8"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +46,8 @@ extern "C" {
 		int ps2smap;
 		/** True, if eedebug.irx, IOP debug output is required. */
 		int eedebug;
+		/** True, if required for video DVDs. */
+		int dvdv;
 	} moduleEntry_t;
 
 	typedef struct {

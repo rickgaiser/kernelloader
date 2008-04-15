@@ -102,6 +102,22 @@ moduleEntry_t modules[] = {
 		.debug = 1,
 		.eedebug = 1
 	},
+	{
+		.path = "rom0:ADDDRV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.dvdv = 1,
+	},
+	{
+		.path = "host:eromdrvloader.irx",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.dvdv = 1,
+	},
 #ifdef RTE
 	{
 		.path = "host:RTE/sio2man.irx",
@@ -129,6 +145,13 @@ moduleEntry_t modules[] = {
 		.load = 1,
 		.tge = 1,
 		.oldmods = 1
+	},
+	{
+		.path = "rom1:SIO2MAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
 	},
 #ifdef RTE
 	{
@@ -213,6 +236,13 @@ moduleEntry_t modules[] = {
 		.tge = 1,
 		.oldmods = 1
 	},
+	{
+		.path = "rom1:PADMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
 #ifdef RTE
 	{
 		.path = "host:RTE/libsd.irx",
@@ -222,6 +252,24 @@ moduleEntry_t modules[] = {
 		.load = 0,
 		.rte = 1
 	},
+#endif
+	{
+		.path = "rom0:LIBSD",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+	},
+	{
+		.path = "rom1:LIBSD",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+	},
+#ifdef RTE
 	{
 		.path = "host:RTE/sdrdrv.irx",
 		.buffered = -1,
@@ -231,6 +279,14 @@ moduleEntry_t modules[] = {
 		.rte = 1
 	},
 #endif
+	{
+		.path = "rom1:SDRDRV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 1,
+		.tge = 1,
+	},
 	{
 		.path = "host:ioptrap.irx",
 		.buffered = -1,
@@ -403,6 +459,13 @@ moduleEntry_t modules[] = {
 		.tge = 1,
 		.oldmods = 1
 	},
+	{
+		.path = "rom1:CDVDMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
 #ifdef RTE
 	{
 		.path = "host:RTE/cdvdfsv.irx",
@@ -430,6 +493,27 @@ moduleEntry_t modules[] = {
 		.load = 1,
 		.tge = 1,
 		.oldmods = 1
+	},
+	{
+		.path = "rom1:CDVDFSV",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = "rom1:RMMAN",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = "rom1:RMMAN2",
+		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
 	},
 };
 
@@ -828,7 +912,7 @@ void startModules(void)
 				rv = SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
 			}
 			if (rv < 0) {
-				error_printf("Failed to load module \"%s\".", modules[i].path);
+				error_printf("Failed to start module \"%s\" (rv = %d).", modules[i].path, rv);
 			}
 		}
 	}

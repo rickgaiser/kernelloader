@@ -6,3 +6,7 @@ Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd
 Support for packed vmlinux kernel files.
 
 Mount USB device at startup not working. Need to debug it.
+
+Check that ELF file is complete.
+
+Select different config files within the kernelloader. Including ps2fdisk with apa support would be cool to!

@@ -347,3 +347,12 @@ CDVDFSV
 XCDVDFSV
 Required: No
 I believe it is not required by Linux.
+
+ADDRV
+Required: Yes, for reading video DVDs.
+Enables access to rom1.
+
+eromdrvloader
+EROMDRV
+Required: Yes, for reading video DVDs.
+Need to be loaded to read video DVDs.
