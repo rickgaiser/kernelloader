@@ -84,6 +84,14 @@ sh # cd stlport
 sh # make
 sh # make install
 
+ZLIB
+####
+ZLIB need to be installed:
+sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/zlib
+sh # cd zlib
+sh # make
+sh # make install
+
 PS2LINK
 #######
 If you want to debug something then you also need ps2link, but the

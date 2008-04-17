@@ -42,9 +42,12 @@ EE_FLAGS += -DOLD_ROM_MODULES
 EE_LIBS += -lpad
 endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
+EE_LIBS += -lz
 
 # Autodetect if RTE is available.
 EE_FLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
+
+EE_FLAGS += -I$(PS2SDK)/ports/include
 
 EE_CFLAGS += $(EE_FLAGS) -Wimplicit-int -Werror-implicit-function-declaration
 

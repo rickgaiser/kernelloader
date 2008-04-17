@@ -128,3 +128,9 @@ This can lead to a failure and system can be blocked.
 
 PR#20
 Sometimes hard disc interrupts are lost (hard disc will do nothing for some seconds).
+
+PR#21
+Only kernels upto 6 MB are supported, because zlib is used for loading. Kernel size is
+not known until everything is extracted.
+-
+You need to strip the kernel using program "ee-strip".

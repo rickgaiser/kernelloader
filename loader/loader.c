@@ -32,6 +32,7 @@
 #include "rom.h"
 #include "eedebug.h"
 #include "kernelgraphic.h"
+#include "zlib.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -832,6 +833,85 @@ char *load_file(const char *filename, int *size, void *addr)
 	return buffer;
 }
 
+/**
+ * Load compressed kernel file and return pointer to it.
+ * @param filename Path to file.
+ * @param size Pointer where file size will be stored, can be NULL.
+ * @return Pointer to memory where file is loaded to.
+ */
+char *load_kernel_file(const char *filename, int *size, void *addr)
+{
+	char *buffer = NULL;
+	int s;
+	gzFile fin;
+	int maxsize = 6 * 1024 * 1024;
+
+	if (size == NULL) {
+		size = &s;
+		addr = NULL;
+	}
+
+	setEnableDisc(-1);
+	graphic_setPercentage(0, filename);
+	fin = gzopen(filename, "rb");
+	if (fin == NULL) {
+		error_printf("Error cannot open file %s.", filename);
+		setEnableDisc(0);
+		return NULL;
+	}
+
+	// memalign() begins at &_end behind elf file. This ensures that the first 5 MByte are not used.
+	// Don't know the size just use 7 MB.
+	buffer = (char *) memalign(64, maxsize);
+
+	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
+	if (buffer == NULL) {
+		gzclose(fin);
+		setEnableDisc(0);
+		return NULL;
+	}
+	if (addr == NULL) {
+		if ((u32) buffer < (u32) &_end) {
+			/* This will lead to problems. */
+			error_printf("memalign() is unusable!");
+			setEnableDisc(0);
+			panic();
+		}
+	}
+
+	dprintf("Loading...\n");
+	int pos = 0;
+	int n;
+	int next = 10 * 1024;
+	while ((n = gzread(fin, &buffer[pos], next)) > 0) {
+		pos += n;
+		s -= n;
+		if (s < next)
+			next = s;
+		if (next <= 0)
+			break;
+		dprintf(".");
+		graphic_setPercentage(pos / (maxsize / 100), filename);
+		if ((pos + next) > maxsize) {
+			error_printf("Error file %s is too large (> 8MB).", filename);
+			gzclose(fin);
+			free(buffer);
+			return NULL;
+		}
+	}
+	*size = pos;
+	printf("%s size %d\n", filename, *size);
+	gzclose(fin);
+
+	/* Make it smaller, so remaining memory can be used for other stuff. */
+	buffer = realloc(buffer, *size);
+	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
+	setEnableDisc(0);
+	dprintf("Loaded %d\n", pos);
+	graphic_setPercentage(100, filename);
+
+	return buffer;
+}
 int getNumberOfModules(void)
 {
 	return sizeof(modules) / sizeof(moduleEntry_t);
@@ -1370,7 +1450,7 @@ int loader(void *arg)
 		}
 	}
 	if (buffer == NULL) {
-		buffer = load_file(kernel_filename, NULL, NULL);
+		buffer = load_kernel_file(kernel_filename, NULL, NULL);
 	}
 	if (buffer != NULL) {
 		const char *initrd_filename;
