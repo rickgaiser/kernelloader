@@ -1,6 +1,11 @@
 1.8
 - Support video DVDs in kernelloader, for reading Linux kernel and initrd.
-- Support for compressed kernels.
+- Support for compressed kernels to save space on PS2 memory card.
+- Verify ELF file integrity before starting the kernel. Broken files caused
+  by failed downloads will be detected.
+- Fixed bug when trying to load small kernels and initrd. Print error message
+  when this happens. Initrd must be deactivated when using the example
+  kernel included in kloader.elf.
 
 1.7
 - Enabled screenshot feature. Screenshot in kernelloader can be done by

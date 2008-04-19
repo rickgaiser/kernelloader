@@ -20,6 +20,7 @@
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
 #define MAX_PATH_LEN 1024
+#define EXAMPLE_KERNEL "host:kernel.elf"
 
 typedef struct {
 	char *target;
@@ -733,6 +734,14 @@ int unsetFilename(void *arg)
 	return 0;
 }
 
+int setExampleKernel(void *arg)
+{
+	char *fileName = (char *) arg;
+
+	strcpy(fileName, EXAMPLE_KERNEL);
+	return 0;
+}
+
 int showFilename(void *arg)
 {
 	char *fileName = (char *) arg;
@@ -796,11 +805,11 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 
-	kernelFilename[0] = 0;
+	strcpy(kernelFilename, EXAMPLE_KERNEL);
 	addConfigTextItem("KernelFileName", kernelFilename, MAX_PATH_LEN);
 	//linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
 	linuxMenu->addItem("Edit Filename", editString, (void *) &kernelFilename);
-	linuxMenu->addItem("Example Kernel", unsetFilename, (void *) &kernelFilename);
+	linuxMenu->addItem("Example Kernel", setExampleKernel, (void *) &kernelFilename);
 
 	static fsRootParam_t kusbParam = {
 		kernelFilename,
@@ -995,7 +1004,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		sbiosCallsMenu->addItem("Disable all Calls", disableAllSBIOSCalls,
 			NULL);
 #ifdef RTE
-		sbiosCallsMenu->addItem("Set default", defaultSBIOSCalls, NULL);
+		sbiosCallsMenu->addItem("Set default for RTE", defaultSBIOSCalls, NULL);
 #endif
 		defaultSBIOSCalls(NULL);
 		for (i = 0; i < numberOfSbiosCalls; i++) {
@@ -1044,11 +1053,7 @@ extern "C" {
 	}
 
 	const char *getKernelFilename(void) {
-		if (kernelFilename[0] != 0) {
-			return kernelFilename;
-		} else {
-			return "host:kernel.elf";
-		}
+		return kernelFilename;
 	}
 
 	const char *getInitRdFilename(void) {

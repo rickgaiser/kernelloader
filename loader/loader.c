@@ -76,6 +76,8 @@
 #define NUMBER_OF_INSTRUCTIONS_CHECKED 128
 /** Base address for SBIOS. */
 #define SBIOS_START_ADDRESS 0x80001000
+/** Normal usable memroy starts here.*/
+#define NORMAL_MEMORY_START 0x80000
 
 /** Definition of kernel entry function. */
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
@@ -113,7 +115,7 @@ moduleEntry_t modules[] = {
 	},
 	{
 		.path = "host:eromdrvloader.irx",
-		.buffered = 0,
+		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 1,
@@ -537,13 +539,14 @@ void panic()
  * @param start Physical start address (included).
  * @param end Physical end address (excluded).
  */
-int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end, uint32_t *highest)
+int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	uint32_t entry = 0;
 	uint32_t area;
+	char *buffer_end = buffer + filesize;
 
 	start = start & 0x0FFFFFFF;
 	end = end & 0x0FFFFFFF;
@@ -606,6 +609,22 @@ int check_sections(const char *name, char *buffer, uint32_t start, uint32_t end,
 			}
 
 			if (size != 0) {
+				if (program_header->filesz != 0) {
+					char *startaddr;
+					char *endaddr;
+					/* Check if file is completly loaded. */
+					startaddr = &buffer[program_header->offset];
+					endaddr = startaddr + program_header->filesz;
+
+					if ((startaddr < buffer) || (startaddr >= &buffer[filesize])) {
+						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, startaddr - buffer);
+						return -30;
+					}
+					if ((endaddr < buffer) || (endaddr >= &buffer[filesize])) {
+						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, endaddr - buffer);
+						return -31;
+					}
+				}
 				uint32_t last;
 				area = dest >> 28;
 				switch(area) {
@@ -806,7 +825,7 @@ char *load_file(const char *filename, int *size, void *addr)
 			/* This will lead to problems. */
 			error_printf("memalign() is unusable!");
 			setEnableDisc(0);
-			panic();
+			return NULL;
 		}
 	}
 
@@ -875,7 +894,7 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 			/* This will lead to problems. */
 			error_printf("memalign() is unusable!");
 			setEnableDisc(0);
-			panic();
+			return NULL;
 		}
 	}
 
@@ -894,6 +913,7 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 		graphic_setPercentage(pos / (maxsize / 100), filename);
 		if ((pos + next) > maxsize) {
 			error_printf("Error file %s is too large (> 8MB).", filename);
+			setEnableDisc(0);
 			gzclose(fin);
 			free(buffer);
 			return NULL;
@@ -1354,6 +1374,7 @@ int loader(void *arg)
 	volatile uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
 #endif
 	int sbios_size = 0;
+	int kernel_size = 0;
 	const char *sbios_filename = NULL;
 	const char *kernel_filename = NULL;
 	uint32_t *initrd_header = NULL;
@@ -1411,7 +1432,7 @@ int loader(void *arg)
 		graphic_setStatusMessage("Checking SBIOS...");
 
 		/* Check for errors in ELF file. */
-		if (check_sections("SBIOS", sbios, 0x1000, 0x10000, NULL) != 0) {
+		if (check_sections("SBIOS", sbios, sbios_size, 0x1000, 0x10000, NULL) != 0) {
 			free(sbios);
 			return -2;
 		}
@@ -1446,11 +1467,15 @@ int loader(void *arg)
 
 		romfile = rom_getFile(&kernel_filename[5]);
 		if (romfile != NULL) {
-			buffer = romfile->start;
+			buffer = memalign(64, romfile->size);
+			if (buffer != NULL) {
+				memcpy(buffer, romfile->start, romfile->size);
+				kernel_size = romfile->size;
+			}
 		}
 	}
 	if (buffer == NULL) {
-		buffer = load_kernel_file(kernel_filename, NULL, NULL);
+		buffer = load_kernel_file(kernel_filename, &kernel_size, NULL);
 	}
 	if (buffer != NULL) {
 		const char *initrd_filename;
@@ -1465,14 +1490,20 @@ int loader(void *arg)
 
 		/* Check for errors in ELF file. */
 		graphic_setStatusMessage("Checking Kernel...");
-		if (check_sections("kernel", buffer, 0x10000, lowestAddress, &highest) != 0) {
+		if (check_sections("kernel", buffer, kernel_size, 0x10000, lowestAddress, &highest) != 0) {
 			free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
 			free(buffer);
 			return -2;
 		}
-		base = ((highest + 4096 - 1) & ~(4096 - 1)) - 8;
-		if (base > highest) {
-			initrd_header = (uint32_t *) base;
+
+		/* Check if loading of initrd is possible. */
+		if ((highest < lowestAddress) && (highest >= NORMAL_MEMORY_START)) {
+			base = ((highest + 4096 - 1) & ~(4096 - 1)) - 8;
+			if (base > highest) {
+				initrd_header = (uint32_t *) base;
+			} else {
+				initrd_header = NULL;
+			}
 		} else {
 			initrd_header = NULL;
 		}
@@ -1491,7 +1522,7 @@ int loader(void *arg)
 			if (initrd_header == NULL) {
 				/* We don't want to overwrite end of kernel. */
 				error_printf("Can't load initrd. End of kernel must not be within the last 8 bytes of a page. "
-					"You can remove or add any kernel module to fix this problem end.\n");
+					"Kernel must be larger than %d Bytes.\n", NORMAL_MEMORY_START);
 				free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
 				free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
 				return -12;
@@ -1526,10 +1557,11 @@ int loader(void *arg)
 
 		printf("Try to reboot IOP.\n");
 		graphic_setStatusMessage("Reseting IOP");
-		FlushCache(0);
 
 		PS2KbdClose();
 		deinitializeController();
+
+		FlushCache(0);
 
 		SifExitIopHeap();
 		SifLoadFileExit();
