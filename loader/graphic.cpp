@@ -229,7 +229,7 @@ void graphic_paint(void)
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"21.03.2008"
+		"TODAY"
 #ifdef RTE
 		" RTE"
 #endif
