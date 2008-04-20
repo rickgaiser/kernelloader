@@ -29,6 +29,7 @@ install: $(INSTALLFILE)
 
 $(INSTALLFILE): $(PROGRAM).elf
 	install -m 644 -p $(PROGRAM).elf $(INSTALLFILE)
+	ee-strip $(INSTALLFILE)
 
 $(PROGRAM).elf: $(OBJS)
 	$(CC) $(CFLAGS) -Tlinkfile -o $(PROGRAM).elf $(OBJS) -lgcc
