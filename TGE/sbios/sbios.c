@@ -359,29 +359,29 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	sbcall_padinfomode,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 112 */
-	0, /* Sound init. */
+	sbcall_soundinit,
 	/* 113 */
-	0,
+	sbcall_soundend,
 	/* 114 */
-	0,
+	sbcall_soundgetreg,
 	/* 115 */
-	0,
+	sbcall_soundsetreg,
 	/* 116 */
-	0,
+	sbcall_soundgcoreattr,
 	/* 117 */
-	0,
+	sbcall_soundscoreattr,
 	/* 118 */
-	0,
+	sbcall_soundtrans,
 	/* 119 */
-	0,
+	sbcall_soundtransstat,
 	/* 120 */
-	0,
+	sbcall_soundtranscallback,
 	/* 121 */
 	0,
 	/* 122 */
 	0,
 	/* 123 */
-	0,
+	sbcall_soundremote,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 144 */
 	sbcall_mcinit,

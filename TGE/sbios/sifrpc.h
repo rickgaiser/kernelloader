@@ -149,8 +149,10 @@ typedef struct t_SifRpcReceiveData
 
 typedef struct t_SifRpcDataQueue
 {
+#if 0
    int				thread_id,	/* 00 */
-      				active;		/* 01 */
+#endif
+   int 				active;		/* 01 */
    struct t_SifRpcServerData	*link,		/* 02 */
       				*start,		/* 03 */
                                 *end;		/* 04 */
@@ -172,8 +174,13 @@ int SifRpcGetOtherData(SifRpcReceiveData_t *rd, void *src, void *dest,
 int SifCheckStatRpc(SifRpcClientData_t *cd);
 
 /* SIF RPC server API */
+#if 0
 SifRpcDataQueue_t *
 SifSetRpcQueue(SifRpcDataQueue_t *q, int thread_id);
+#else
+SifRpcDataQueue_t *
+SifSetRpcQueue(SifRpcDataQueue_t *q);
+#endif
 
 SifRpcServerData_t *
 SifRegisterRpc(SifRpcServerData_t *srv,

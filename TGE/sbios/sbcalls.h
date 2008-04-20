@@ -2,6 +2,7 @@
  * sbcalls.h - SBIOS interfaces.
  *
  * Copyright (c) 2003 Marcus R. Brown <mrbrown@0xd6.org>
+ * Copyright (c) 2008 Mega Man
  *
  * See the file LICENSE, located within this directory, for licensing terms.
  */
@@ -106,5 +107,17 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg);
 int sbcall_cdvdgeterror(tge_sbcall_rpc_arg_t *carg);
 int sbcall_cdvdgettype(tge_sbcall_rpc_arg_t *carg);
 int sbcall_cdvdtrayrequest(tge_sbcall_rpc_arg_t *carg);
+
+/* Sound .*/
+int sbcall_soundinit(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundend(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundgetreg(tge_sbcall_soundgetreg_arg_t *arg);
+int sbcall_soundsetreg(tge_sbcall_soundsetreg_arg_t *arg);
+int sbcall_soundgcoreattr(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundscoreattr(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundtrans(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundtransstat(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundtranscallback(tge_sbcall_rpc_arg_t *carg);
+int sbcall_soundremote(tge_sbcall_rpc_arg_t *carg);
 
 #endif /* TGE_SBCALLS_H */

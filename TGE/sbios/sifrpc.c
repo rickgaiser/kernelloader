@@ -424,10 +424,10 @@ static void _request_call(SifRpcCallPkt_t *request, void *data)
 	server->rmode      = request->rmode;
 	server->rid        = request->rec_id;
 
+#if 0 /* XXX: This code is in PS2SDK. */
 	if (base->thread_id < 0 || base->active == 0)
 		return;
 
-#if 0 /* XXX: This code is in PS2SDK. */
 	iWakeupThread(base->thread_id);
 #endif
 }
@@ -488,15 +488,15 @@ void SifExitRpc(void)
     init = 0;
 }
 
-#ifdef F_SifRegisterRpc
 SifRpcServerData_t *
 SifRegisterRpc(SifRpcServerData_t *sd, 
 		int sid, SifRpcFunc_t func, void *buff, SifRpcFunc_t cfunc,
 		void *cbuff, SifRpcDataQueue_t *qd)
 {
 	SifRpcServerData_t *server;
+	u32 status;
 
-	DI();
+	core_save_disable(&status);
 
 	sd->link  = NULL;
 	sd->next  = NULL;
@@ -516,21 +516,22 @@ SifRegisterRpc(SifRpcServerData_t *sd,
 		server->next = sd;
 	}
 
-	EI();
+	core_restore(status);
 
 	return server;
 }
-#endif
 
-#ifdef F_SifSetRpcQueue
 SifRpcDataQueue_t *
-SifSetRpcQueue(SifRpcDataQueue_t *qd, int thread_id)
+SifSetRpcQueue(SifRpcDataQueue_t *qd)
 {
 	SifRpcDataQueue_t *queue = NULL;
+	u32 status;
 
-	DI();
+	core_save_disable(&status);
 
+#if 0
 	qd->thread_id = thread_id;
+#endif
 	qd->active = 0;
 	qd->link   = NULL;
 	qd->start  = NULL;
@@ -548,11 +549,10 @@ SifSetRpcQueue(SifRpcDataQueue_t *qd, int thread_id)
 		queue->next = qd;
 	}
 
-	EI();
+	core_restore(status);
 
 	return queue;
 }
-#endif
 
 #ifdef F_SifGetNextRequest
 SifRpcServerData_t *

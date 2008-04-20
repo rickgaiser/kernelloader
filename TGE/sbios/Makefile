@@ -14,7 +14,7 @@ EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=
 
 EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap cache \
 	strlen strncpy memcpy pad memset strcpy cdvd ncmd scmd smod iopmem \
-	memcmp mc mutex
+	memcmp mc mutex sound
 EE_OBJS = $(addsuffix _$(ROM_MODULE_VERSION).o, $(EE_FILES))
 ifeq ($(FILEIO_DEBUG),yes)
 EE_CFLAGS += -DFILEIO_DEBUG
@@ -42,7 +42,8 @@ endif
 
 install: all
 	mkdir -p ../../loader/TGE
-	cp sbios_$(ROM_MODULE_VERSION).elf ../../loader/TGE/
+	install -m 644 -p sbios_$(ROM_MODULE_VERSION).elf ../../loader/TGE/
+	ee-strip ../../loader/TGE/sbios_$(ROM_MODULE_VERSION).elf
 
 all: sbios_$(ROM_MODULE_VERSION).bin
 

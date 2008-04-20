@@ -29,7 +29,7 @@ IOP_LDFLAGS += -s
 
 install: all
 	mkdir -p ../../../loader/TGE
-	cp $(IOP_BIN) ../../../loader/TGE
+	install -m 644 -p $(IOP_BIN) ../../../loader/TGE
 
 all: $(IOP_OBJS_DIR) $(IOP_BIN_DIR) $(IOP_BIN)
 

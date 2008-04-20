@@ -4200,3 +4200,137 @@
 .byte tocBuff[3071]
 80007d60
 .code sbcall_cdvdtrayrequestStage2
+8000bac0
+.word soundsif.hdr.pkt_addr
+.word soundsif.hdr.rpc_id
+.word soundsif.hdr.sema_id
+.word soundsif.hdr.mode
+.word soundsif.command
+.word soundsif.buff
+.word soundsif.cbuff
+.word soundsif.end_function
+.word soundsif.end_param
+.word soundsif.server
+800063b0
+.code sbcall_sound_init_callback1
+80006548
+.code sbcall_sound_init_callback2
+80006628
+.code sbcall_sound_init_callback3
+8000bb08
+.word soundRpcServerData.sid
+.word soundRpcServerData.func
+.word soundRpcServerData.buff
+.word soundRpcServerData.size
+.word soundRpcServerData.cfunc
+.word soundRpcServerData.cbuff
+.word soundRpcServerData.size2
+.word soundRpcServerData.client
+.word soundRpcServerData.pkt_addr
+.word soundRpcServerData.rpc_number
+.word soundRpcServerData.receive
+.word soundRpcServerData.rsize
+.word soundRpcServerData.rmode
+.word soundRpcServerData.rid
+.word soundRpcServerData.link
+.word soundRpcServerData.next
+.word soundRpcServerData.base
+80006d80
+.code soundServerRPCFunc
+8000bb80
+.byte soundServerRpcBuffer[0]
+.byte soundServerRpcBuffer[1]
+.byte soundServerRpcBuffer[2]
+.byte soundServerRpcBuffer[3]
+.byte soundServerRpcBuffer[4]
+.byte soundServerRpcBuffer[5]
+.byte soundServerRpcBuffer[6]
+.byte soundServerRpcBuffer[7]
+8000bae8
+.word soundRpcQueue.thread_id
+.word soundRpcQueue.active
+.word soundRpcQueue.link
+.word soundRpcQueue.start
+.word soundRpcQueue.end
+.word soundRpcQueue.next
+8000ba40
+.word soundRpcBuffer[0]
+.word soundRpcBuffer[1]
+.word soundRpcBuffer[2]
+.word soundRpcBuffer[3]
+.word soundRpcBuffer[4]
+.word soundRpcBuffer[5]
+.word soundRpcBuffer[6]
+.word soundRpcBuffer[7]
+.word soundRpcBuffer[8]
+.word soundRpcBuffer[9]
+.word soundRpcBuffer[10]
+.word soundRpcBuffer[11]
+.word soundRpcBuffer[12]
+.word soundRpcBuffer[13]
+.word soundRpcBuffer[14]
+.word soundRpcBuffer[15]
+8000ba80
+.word soundRpcResultBuffer[0]
+.word soundRpcResultBuffer[1]
+.word soundRpcResultBuffer[2]
+.word soundRpcResultBuffer[3]
+.word soundRpcResultBuffer[4]
+.word soundRpcResultBuffer[5]
+.word soundRpcResultBuffer[6]
+.word soundRpcResultBuffer[7]
+.word soundRpcResultBuffer[8]
+.word soundRpcResultBuffer[9]
+.word soundRpcResultBuffer[10]
+.word soundRpcResultBuffer[11]
+.word soundRpcResultBuffer[12]
+.word soundRpcResultBuffer[13]
+.word soundRpcResultBuffer[14]
+.word soundRpcResultBuffer[15]
+800066d0
+.code soundEndCallback
+80007ff8
+.dword soundreg[0]
+.dword soundreg[1]
+.dword soundreg[2]
+.dword soundreg[3]
+.dword soundreg[4]
+.dword soundreg[5]
+.dword soundreg[6]
+.dword soundreg[7]
+.dword soundreg[8]
+.dword soundreg[9]
+.dword soundreg[10]
+.dword soundreg[11]
+.dword soundreg[12]
+.dword soundreg[13]
+.dword soundreg[14]
+.dword soundreg[15]
+.dword soundreg[16]
+.dword soundreg[17]
+.dword soundreg[18]
+.dword soundreg[19]
+.dword soundreg[20]
+.dword soundreg[21]
+.dword soundreg[22]
+.dword soundreg[23]
+.dword soundreg[24]
+.dword soundreg[25]
+.dword soundreg[26]
+.dword soundreg[27]
+80006860
+.code sbcall_sound_gcoreattr_callback
+80006908
+.code sbcall_sound_scoreattr_callback
+800069a8
+.code sbcall_sound_trans_callback
+80006a68
+.code sbcall_sound_trans_stat_callback
+8000bbc0
+.code sound_callback_func_on_1
+8000bbc4
+.code sound_callback_arg_on_1
+8000bbc8
+.code sound_callback_func_on_2
+8000bbcc
+.code sound_callback_arg_on_2
