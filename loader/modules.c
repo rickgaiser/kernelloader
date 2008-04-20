@@ -14,6 +14,9 @@
 #include "rom.h"
 #include "eedebug.h"
 #include "configuration.h"
+#include "fileXio_rpc.h"
+#include "SMS_CDVD.h"
+#include "SMS_CDDA.h"
 
 #ifdef NEW_ROM_MODULES
 #define MODPREFIX "X"
@@ -185,6 +188,7 @@ int loadLoaderModules(void)
 {
 	int i;
 	int rv;
+	int lrv = -1;
 
 #ifdef RESET_IOP
 	graphic_setStatusMessage("Reseting IOP");
@@ -219,7 +223,7 @@ int loadLoaderModules(void)
 
 		/* Load configuration when necessary modules are loaded. */
 		if (moduleList[i].loadCfg) {
-			loadConfiguration();
+			lrv = loadConfiguration(CONFIG_FILE);
 		}
 		graphic_setStatusMessage(moduleList[i].path);
 		printf("Loading module %s)\n", moduleList[i].path);
@@ -245,6 +249,33 @@ int loadLoaderModules(void)
 	}
 	graphic_setStatusMessage(NULL);
 	printAllModules();
+
+	fileXioInit();
+
+	CDDA_Init();
+	CDVD_Init();
+
+	if (lrv != NULL) {
+		DiskType type;
+
+		type = CDDA_DiskType();
+
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
+
+		lrv = loadConfiguration(DVD_CONFIG_FILE);
+#if 0
+		if (lrv != 0) {
+			error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);
+		}
+#endif
+		/* Stop CD when finished. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+	}
 
 	return 0;
 }
