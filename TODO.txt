@@ -4,5 +4,3 @@ patched jump must be also a nop.
 Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd() is not correctly checked.
 
 Mount USB device at startup not working. Need to debug it.
-
-Select different config files within the kernelloader. Including ps2fdisk with apa support would be cool to!

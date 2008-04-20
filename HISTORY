@@ -6,6 +6,8 @@
 - Fixed bug when trying to load small kernels and initrd. Print error message
   when this happens. Initrd must be deactivated when using the example
   kernel included in kloader.elf.
+- Add possibilty to select different config files.
+- Automatically load cdfs:config.txt if found.
 
 1.7
 - Enabled screenshot feature. Screenshot in kernelloader can be done by

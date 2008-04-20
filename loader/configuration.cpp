@@ -6,10 +6,6 @@
 #include "fileXio_rpc.h"
 
 #define MAXIMUM_CONFIG_LENGTH 2048
-/** FIle where configuration is stored. */
-#define CONFIG_FILE CONFIG_DIR "/config.txt"
-/** Directory where configuration is stored. */
-#define CONFIG_DIR "mc0:kloader"
 
 typedef enum {
 	CLASS_CONFIG_CHECK,
@@ -78,11 +74,11 @@ vector < ConfigurationItem * >configurationVector;
 
 extern "C" {
 
-	int loadConfiguration(void) {
+	int loadConfiguration(const char *configfile) {
 		static char buffer[MAXIMUM_CONFIG_LENGTH];
 		FILE *fd;
 
-		fd = fopen(CONFIG_FILE, "rt");
+		fd = fopen(configfile, "rt");
 		if (fd != NULL) {
 			while (!feof(fd)) {
 				char *val;
@@ -136,13 +132,13 @@ extern "C" {
 		}
 	}
 
-	void saveConfiguration(void) {
+	void saveConfiguration(const char *configfile) {
 		FILE *fd;
 
-		fd = fopen(CONFIG_FILE, "wt");
+		fd = fopen(configfile, "wt");
 		if (fd == NULL) {
 			fileXioMkdir(CONFIG_DIR, 0777);
-			fd = fopen(CONFIG_FILE, "wt");
+			fd = fopen(configfile, "wt");
 		}
 		if (fd != NULL) {
 			vector < ConfigurationItem * >::iterator i;

@@ -42,6 +42,7 @@ static fsDirParam_t fsDirParam[MAX_ENTRIES];
 
 
 loader_config_t loaderConfig;
+static char configfile[MAX_PATH_LEN];
 static char kernelFilename[MAX_PATH_LEN];
 static char initrdFilename[MAX_PATH_LEN];
 static int *sbiosCallEnabled;
@@ -701,10 +702,10 @@ int fsroot(void *arg)
 
 int mcSaveConfig(void *arg)
 {
-	arg = arg;
+	const char *configfile = (char *) arg;
 
 	setEnableDisc(true);
-	saveConfiguration();
+	saveConfiguration(configfile);
 	setEnableDisc(false);
 	return 0;
 }
@@ -712,14 +713,31 @@ int mcSaveConfig(void *arg)
 int mcLoadConfig(void *arg)
 {
 	Menu *menu;
-
-	arg = arg;
+	const char *configfile = (char *) arg;
 
 	menu = getCurrentMenu();
 	setCurrentMenu(NULL);
 	setEnableDisc(true);
-	if (loadConfiguration() < 0) {
-		error_printf("Failed to load configuration from MC0.");
+
+	if (strncmp(configfile, "cdfs:", 5) == 0) {
+		DiskType type;
+
+		type = CDDA_DiskType();
+
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
+	}
+
+	if (loadConfiguration(configfile) < 0) {
+		error_printf("Failed to load configuration \"%s\".", configfile);
+	}
+	if (strncmp(configfile, "cdfs:", 5) == 0) {
+		/* Stop CD when finished. */
+		CDVD_Stop();
+		CDVD_FlushCache();
 	}
 	setCurrentMenu(menu);
 	setEnableDisc(false);
@@ -789,6 +807,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	strcpy(gatewayIP, "192.168.0.1");
 	strcpy(pcicType, "");
 	strcpy(kernelGraphicMode, "");
+	strcpy(configfile, CONFIG_FILE);
 
 	addConfigTextItem("KernelParameter", kernelParameter, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
@@ -798,11 +817,70 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, (void *) mode);
-	menu->addItem("Save Current Config", mcSaveConfig, NULL);
-	menu->addItem("Load Config", mcLoadConfig, NULL);
+	menu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
+	menu->addItem("Load Config", mcLoadConfig, (void *) configfile);
+	menu->addItem("Save Current Config", mcSaveConfig, configfile);
+
+	Menu *configFileMenu = menu->addSubMenu("Select Config File");
+	configFileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	configFileMenu->addItem("Edit Filename", editString, (void *) &configfile);
+
+	static fsRootParam_t cusbParam = {
+		configfile,
+		menu,
+		configFileMenu,
+		NULL,
+		"USB Memory Stick",
+		"mass0:",
+		""
+	};
+	configFileMenu->addItem(cusbParam.menuName, fsroot, (void *) &cusbParam);
+
+	static fsRootParam_t cmc0Param = {
+		configfile,
+		menu,
+		configFileMenu,
+		NULL,
+		"Memory Card 1",
+		"mc0:",
+		""
+	};
+	configFileMenu->addItem(cmc0Param.menuName, fsroot, (void *) &cmc0Param);
+
+	static fsRootParam_t cmc1Param = {
+		configfile,
+		menu,
+		configFileMenu,
+		NULL,
+		"Memory Card 2",
+		"mc1:",
+		""
+	};
+	configFileMenu->addItem(cmc1Param.menuName, fsroot, (void *) &cmc1Param);
+#if !defined(RESET_IOP) || defined(PS2LINK) || defined(NAPLINK)
+	static fsRootParam_t chostParam = {
+		configfile,
+		menu,
+		configFileMenu,
+		NULL,
+		"Host",
+		"host:",
+		""
+	};
+	configFileMenu->addItem(chostParam.menuName, fsroot, (void *) &chostParam);
+#endif
+	static fsRootParam_t ccdfsParam = {
+		configfile,
+		menu,
+		configFileMenu,
+		NULL,
+		"CD/DVD",
+		"cdfs:",
+		""
+	};
+	configFileMenu->addItem(ccdfsParam.menuName, fsroot, (void *) &ccdfsParam);
 
 	Menu *linuxMenu = menu->addSubMenu("Select Kernel");
-
 	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 
 	strcpy(kernelFilename, EXAMPLE_KERNEL);

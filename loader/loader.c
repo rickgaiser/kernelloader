@@ -9,6 +9,8 @@
 #include <iopcontrol.h>
 #include <debug.h>
 #include "libkbd.h"
+#include "SMS_CDVD.h"
+#include "SMS_CDDA.h"
 
 #include "cache.h"
 #include "elf.h"
@@ -546,7 +548,6 @@ int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t s
 	int i;
 	uint32_t entry = 0;
 	uint32_t area;
-	char *buffer_end = buffer + filesize;
 
 	start = start & 0x0FFFFFFF;
 	end = end & 0x0FFFFFFF;
@@ -1354,11 +1355,12 @@ uint32_t *getSBIOSCallTable(char *addr)
 	}
 	return (uint32_t *) jumpBase;
 }
+
 /**
  * Load kernel, initrd and required modules. Then start kernel.
  * @param mode Graphic mode that should be used.
  */
-int loader(void *arg)
+int real_loader(void)
 {
 	entry_t *entry;
 	int ret;
@@ -1381,8 +1383,6 @@ int loader(void *arg)
 	uint32_t initrd_start = 0;
 	uint32_t initrd_size = 0;
 	const char *gmode = NULL;
-
-	arg = arg;
 
 	commandline = getKernelParameter();
 
@@ -1481,7 +1481,7 @@ int loader(void *arg)
 		const char *initrd_filename;
 		uint32_t lowestAddress;
 		uint32_t highest;
-		uint32_t base;
+		uint32_t base = 0;
 
 		lowestAddress = (uint32_t) _ftext;
 		if (lowestAddress > ((uint32_t) buffer)) {
@@ -1554,6 +1554,11 @@ int loader(void *arg)
 			}
 			printf("initrd_start 0x%08x 0x%08x\n", initrd_start, initrd_size);
 		}
+
+#if 0
+		CDVD_Stop();
+		CDVD_FlushCache();
+#endif
 
 		printf("Try to reboot IOP.\n");
 		graphic_setStatusMessage("Reseting IOP");
@@ -1823,5 +1828,30 @@ void DelayThread(int delay)
 	for (i = 0; i < delay; i++) {
 		nopdelay1ms();
 	}
+}
+
+int loader(void *arg)
+{
+	DiskType type;
+	int rv;
+
+	arg = arg;
+
+	type = CDDA_DiskType();
+
+	/* Detect disk type, so loading will work. */
+	if (type == DiskType_DVDV) {
+		CDVD_SetDVDV(1);
+	} else {
+		CDVD_SetDVDV(0);
+	}
+
+	rv = real_loader();
+
+	/* Always stop CD/DVD when an error happened. */
+	CDVD_Stop();
+	CDVD_FlushCache();
+
+	return rv;
 }
 

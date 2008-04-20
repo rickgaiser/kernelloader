@@ -10,7 +10,6 @@
 #include "configuration.h"
 #include "smod.h"
 #include "libkbd.h"
-#include "fileXio_rpc.h"
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
 
@@ -58,16 +57,11 @@ int main(int argc, char **argv)
 
 	loadLoaderModules();
 
-	fileXioInit();
-
 	setEnableDisc(false);
 
 	initializeController();
 
 	PS2KbdInit();
-
-	CDDA_Init();
-	CDVD_Init();
 
 	setCurrentMenu(menu);
 
