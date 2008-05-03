@@ -1,8 +1,8 @@
-Kernelloader for ps2 linux
+Kernelloader for ps2 Linux
 ##########################
 
-This program can load a linux kernel and start it. You need linux kernel
-2.4.17 for ps2 from the sony website. To build it you need a linux host
+This program can load a Linux kernel and start it. You need Linux kernel
+2.4.17 for ps2 from the sony website. To build it you need a Linux host
 and the PS2SDK. You also need to get a mips cross compiler. You can
 download it here:
 
@@ -30,9 +30,9 @@ sh # rpm2cpio kernel-headers-2.4.17_ps2-26.mipsel.rpm | cpio -idmv
 sh # rpm2cpio kernel-source-2.4.17_ps2-26.mipsel.rpm | cpio -idmv
 sh # cd usr/src/linux-2.4.17_ps2
 
-There is no patch required to start linux.
+There is no patch required to start Linux.
 
-You can add support for printk over ps2link by patching linux (system
+You can add support for printk over ps2link by patching Linux (system
 start is slower):
 
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-printk.patch
@@ -179,7 +179,7 @@ single thread and a interrupt handler is supported.
 
 Linux
 #####
-Now you should compile the linux kernel. Run menu config and deactivate
+Now you should compile the Linux kernel. Run menu config and deactivate
 old bootinfo support.
 
 sh # make menuconfig
@@ -205,8 +205,8 @@ or a USB memroy stick and insert it into your PS2.
 
 Initrd
 ######
-The initrd includes the linux file system and is currently the only
-useful way to use TGE linux.
+The initrd includes the Linux file system. This required for installing
+Linux.
 
 Make an "initrd.gz":
 
@@ -229,7 +229,7 @@ sh # make test
 Maximum size of kernel is ~4 MB.
 The loader sets maximum "initrd.gz" decompressed size to 16 MB (using
 "ramdisk_size=16384").
-The linux kernel should start. USB keyboard is working. You can also
+The Linux kernel should start. USB keyboard is working. You can also
 load the kernel from a memory card or a USB memory stick. You can select
 the file in the menu in the kernelloader on the PS2 using the first pad.
 
@@ -237,9 +237,9 @@ Remarks:
 ########
 
 You can select the SBIOS type "TGE" or "RTE" if you have DISC 1 from Sony's
-Linux (for PlayStation 2) Release 1.0. To start linux this is not required.
+Linux (for PlayStation 2) Release 1.0. To start Linux this is not required.
 TGE is not finished and it is possible that "RTE" is running more stable.
-Then you need to put in the original PS2 linux DVD DISC 1 and adjust the
+Then you need to put in the original PS2 Linux DVD DISC 1 and adjust the
 path in config.mk. The SBIOS will be automatically extracted. Linux will
 only start with this version when you change the configuration accordingly:
 
@@ -330,7 +330,7 @@ Required: No, only for ps2link or if you applied the patch.
 Patch: linux-2.4.17_ps2-printk.patch
 This module is only for debugging and is easier than the RPC interface. Its
 purpose is to get a easy way to print messages on EE. If you applied the patch
-linux will only start if you load the module.
+Linux will only start if you load the module.
 
 iopintr.irx
 intrelay-direct.irx
@@ -343,7 +343,7 @@ you try to use network from IOP and EE!
 
 dmarelay.irx
 Required: No
-Redirects DMA from EE to IOP and backwards. There is no linux driver using it
+Redirects DMA from EE to IOP and backwards. There is no Linux driver using it
 correctly. Its purpose is to speed up network and hard disc.
 
 CDVDMAN
