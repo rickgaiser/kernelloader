@@ -4,7 +4,7 @@
 
 #include "stdint.h"
 
-#define LOADER_VERSION "1.8"
+#define LOADER_VERSION "1.9"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +48,8 @@ extern "C" {
 		int eedebug;
 		/** True, if required for video DVDs. */
 		int dvdv;
+		/** -1, if for fat PS2, 1 if for slim PSTwo. */
+		int slim;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -59,6 +61,7 @@ extern "C" {
 		int enableDev9;
 		int enableEEDebug;
 		int newModulesInTGE;
+		int slimPSTwo;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;

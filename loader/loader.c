@@ -114,6 +114,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 1,
 		.dvdv = 1,
+		.slim = -1 /* XXX: Don't know why, but it is not working with slim PSTwo. */
 	},
 	{
 		.path = "host:eromdrvloader.irx",
@@ -122,6 +123,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 1,
 		.dvdv = 1,
+		.slim = -1 /* XXX: Don't know why, but it is not working with slim PSTwo. */
 	},
 #ifdef RTE
 	{
@@ -401,7 +403,20 @@ moduleEntry_t modules[] = {
 		.load = LOAD_ON_NOT_PS2LINK,
 		/* Everything is working when ps2link is not loaded. */
 		.ps2link = 1,
-		.tge = 1
+		.tge = 1,
+		.slim = -1
+	},
+	{
+		/* Interrupt relay when DEV9 is not loaded and slim PSTwo. */
+		.path = "host:TGE/intrelay-direct-rpc.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		/* Everything is working when ps2link is not loaded. */
+		.ps2link = 1,
+		.tge = 1,
+		.slim = 1
 	},
 	{
 		/* Interrupt relay when DEV9 is loaded. */
@@ -412,7 +427,20 @@ moduleEntry_t modules[] = {
 		.load = LOAD_ON_PS2LINK,
 		/* Only hard disc and USB is working. */
 		.ps2link = -1,
-		.tge = 1
+		.tge = 1,
+		.slim = -1
+	},
+	{
+		/* Interrupt relay when DEV9 is loaded and slim PSTwo. */
+		.path = "host:TGE/intrelay-dev9-rpc.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		/* Only hard disc and USB is working. */
+		.ps2link = -1,
+		.tge = 1,
+		.slim = 1
 	},
 #ifdef RTE
 	{

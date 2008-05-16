@@ -1,0 +1,102 @@
+RPC IRQ Patch
+#############
+
+Patch is required for slim PSTwo to get interrupts working.
+To get this working the according IOP module need to be loaded.
+One of the IOP modules intrelay*rpc.irx is required.
+
+--- linux-2.4.17_ps2.orig/arch/mips/kernel/irq.c	2002-03-04 11:31:35.000000000 +0100
++++ linux-2.4.17_ps2/arch/mips/kernel/irq.c	2008-05-06 22:45:32.000000000 +0200
+@@ -363,6 +363,23 @@ out:
+ 	return 1;
+ }
+ 
++void handleSimulatedIRQ(int irq)
++{
++	struct irqaction * action;
++
++	if (irq < NR_IRQS) {
++		irq_desc_t *desc = irq_desc + irq;
++
++		action = desc->action;
++
++		while (action) {
++			action->handler(irq, action->dev_id, NULL);
++			action = action->next;
++		}
++	}
++}
++
++
+ /**
+  *	request_irq - allocate an interrupt line
+  *	@irq: Interrupt line to allocate
+--- linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c	2002-04-12 12:20:16.000000000 +0200
++++ linux-2.4.17_ps2/arch/mips/ps2/sbcall.c	2008-05-06 22:48:52.000000000 +0200
+@@ -42,6 +42,14 @@ EXPORT_SYMBOL(ps2sif_getotherdata);
+ EXPORT_SYMBOL(ps2sif_removerpc);
+ EXPORT_SYMBOL(ps2sif_removerpcqueue);
+ 
++typedef struct t_SifCmdHeader
++{
++	u32 size;
++	void *dest;
++	int cid;
++	u32 unknown;
++} SifCmdHeader_t;
++
+ /*
+  *  SIF DMA functions
+  */
+@@ -319,6 +332,19 @@ static void sif1_dma_handler(int irq, vo
+     spin_unlock(&ps2sif_dma_lock);
+ }
+ 
++static uint32_t usrCmdHandler[256];
++
++typedef struct {
++	struct t_SifCmdHeader    sifcmd;
++	u32 data[16];
++} iop_sifCmdBufferIrq_t;
++
++void handleRPCIRQ(iop_sifCmdBufferIrq_t *sifCmdBufferIrq, void *arg)
++{
++	extern void handleSimulatedIRQ(int irq);
++
++	handleSimulatedIRQ(sifCmdBufferIrq->data[0]);
++}
+ 
+ /*
+  *  Initialize
+@@ -326,8 +354,17 @@ static void sif1_dma_handler(int irq, vo
+ 
+ int __init ps2sif_init(void)
+ {
++	struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
++	struct sb_sifsetcmdbuffer_arg setcmdhandlerbufferparam;
+     init_waitqueue_head(&ps2sif_dma_waitq);
+ 
++    setcmdhandlerbufferparam.db = usrCmdHandler;
++    setcmdhandlerbufferparam.size = sizeof(usrCmdHandler) / 8;
++
++	addcmdhandlerparam.fid = 0x20;
++	addcmdhandlerparam.func = handleRPCIRQ;
++	addcmdhandlerparam.data = NULL;
++
+     if (sbios(SB_SIFINIT, 0) < 0)
+ 	return -1;
+     if (sbios(SB_SIFINITCMD, 0) < 0)
+@@ -336,6 +373,13 @@ int __init ps2sif_init(void)
+ 	return -1;
+     if (request_irq(IRQ_DMAC_6, sif1_dma_handler, SA_INTERRUPT, "SIF1 DMA", NULL))
+ 	return -1;
++	if (sbios(SB_SIFSETCMDBUFFER, &setcmdhandlerbufferparam) < 0) {
++		printk("Failed to initialize EEDEBUG handler (1).\n");
++	} else {
++		if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++			printk("Failed to initialize SIF IRQ handler.\n");
++		}
++	}
+     if (sbios(SB_SIFINITRPC, 0) < 0)
+ 	return -1;
+ 

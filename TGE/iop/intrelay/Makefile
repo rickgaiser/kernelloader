@@ -11,15 +11,23 @@ IOP_SRC_DIR = src/
 IOP_INC_DIR = include/
 
 DEV9_SUPPORT = no
+RPC_IRQ_SUPPORT = no
+ifeq ($(RPC_IRQ_SUPPORT),yes)
+IRQ_TYPE=-rpc
+IOP_CFLAGS += -DRPC_IRQ_SUPPORT
+else
+IRQ_TYPE=
+endif
 ifeq ($(DEV9_SUPPORT),yes)
-IOP_OBJS_DIR = obj-dev9/
+DEV9_TYPE=-dev9
+
 IOP_CFLAGS += -DDEV9_SUPPORT
 IOP_INCS += -I$(PS2SDKSRC)/iop/dev9/dev9/include
-IOP_BIN  = bin/intrelay-dev9.irx
 else
-IOP_OBJS_DIR = obj-direct/
-IOP_BIN  = bin/intrelay-direct.irx
+DEV9_TYPE=-direct
 endif
+IOP_OBJS_DIR = obj$(DEV9_TYPE)$(IRQ_TYPE)/
+IOP_BIN  = bin/intrelay$(DEV9_TYPE)$(IRQ_TYPE).irx
 
 IOP_MODS = intrelay imports
 IOP_OBJS = $(addsuffix .o, $(addprefix $(IOP_OBJS_DIR), $(IOP_MODS)))

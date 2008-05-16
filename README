@@ -32,6 +32,14 @@ sh # cd usr/src/linux-2.4.17_ps2
 
 There is no patch required to start Linux.
 
+The following patch is recommended to get initrd working:
+
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-initrd.patch
+
+To get interrupts working on slim PSTwo (USB), you need this patch:
+
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-rpc-irq.patch
+
 You can add support for printk over ps2link by patching Linux (system
 start is slower):
 

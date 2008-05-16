@@ -456,6 +456,21 @@ void checkTGEandDebug(moduleEntry_t * module)
 			module->load = 0;
 		}
 	}
+	if (loaderConfig.slimPSTwo) {
+		if (module->load) {
+			if (module->slim < 0) {
+				/* Module is not for slim PSTwo. */
+				module->load = 0;
+			}
+		}
+	} else {
+		if (module->load) {
+			if (module->slim > 0) {
+				/* Module is not for fat PS2. */
+				module->load = 0;
+			}
+		}
+	}
 }
 
 int submitConfiguration(void *arg)
@@ -1038,6 +1053,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		&loaderConfig.enablePS2LINK);
 	loaderConfig.enableDebug = 1;
 	moduleConfigMenu->addCheckItem("Enable debug modules", &loaderConfig.enableDebug);
+	loaderConfig.slimPSTwo = 0;
+	moduleConfigMenu->addCheckItem("Slim PSTwo", &loaderConfig.slimPSTwo);
 	moduleConfigMenu->addItem("Submit above config", submitConfiguration, NULL);
 
 	/* Module Menu */

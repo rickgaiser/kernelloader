@@ -20,3 +20,14 @@ I_dev9RegisterIntrCb
 I_dev9IntrEnable
 dev9_IMPORTS_end
 #endif
+
+sifman_IMPORTS_start
+I_sceSifInit
+I_sceSifCheckInit
+sifman_IMPORTS_end
+
+sifcmd_IMPORTS_start
+I_sceSifInitRpc
+I_isceSifSendCmd
+I_sceSifSendCmd
+sifcmd_IMPORTS_end

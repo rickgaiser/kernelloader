@@ -1,3 +1,6 @@
+1.9
+- Support interrupts on slim PSTwo. So USB is working.
+
 1.8
 - Support video DVDs in kernelloader, for reading Linux kernel and initrd.
 - Support for compressed kernels to save space on PS2 memory card.

@@ -1,0 +1,23 @@
+IRQ Fix
+#######
+
+It is possible that an interrupt occurs before a function is registered.
+This patch seems to solve the interrupt problem on slim PSTwo partly.
+Sometimes Linux is working with this patch on a slim PSTwo.
+
+--- linux-2.4.17_ps2.orig/arch/mips/kernel/irq.c	2002-03-04 11:31:35.000000000 +0100
++++ linux-2.4.17_ps2/arch/mips/kernel/irq.c	2008-05-07 23:17:03.000000000 +0200
+@@ -121,11 +121,11 @@ int handle_IRQ_event(unsigned int irq, s
+ 	if (!(action->flags & SA_INTERRUPT))
+ 		__sti();
+ 
+-	do {
++	while (action) {
+ 		status |= action->flags;
+ 		action->handler(irq, action->dev_id, regs);
+ 		action = action->next;
+-	} while (action);
++	}
+ 	if (status & SA_SAMPLE_RANDOM)
+ 		add_interrupt_randomness(irq);
+ 	__cli();

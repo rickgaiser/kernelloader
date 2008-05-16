@@ -90,9 +90,12 @@ IOP heap bug fixed solved some problems, but it is not yet working.
 Only working if XMCMAN.IRX, XMCSERV.IRX and XPADMAN.IRX is not loaded.
 At least padman.irx from RTE is working.
 
-PR#12
+PR#12 - Workaround
 USB is not working with V12 and higher slim PSTwo console. This was
 reported in ps2dev forums. I don't have a slim PS2, so I can't test it.
+-
+slim PSTwo need to be selected in module configuration and must be submitted.
+Then a Linux kernel with a patch is required (linux-2.4.17_ps2-rpc-irq.patch).
 
 PR#13
 Game controller (pad) is not working in linux.

@@ -80,6 +80,8 @@ ROM_FILES += \
 	TGE/dmarelay.irx \
 	TGE/intrelay-direct.irx \
 	TGE/intrelay-dev9.irx \
+	TGE/intrelay-direct-rpc.irx \
+	TGE/intrelay-dev9-rpc.irx \
 	TGE/sbios_old.elf \
 	TGE/sbios_new.elf \
 	kernel.elf \

@@ -1,0 +1,20 @@
+Initrd Patch
+############
+
+Patch is required to get Linux kernel compiled when
+embedded ramdisk is deactivated and should not be used.
+
+--- linux-2.4.17_ps2.orig/arch/mips/Makefile	2002-11-20 13:14:52.000000000 +0100
++++ linux-2.4.17_ps2/arch/mips/Makefile	2008-05-03 23:10:10.000000000 +0200
+@@ -114,9 +114,11 @@ endif
+ # arch/mips/ramdisk
+ #
+ ifdef CONFIG_BLK_DEV_INITRD 
++ifdef CONFIG_EMBEDDED_RAMDISK
+ CORE_FILES      += arch/mips/ramdisk/ramdisk.o
+ SUBDIRS		+= arch/mips/ramdisk
+ endif
++endif
+ 
+ 
+ GCCFLAGS	+= -pipe
