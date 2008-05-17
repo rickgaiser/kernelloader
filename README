@@ -342,12 +342,18 @@ Linux will only start if you load the module.
 
 iopintr.irx
 intrelay-direct.irx
+intrelay-direct-rpc.irx
 intrelay-dev9.irx
+intrelay-dev9-rpc.irx
 Required: Yes
 Redirects interrupts from IOP to EE.
 You need only one module. The normal module is "intrelay-direct.irx". If you
-use ps2link or ps2dev9 you need to load "intrelay-dev9.irx". System can hang if
-you try to use network from IOP and EE!
+use ps2link or ps2dev9 you need to load "intrelay-dev9.irx". When you have a
+slim PSTwo you should use a module with "rpc" in the name and a Linux patch:
+
+linux-2.4.17_ps2-rpc-irq.patch
+
+System can hang if you try to use network from IOP and EE!
 
 dmarelay.irx
 Required: No
