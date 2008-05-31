@@ -116,7 +116,9 @@ int intr_ilink_handler(void *unused)
 
 void nullthread(void *unused)
 {
-	SleepThread();
+	while(1) {
+		SleepThread();
+	}
 }
 
 int _start(int argc, char *argv[])
