@@ -1,5 +1,6 @@
 1.9
 - Support interrupts on slim PSTwo. So USB is working.
+- Support automatic boot (without key or button press).
 
 1.8
 - Support video DVDs in kernelloader, for reading Linux kernel and initrd.
