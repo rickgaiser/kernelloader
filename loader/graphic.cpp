@@ -186,15 +186,8 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 	}
 }
 
-/** Paint current state on screen. */
-void graphic_paint(void)
+void graphic_common(void)
 {
-	const char *msg;
-
-	if (!graphicInitialized) {
-		return;
-	}
-
 	gsKit_clear(gsGlobal, Blue);
 
 	/* Paint background. */
@@ -234,6 +227,35 @@ void graphic_paint(void)
 		" RTE"
 #endif
 	);
+}
+
+/** Paint screen when Auto Boot is in process. */
+void graphic_auto_boot_paint(int time)
+{
+	static char msg[80];
+
+	if (!graphicInitialized) {
+		return;
+	}
+	graphic_common();
+
+	snprintf(msg, sizeof(msg), "Auto Boot in %d seconds.", time);
+	gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+		msg);
+
+	gsKit_queue_exec(gsGlobal);
+	gsKit_sync_flip(gsGlobal);
+}
+
+/** Paint current state on screen. */
+void graphic_paint(void)
+{
+	const char *msg;
+
+	if (!graphicInitialized) {
+		return;
+	}
+	graphic_common();
 
 	if (statusMessage != NULL) {
 		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,

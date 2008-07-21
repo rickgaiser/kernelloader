@@ -62,6 +62,7 @@ extern "C" {
 		int enableEEDebug;
 		int newModulesInTGE;
 		int slimPSTwo;
+		int autoBootTime;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;

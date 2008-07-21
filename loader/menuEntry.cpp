@@ -39,6 +39,11 @@ void MenuEntry::paint(int x, int y, int z)
 		gsKit_prim_sprite(gsGlobal, x - 10, y - 5, x + 520, y + 30, z, White);
 	}
 
+	if (multiItem) {
+		/* Update name, because somebody could changed the value outside. */
+		name = valueList[*multiValue];
+	}
+
 	if (checkItem) {
 		//gsKit_prim_quad(gsGlobal, x, y, x, y + CHECK_ITEM_SIZE, x + CHECK_ITEM_SIZE, y, x + CHECK_ITEM_SIZE, y + CHECK_ITEM_SIZE, 3, CheckCol);
 #if 0

@@ -290,6 +290,21 @@ static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )
 /** Current graphic mode. */
 graphic_mode_t graphicMode;
 
+/** Text for auto boot menu. */
+const char *autoBootText[] = {
+	"Auto Boot: off",
+	"Auto Boot Time: 1 Second",
+	"Auto Boot Time: 2 Seconds",
+	"Auto Boot Time: 3 Seconds",
+	"Auto Boot Time: 4 Seconds",
+	"Auto Boot Time: 5 Seconds",
+	"Auto Boot Time: 6 Seconds",
+	"Auto Boot Time: 7 Seconds",
+	"Auto Boot Time: 8 Seconds",
+	"Auto Boot Time: 9 Seconds",
+	"Auto Boot Time: 10 Seconds",
+	NULL };
+
 static unsigned int getStatusReg() {
 	register unsigned int rv;
 	asm volatile (
@@ -835,6 +850,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	menu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
 	menu->addItem("Load Config", mcLoadConfig, (void *) configfile);
 	menu->addItem("Save Current Config", mcSaveConfig, configfile);
+	loaderConfig.autoBootTime = 0;
+	menu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
 
 	Menu *configFileMenu = menu->addSubMenu("Select Config File");
 	configFileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());

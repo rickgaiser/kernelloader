@@ -10,6 +10,7 @@
 
 Menu *graphic_main(graphic_mode_t mode);
 void graphic_paint(void);
+void graphic_auto_boot_paint(int time);
 int setCurrentMenu(void *arg);
 Menu *getCurrentMenu(void);
 GSTEXTURE *getTexFolder(void);

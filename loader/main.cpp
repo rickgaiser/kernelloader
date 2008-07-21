@@ -29,14 +29,17 @@ int main(int argc, char **argv)
 	int old_pad;
 	const char *errorMessage = NULL;
 	int i;
+	int refreshesPerSecond;
 
 	argc = argc;
 	argv = argv;
 
 	if (*((char *) 0x1FC80000 - 0xAE) != 'E') {
 		mode = MODE_NTSC;
+		refreshesPerSecond = 60;
 	} else {
 		mode = MODE_PAL;
+		refreshesPerSecond = 50;
 	}
 
 	/* Disable debug output at startup. */
@@ -67,6 +70,50 @@ int main(int argc, char **argv)
 
 	enablePad(true);
 	old_pad = 0;
+
+	if (loaderConfig.autoBootTime > 0) {
+		int refreshCounter = 0;
+		char key;
+
+		do {
+			int time;
+
+			time = refreshCounter / refreshesPerSecond;
+			time = loaderConfig.autoBootTime - time;
+			graphic_auto_boot_paint(time);
+			paddata = readPad(0);
+			new_pad = paddata & ~old_pad;
+			old_pad = paddata;
+
+			if (PS2KbdRead(&key) > 0) {
+				if (key == 27) {
+					/* Remove escape code from queue. */
+					PS2KbdRead(&key);
+				}
+				/* Stop auto boot. */
+				break;
+			}
+			if (new_pad & 0xFFFF) {
+				/* Stop auto boot if any button is pressed. */
+				break;
+			}
+			/* Wait until timeis elapsed. autoBootTime is in seconds. */
+			if (refreshCounter > (loaderConfig.autoBootTime * refreshesPerSecond)) {
+				/* Deactivate menu, in case menu will print something. */
+				setCurrentMenu(NULL);
+
+				/* Execute default menu. */
+				menu->execute();
+
+				/* Change back to main menu. */
+				/* In case it fails to load, go to menu. */
+				setCurrentMenu(menu);
+				break;
+			}
+			refreshCounter++;
+		} while (true);
+		old_pad = paddata;
+	}
 	do {
 		char key;
 

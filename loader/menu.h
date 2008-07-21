@@ -46,6 +46,7 @@ class Menu {
 
 	void addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex = NULL);
 	void addCheckItem(const char *name, int *value);
+	void addMultiSelectionItem(const char *name, const char **valueList, int *value, GSTEXTURE *tex);
 
 	Menu *addSubMenu(const char *name);
 

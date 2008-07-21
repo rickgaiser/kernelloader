@@ -378,3 +378,11 @@ eromdrvloader
 EROMDRV
 Required: Yes, for reading video DVDs.
 Need to be loaded to read video DVDs.
+
+Configuration Order
+###################
+At startup the default configuration is set. Then configuration is loaded
+from a file. When a value is missing in the configuration file the default
+configuration is used. The search order of the configuration files is
+"cdfs:config.txt" and then "mc0:kloader/config.txt". The auto boot time is
+part of the configuration file.

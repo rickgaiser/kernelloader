@@ -19,24 +19,42 @@ class MenuEntry {
 	void *executeArg;
 	bool checkItem;
 	int *checkValue;
+	bool multiItem;
+	const char **valueList;
+	int *multiValue;
 	GSTEXTURE *tex;
 
 	public:
+	/** Normal menu entry with slectable icon. */
 	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(executeArg),
 		checkItem(false), checkValue(NULL),
+		multiItem(false), valueList(NULL), multiValue(NULL),
 		tex(tex)
 	{
 	}
 
+	/** Menu entry for check items. */
 	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, int *checkValue) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(this),
 		checkItem(true), checkValue(checkValue),
+		multiItem(false), valueList(NULL), multiValue(NULL),
 		tex(NULL)
+	{
+	}
+
+	/** Menu entry for multi selection items. */
+	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char **valueList, executeMenuFn_t *executeFn, int *multiValue, GSTEXTURE *tex) :
+		gsGlobal(gsGlobal), gsFont(gsFont),
+		name(valueList[*multiValue]), selected(false),
+		executeFn(executeFn), executeArg(this),
+		checkItem(false), checkValue(NULL),
+		multiItem(true), valueList(valueList), multiValue(multiValue),
+		tex(tex)
 	{
 	}
 
@@ -48,9 +66,12 @@ class MenuEntry {
 		executeFn(other.executeFn),
 		checkItem(other.checkItem),
 		checkValue(other.checkValue),
+		multiItem(other.multiItem),
+		valueList(other.valueList),
+		multiValue(other.multiValue),
 		tex(other.tex)
 	{
-		if (checkItem) {
+		if (checkItem || multiItem) {
 			executeArg = this;
 		} else {
 			executeArg = other.executeArg;
@@ -80,13 +101,21 @@ class MenuEntry {
 
 	int execute(void);
 
-	bool switchCheckItem()
+	bool switchItem()
 	{
 		if (checkItem) {
 			*checkValue = !(*checkValue);
 			return *checkValue;
 		} else {
-			return false;
+			if (multiItem) {
+				(*multiValue)++;
+				if (valueList[*multiValue] == NULL) {
+					*multiValue = 0;
+				}
+				name = valueList[*multiValue];
+			} else {
+				return false;
+			}
 		}
 	}
 };

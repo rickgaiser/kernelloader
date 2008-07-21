@@ -69,7 +69,7 @@ int checkItem(void *arg)
 {
 	MenuEntry *menuEntry = (MenuEntry *) arg;
 
-	menuEntry->switchCheckItem();
+	menuEntry->switchItem();
 
 	return 0;
 }
@@ -84,6 +84,18 @@ void Menu::addCheckItem(const char *name, int *value)
 
 	numberOfMenuEntries++;
 }
+
+void Menu::addMultiSelectionItem(const char *name, const char **valueList, int *value, GSTEXTURE *tex)
+{
+	MenuEntry menuEntry(gsGlobal, gsFont, valueList, checkItem, value, tex);
+	menuVector.push_back(menuEntry);
+
+	selectMenuEntry(selectedMenu);
+	addConfigCheckItem(name, value);
+
+	numberOfMenuEntries++;
+}
+
 
 void Menu::selectMenuEntry(int selection)
 {
