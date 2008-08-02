@@ -8,6 +8,7 @@
 - Automatic boot feature (time out)
 - Added audsrv.irx sound module.
 - Added free versions of padman, sio2man and libsd.
+- Fixed Video DVD support on slim PSTwo (rom1:EROMDRV? detection)
 
 1.8
 - Support video DVDs in kernelloader, for reading Linux kernel and initrd.
