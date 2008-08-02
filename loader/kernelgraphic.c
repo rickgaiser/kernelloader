@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "stdio.h"
 #include "loader.h"
+#include "iopmem.h"
 
 #define GSSREG_BASE1            (0x12000000 | KSEG1_MASK)
 #define GSSREG_BASE2            (0x12001000 | KSEG1_MASK)
@@ -374,6 +375,11 @@ int ps2_sysconf_video = 0; /* XXX: guessed!!! */
 
 void setcrtc_old(int mode, int ffmd, int noreset)
 {
+	if ((mode >= (sizeof(syncdata0) / sizeof(struct syncparam))) || (mode < 0)) {
+		/* Can't set mode. */
+		iop_printf("Graphic mode %d out of range.\n", mode);
+		return;
+	}
     uint64_t smode1 = syncdata[mode].smode1;
 
     if (syncdata[mode].dvemode != 2)		/* not VESA */
