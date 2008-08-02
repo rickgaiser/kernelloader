@@ -358,6 +358,7 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 95 */
 	sbcall_padinfomode,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+#if 0 /* XXX: Implementation is buggy. Sound driver lead to Linux kernel crashs. */
 	/* 112 */
 	sbcall_soundinit,
 	/* 113 */
@@ -382,6 +383,32 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	0,
 	/* 123 */
 	sbcall_soundremote,
+#else
+	/* 112 */
+	0,
+	/* 113 */
+	0,
+	/* 114 */
+	0,
+	/* 115 */
+	0,
+	/* 116 */
+	0,
+	/* 117 */
+	0,
+	/* 118 */
+	0,
+	/* 119 */
+	0,
+	/* 120 */
+	0,
+	/* 121 */
+	0,
+	/* 122 */
+	0,
+	/* 123 */
+	0,
+#endif
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 144 */
 	sbcall_mcinit,

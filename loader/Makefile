@@ -5,7 +5,7 @@ include ../config.mk
 EE_BIN = $(PROGRAM).elf
 EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o ps2dev9.o
 EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o hdd.o
-EE_OBJS += kernelgraphic.o SMS_SIF.o SMS_CDVD.o SMS_CDDA.o
+EE_OBJS += kernelgraphic.o SMS_SIF.o SMS_CDVD.o SMS_CDDA.o getrte.o getsbios.o getelf.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
 EE_LIBS += -lmc -lfileXio -lkbd
 ifneq ($(LIBJPG),)
@@ -53,14 +53,7 @@ EE_CFLAGS += $(EE_FLAGS) -Wimplicit-int -Werror-implicit-function-declaration
 
 EE_CXXFLAGS = $(EE_FLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
 
-MODULES = ioptrap.irx iomanX.irx ps2dev9.irx ps2ip.irx ps2smap.irx poweroff.irx \
-	ps2link.irx usbd.irx usb_mass.irx fileXio.irx ps2kbd.irx
-
-NAPLINK_MODULES += \
-	npm-usbd.irx \
-	npm-2301.irx
-
-ROM_FILES += \
+MODULES = \
 	ps2dev9.irx \
 	eedebug.irx \
 	fileXio.irx \
@@ -74,6 +67,16 @@ ROM_FILES += \
 	usbd.irx \
 	usb_mass.irx \
 	ps2kbd.irx \
+	freesio2.irx \
+	freepad.irx \
+	freesd.irx \
+	audsrv.irx
+
+NAPLINK_MODULES += \
+	npm-usbd.irx \
+	npm-2301.irx
+
+ROM_FILES += $(MODULES) \
 	SMSUTILS.irx \
 	SMSCDVD.irx \
 	eromdrvloader.irx \

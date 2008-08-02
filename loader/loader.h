@@ -50,6 +50,8 @@ extern "C" {
 		int dvdv;
 		/** -1, if for fat PS2, 1 if for slim PSTwo. */
 		int slim;
+		/** -1, if non free module, 1 if free module. */
+		int free;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -63,6 +65,7 @@ extern "C" {
 		int newModulesInTGE;
 		int slimPSTwo;
 		int autoBootTime;
+		int free;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;

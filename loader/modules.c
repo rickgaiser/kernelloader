@@ -39,6 +39,8 @@ typedef struct
 	int ps2smap;
 	/** True, if configuration should be loaded. */
 	int loadCfg;
+	/** True, if module can be loaded from "mc0:/kloader/". */
+	int checkMc;
 } moduleLoaderEntry_t;
 
 
@@ -50,6 +52,12 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL
 	},
 #endif
+	{
+		/* Stop sound. */
+		.path = "rom0:CLEARSPU",
+		.argLen = 0,
+		.args = NULL
+	},
 	{
 		/* Module is required to access rom1: */
 		.path = "rom0:ADDDRV",
@@ -95,38 +103,45 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "SMSUTILS.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "SMSCDVD.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 #if defined(RESET_IOP)
 	{
 		.path = "ioptrap.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "iomanX.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "poweroff.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "ps2dev9.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "ps2ip.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "ps2smap.irx",
@@ -140,7 +155,8 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "ps2link.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 #endif
 #endif
@@ -148,34 +164,40 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "npm-usbd.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "npm-2301.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 #else
 	{
 		.path = "usbd.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 #endif
 	{
 		.path = "usb_mass.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "fileXio.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 	{
 		.path = "ps2kbd.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.checkMc = -1
 	},
 };
 
@@ -231,20 +253,31 @@ int loadLoaderModules(void)
 		if (moduleList[i].ps2smap) {
 			moduleList[i].args = getPS2MAPParameter(&moduleList[i].argLen);
 		}
-		romfile = rom_getFile(moduleList[i].path);
-		if (romfile != NULL) {
-			int ret;
+		if (moduleList[i].checkMc) {
+			static char file[256];
 
-			ret = SifExecModuleBuffer(romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
-			if (ret < 0) {
-				rv = ret;
-			}
+			/* Try to load module from MC if available. */
+			snprintf(file, sizeof(file), CONFIG_DIR "/%s", moduleList[i].path);
+			rv = SifLoadModule(file, moduleList[i].argLen, moduleList[i].args);
 		} else {
-			rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
+			rv = -1;
 		}
 		if (rv < 0) {
-			printf("Failed to load module \"%s\".", moduleList[i].path);
-			error_printf("Failed to load module \"%s\".", moduleList[i].path);
+			romfile = rom_getFile(moduleList[i].path);
+			if (romfile != NULL) {
+				int ret;
+
+				ret = SifExecModuleBuffer(romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
+				if (ret < 0) {
+					rv = ret;
+				}
+			} else {
+				rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
+			}
+			if (rv < 0) {
+				printf("Failed to load module \"%s\".", moduleList[i].path);
+				error_printf("Failed to load module \"%s\".", moduleList[i].path);
+			}
 		}
 	}
 	graphic_setStatusMessage(NULL);

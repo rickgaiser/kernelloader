@@ -278,7 +278,8 @@ prefixed with "rom0:X" are the new rom modules. Module names without the
 "X" are the old ones. Each playstation has the same version of the old modules.
 ps2link is only for debugging. It's purpose in this project is to print debug
 messages over network. The messages can be seen on the host using ps2client.
-The new modules can be different. Here is more information about the modules:
+The new modules can be different. Here is more information about the modules
+(the modules are listed in groups, only one module of a group is required):
 
 eedebug.irx
 Required: No
@@ -286,23 +287,39 @@ Patch: linux-2.4.17_ps2-iop-debug.patch
 Module send all output of IOP processor to host. Linux patch is required
 to see this information at "/proc/ps2iopdebug".
 
+init.irx
+imodule1.irx
+imodule2.irx
+imodule3.irx
+imodule4.irx
+imodule5.irx
+Required: No
+You can copy a module to mc0:kloader/ to add a custom module, you
+want to load.
+
 SIO2MAN
 XSIO2MAN
+sio2man.irx
+freesio2.irx
 Required: Yes
 System module. Required to start other modules.
 
 MCMAN
 XMCMAN
+mcman.irx
 Required: Yes, or accessing memroy cards.
 Access to PS2 memory cards on IOP.
 
 MCSERV
 XMCSERV
+mcserv.irx
 Required: Yes, or accessing memroy cards.
 RPC server for MCMAN. Linux will call the RPC server.
 
 PADMAN
 XPADMAN
+padman.irx
+freepad
 Required: Yes, for accessing playstation game controllers.
 Driver and RPC server to access gamecontrollers by EE.
 
@@ -358,10 +375,12 @@ System can hang if you try to use network from IOP and EE!
 dmarelay.irx
 Required: No
 Redirects DMA from EE to IOP and backwards. There is no Linux driver using it
-correctly. Its purpose is to speed up network and hard disc.
+correctly. Its purpose is to speed up network and hard disc. Only the RTE
+module is working.
 
 CDVDMAN
 XCDVDMAN
+cdvdman.irx
 Required: Yes
 Reading CDs and DVDs.
 
@@ -370,7 +389,7 @@ XCDVDFSV
 Required: No
 I believe it is not required by Linux.
 
-ADDRV
+ADDDRV
 Required: Yes, for reading video DVDs.
 Enables access to rom1.
 
@@ -379,6 +398,30 @@ EROMDRV
 Required: Yes, for reading video DVDs.
 Need to be loaded to read video DVDs.
 
+LIBSD
+libsd.irx
+freesd.irx
+Required: Yes, for sound.
+Need to be loaded to get sound working. Only the RTE module is working.
+
+SDRDRV
+sdrdrv.irx
+Required: Yes, for sound with original Sony Linux Kernel.
+Sound server. Only the RTE module is working.
+
+audsrv.irx
+Required: Yes, for sound with special Linux Kernel.
+Sound server.
+
+ioptrap.irx
+Required: No, only for ps2link
+Module is only for debugging.
+
+RMMAN
+RMMAN2
+Required: No
+Driver for remote control. This not supported in TGE and RTE SBIOS.
+
 Configuration Order
 ###################
 At startup the default configuration is set. Then configuration is loaded
@@ -386,3 +429,71 @@ from a file. When a value is missing in the configuration file the default
 configuration is used. The search order of the configuration files is
 "cdfs:config.txt" and then "mc0:kloader/config.txt". The auto boot time is
 part of the configuration file.
+
+Loading Custom Kernelloader Modules
+###################################
+Kernelloader includes default modules. You can replace the modules by copying
+other versions to the directory "mc0:kloader/". The following modules are loaded
+for kernelloader. These modules are only used within kernelloader and not
+by Linux. Here is the list in loading order:
+SMSUTILS.irx
+SMSCDVD.irx
+ioptrap.irx
+iomanX.irx
+poweroff.irx
+ps2dev9.irx
+ps2ip.irx
+ps2smap.irx
+ps2link.irx
+usbd.irx
+usb_mass.irx
+fileXio.irx
+ps2kbd.irx
+
+When your USB memory stick is not supported within kernelloader, you can
+replace usbd.irx and usb_mass.irx. Just copy the files to "mc0:kloader/".
+It is possible that kernelloader will not start afterwards. To get it working
+again just remove the files or remove the memory card.
+
+Loading Custom Linux Modules
+############################
+Kernelloader includes default modules. You can replace the modules by copying
+other versions to the directory "mc0:kloader/". The following modules are loaded
+for Linux. These modules are only used by Linux. Here is the list in loading
+order:
+init.irx (*)
+sio2man.irx
+mcman.irx
+mcserv.irx
+padman.irx
+libsd.irx
+sdrdrv.irx
+iopintr.irx
+dmarelay.irx
+cdvdman.irx
+cdvdfsv.irx
+module1.irx (*)
+module2.irx (*)
+module3.irx (*)
+module4.irx (*)
+module5.irx (*)
+
+sbios.elf
+
+These modules need to be selected in the module configuration menu. These modules
+are automatially choosen if you submit with RTE modules enabled.
+There is a menu entry which copies the RTE modules from Sony's Linux kit DVD.
+sbios.elf is extracted from pbpx_955.09.
+Modules marked with (*) are not part of RTE and can be used to load custom
+modules.
+
+Extracting RTE modules and SBIOS
+################################
+At the end of the configuration menu there is a menu entry for copying RTE modules
+and SBIOS from Sony's Linux Kit DVD 1. There are menu entries for changing the source
+path if your DVD looks different. When the files doesn't exist, it is possible
+that it will hang. This problem is caused by the Video DVD driver. You need to copy/
+extract all files.
+Then you can select all RTE modules and RTE SBIOS in the module and configuration
+menu. You need also to disable CDVD SBIOS calls, because Linux will not start when
+the calls are enabled and RTE SBIOS is used.

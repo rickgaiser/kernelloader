@@ -2,3 +2,7 @@ Linux patch: first 2 instructions of exception handler need to be nop and after
 patched jump must be also a nop.
 
 Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd() is not correctly checked.
+
+auto select EROMDRV A, E, ... from ROM version
+
+Move hard disc initialisation from EE side to IOP side, so ps2link modules need not to be loaded before.

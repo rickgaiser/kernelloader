@@ -1,6 +1,13 @@
 1.9
 - Support interrupts on slim PSTwo. So USB is working.
 - Support automatic boot (without key or button press).
+- Stop sound engine when kernelloade starts.
+- Add possibilty to extract RTE modules and SBIOS to memory card.
+- RTE modules and SBIOS can now be loaded from memory card.
+- USB module can be replaced by one on memory card.
+- Automatic boot feature (time out)
+- Added audsrv.irx sound module.
+- Added free versions of padman, sio2man and libsd.
 
 1.8
 - Support video DVDs in kernelloader, for reading Linux kernel and initrd.

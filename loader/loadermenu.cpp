@@ -16,6 +16,9 @@
 #include "pad.h"
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
+#include "getrte.h"
+#include "getsbios.h"
+#include "getelf.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -431,7 +434,21 @@ void checkTGEandDebug(moduleEntry_t * module)
 			if (loaderConfig.newModules) {
 				/* Enable all new ROM modules */
 				if (module->newmods) {
-					module->load = 1;
+					if (loaderConfig.free) {
+						/* Enable only free modules. */
+						if (module->free >= 0) {
+							module->load = 1;
+						} else {
+							module->load = 0;
+						}
+					} else {
+						/* Enable only non free modules. */
+						if (module->free <= 0) {
+							module->load = 1;
+						} else {
+							module->load = 0;
+						}
+					}
 				}
 				if (module->oldmods) {
 					module->load = 0;
@@ -579,7 +596,7 @@ int disableAllSBIOSCalls(void *arg)
 	return 0;
 }
 
-/** Set enabled and disabled SBIOS calls to default setup. */
+/** Set enabled and disabled SBIOS calls to default setup for RTE. */
 int defaultSBIOSCalls(void *arg)
 {
 	int i;
@@ -588,12 +605,8 @@ int defaultSBIOSCalls(void *arg)
 
 	for (i = 0; i < numberOfSbiosCalls; i++) {
 		if ((i >= 176) && (i <= 195)) {
-			if (loaderConfig.enableSBIOSTGE) {
-				/* Disable CDVD, because of some problems. */
-				sbiosCallEnabled[i] = 0;
-			} else {
-				sbiosCallEnabled[i] = 1;
-			}
+			/* Disable CDVD, because of some problems. */
+			sbiosCallEnabled[i] = 0;
 		} else {
 			sbiosCallEnabled[i] = 1;
 		}
@@ -847,19 +860,19 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, (void *) mode);
-	menu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
-	menu->addItem("Load Config", mcLoadConfig, (void *) configfile);
-	menu->addItem("Save Current Config", mcSaveConfig, configfile);
-	loaderConfig.autoBootTime = 0;
-	menu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
+	Menu *fileMenu = menu->addSubMenu("File Menu");
+	fileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	fileMenu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
+	fileMenu->addItem("Load Config", mcLoadConfig, (void *) configfile);
+	fileMenu->addItem("Save Current Config", mcSaveConfig, configfile);
 
-	Menu *configFileMenu = menu->addSubMenu("Select Config File");
-	configFileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	Menu *configFileMenu = fileMenu->addSubMenu("Select Config File");
+	configFileMenu->addItem(fileMenu->getTitle(), setCurrentMenu, fileMenu, getTexBack());
 	configFileMenu->addItem("Edit Filename", editString, (void *) &configfile);
 
 	static fsRootParam_t cusbParam = {
 		configfile,
-		menu,
+		fileMenu,
 		configFileMenu,
 		NULL,
 		"USB Memory Stick",
@@ -870,7 +883,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	static fsRootParam_t cmc0Param = {
 		configfile,
-		menu,
+		fileMenu,
 		configFileMenu,
 		NULL,
 		"Memory Card 1",
@@ -881,7 +894,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 
 	static fsRootParam_t cmc1Param = {
 		configfile,
-		menu,
+		fileMenu,
 		configFileMenu,
 		NULL,
 		"Memory Card 2",
@@ -892,7 +905,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 #if !defined(RESET_IOP) || defined(PS2LINK) || defined(NAPLINK)
 	static fsRootParam_t chostParam = {
 		configfile,
-		menu,
+		fileMenu,
 		configFileMenu,
 		NULL,
 		"Host",
@@ -903,7 +916,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 #endif
 	static fsRootParam_t ccdfsParam = {
 		configfile,
-		menu,
+		fileMenu,
 		configFileMenu,
 		NULL,
 		"CD/DVD",
@@ -911,6 +924,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		""
 	};
 	configFileMenu->addItem(ccdfsParam.menuName, fsroot, (void *) &ccdfsParam);
+
+	loaderConfig.autoBootTime = 0;
 
 	Menu *linuxMenu = menu->addSubMenu("Select Kernel");
 	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
@@ -1057,10 +1072,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	loaderConfig.newModules = 0;
 	moduleConfigMenu->addCheckItem("New Modules", &loaderConfig.newModules);
 	loaderConfig.enableTGE = 1;
-#ifdef RTE
-	moduleConfigMenu->addCheckItem("Enable TGE (disable RTE)",
+	moduleConfigMenu->addCheckItem("Enable TGE (ow RTE mc)",
 		&loaderConfig.enableTGE);
-#endif
 #ifdef PS2LINK
 	loaderConfig.enablePS2LINK = 1;
 #else
@@ -1068,10 +1081,13 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 #endif
 	moduleConfigMenu->addCheckItem("Enable PS2LINK (debug)",
 		&loaderConfig.enablePS2LINK);
-	loaderConfig.enableDebug = 1;
+	loaderConfig.enableDebug = 0;
 	moduleConfigMenu->addCheckItem("Enable debug modules", &loaderConfig.enableDebug);
 	loaderConfig.slimPSTwo = 0;
 	moduleConfigMenu->addCheckItem("Slim PSTwo", &loaderConfig.slimPSTwo);
+	loaderConfig.free = 0;
+	moduleConfigMenu->addCheckItem("Use free modules",
+		&loaderConfig.free);
 	moduleConfigMenu->addItem("Submit above config", submitConfiguration, NULL);
 
 	/* Module Menu */
@@ -1093,10 +1109,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	}
 
 	loaderConfig.enableSBIOSTGE = 1;
-#ifdef RTE
 	configMenu->addCheckItem("Use SBIOS from TGE (ow RTE)",
 		&loaderConfig.enableSBIOSTGE);
-#endif
 	loaderConfig.newModulesInTGE = 0;
 	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
 	loaderConfig.enableDev9 = 1;
@@ -1115,10 +1129,8 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 		sbiosCallsMenu->addItem("Enable all Calls", enableAllSBIOSCalls, NULL);
 		sbiosCallsMenu->addItem("Disable all Calls", disableAllSBIOSCalls,
 			NULL);
-#ifdef RTE
 		sbiosCallsMenu->addItem("Set default for RTE", defaultSBIOSCalls, NULL);
-#endif
-		defaultSBIOSCalls(NULL);
+		enableAllSBIOSCalls(NULL);
 		for (i = 0; i < numberOfSbiosCalls; i++) {
 			sbiosCallsMenu->addCheckItem(sbiosDescription[i],
 				&sbiosCallEnabled[i]);
@@ -1126,6 +1138,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	} else {
 		error_printf("Not enough memory.");
 	}
+	menu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
 	menu->addItem("Power off", poweroff, NULL);
 	menu->addItem("Reboot", reboot, NULL);
 
@@ -1138,6 +1151,29 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	ps2linkMenu->addItem("Set Gateway IP address", editString, gatewayIP);
 
 	configMenu->addItem("Set Graphic Mode", editString, kernelGraphicMode);
+
+	Menu *rteMenu = configMenu->addSubMenu("RTE Copy Menu");
+	rteMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
+		getTexBack());
+	rteMenu->addItem("Edit RTE module path", editString, rtePath);
+	rteMenu->addItem("Copy RTE modules", copyRTEModules, NULL);
+	rteMenu->addItem("Edit RTE elf", editString, rteElf);
+	rteMenu->addItem("Edit RTE elf Offset", editString, rteElfOffset);
+	rteMenu->addItem("Copy RTE SBIOS", copyRTESBIOS, NULL);
+	static copyRTEELF_param_t ExtractCDVDMANParam = {
+		"3",
+		CONFIG_DIR "/cdvdman.irx"
+	};
+	static copyRTEELF_param_t ExtractCDVDFSVParam = {
+		"4",
+		CONFIG_DIR "/cdvdfsv.irx"
+	};
+
+	rteMenu->addItem("Edit RTE CDVD ELF", editString, rteELF);
+	rteMenu->addItem("Edit RTE CDVDMAN nr", editString, ExtractCDVDMANParam.elfNumber);
+	rteMenu->addItem("Edit RTE CDVDFSV nr", editString, ExtractCDVDFSVParam.elfNumber);
+	rteMenu->addItem("Extract RTE CDVDMAN", copyRTEELF, &ExtractCDVDMANParam);
+	rteMenu->addItem("Extract RTE CDVDFSV", copyRTEELF, &ExtractCDVDFSVParam);
 }
 
 extern "C" {
@@ -1160,7 +1196,11 @@ extern "C" {
 				return "host:TGE/sbios_old.elf";
 			}
 		} else {
+#ifdef RTE
 			return "host:RTE/sbios.elf";
+#else
+			return "mc0:kloader/sbios.bin";
+#endif
 		}
 	}
 

@@ -35,6 +35,7 @@
 #include "eedebug.h"
 #include "kernelgraphic.h"
 #include "zlib.h"
+#include "configuration.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -102,10 +103,17 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_NOT_PS2LINK,
+		.load = 0, //LOAD_ON_NOT_PS2LINK,
 		.ps2link = 1,
 		.debug = 1,
 		.eedebug = 1
+	},
+	{
+		.path = CONFIG_DIR "/init.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
 	},
 	{
 		.path = "rom0:ADDDRV",
@@ -125,16 +133,18 @@ moduleEntry_t modules[] = {
 		.dvdv = 1,
 		.slim = -1 /* XXX: Don't know why, but it is not working with slim PSTwo. */
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/sio2man.irx",
+#else
+		.path = CONFIG_DIR "/sio2man.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XSIO2MAN",
 		.buffered = 0,
@@ -142,7 +152,18 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 0,
 		.tge = 1,
-		.newmods = 1
+		.newmods = 1,
+		.free = -1
+	},
+	{
+		.path = "host:freesio2.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1,
+		.free = 1
 	},
 	{
 		.path = "rom0:SIO2MAN",
@@ -158,18 +179,20 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
+		.load = 0
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/mcman.irx",
+#else
+		.path = CONFIG_DIR "/mcman.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XMCMAN",
 		.buffered = 0,
@@ -188,16 +211,18 @@ moduleEntry_t modules[] = {
 		.tge = 1,
 		.oldmods = 1
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/mcserv.irx",
+#else
+		.path = CONFIG_DIR "/mcserv.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XMCSERV",
 		.buffered = 0,
@@ -216,15 +241,17 @@ moduleEntry_t modules[] = {
 		.tge = 1,
 		.oldmods = 1
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/padman.irx",
+#else
+		.path = CONFIG_DIR "/padman.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XPADMAN",
 		.buffered = 0,
@@ -232,7 +259,18 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 0,
 		.tge = 1,
-		.newmods = 1
+		.newmods = 1,
+		.free = -1
+	},
+	{
+		.path = "host:freepad.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.newmods = 1,
+		.free = 1
 	},
 	{
 		.path = "rom0:PADMAN",
@@ -250,16 +288,18 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 0,
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/libsd.irx",
+#else
+		.path = CONFIG_DIR "/libsd.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:LIBSD",
 		.buffered = 0,
@@ -267,39 +307,62 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 0,
 		.tge = 1,
+		.free = -1
 	},
 	{
 		.path = "rom1:LIBSD",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
+		.load = 0,
 		.tge = 1,
+		.free = -1
 	},
-#ifdef RTE
 	{
+		.path = "host:freesd.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.free = 1
+	},
+	{
+#ifdef RTE
 		.path = "host:RTE/sdrdrv.irx",
+#else
+		.path = CONFIG_DIR "/sdrdrv.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom1:SDRDRV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
+		.load = 0,
 		.tge = 1,
+		.free = -1
+	},
+	{
+		.path = "host:audsrv.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+		.tge = 1,
+		.free = 1
 	},
 	{
 		.path = "host:ioptrap.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
+		.load = 0,
 		.debug = 1
 	},
 	{
@@ -307,7 +370,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
+		.load = 0,
 		.debug = 1
 	},
 	{
@@ -381,9 +444,12 @@ moduleEntry_t modules[] = {
 #endif
 		.debug = 1
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/iopintr.irx",
+#else
+		.path = CONFIG_DIR "/iopintr.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
@@ -393,7 +459,6 @@ moduleEntry_t modules[] = {
 #endif
 		.rte = 1
 	},
-#endif
 	{
 		/* Interrupt relay when DEV9 is not loaded. */
 		.path = "host:TGE/intrelay-direct.irx",
@@ -442,9 +507,12 @@ moduleEntry_t modules[] = {
 		.tge = 1,
 		.slim = 1
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/dmarelay.irx",
+#else
+		.path = CONFIG_DIR "/dmarelay.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
@@ -452,7 +520,6 @@ moduleEntry_t modules[] = {
 		.ps2link = 1,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "host:TGE/dmarelay.irx",
 		.buffered = -1,
@@ -464,16 +531,18 @@ moduleEntry_t modules[] = {
 		.tge = 1
 #endif
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/cdvdman.irx",
+#else
+		.path = CONFIG_DIR "/cdvdman.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XCDVDMAN",
 		.buffered = 0,
@@ -499,16 +568,18 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.load = 0,
 	},
-#ifdef RTE
 	{
+#ifdef RTE
 		.path = "host:RTE/cdvdfsv.irx",
+#else
+		.path = CONFIG_DIR "/cdvdfsv.irx",
+#endif
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
 		.rte = 1
 	},
-#endif
 	{
 		.path = "rom0:XCDVDFSV",
 		.buffered = 0,
@@ -544,6 +615,41 @@ moduleEntry_t modules[] = {
 	{
 		.path = "rom1:RMMAN2",
 		.buffered = 0,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = CONFIG_DIR "/module1.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = CONFIG_DIR "/module2.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = CONFIG_DIR "/module3.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = CONFIG_DIR "/module4.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = 0,
+	},
+	{
+		.path = CONFIG_DIR "/module5.irx",
+		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
 		.load = 0,
@@ -835,12 +941,12 @@ char *load_file(const char *filename, int *size, void *addr)
 	fseek(fin, 0, SEEK_SET);
 	dprintf("filesize %d\n", *size);
 	if (addr != NULL) {
-		if (filesize < *size) {
+		if (filesize <= *size) {
 			buffer = addr;
 		}
 	} else {
 		// memalign() begins at &_end behind elf file. This ensures that the first 5 MByte are not used.
-		buffer = (char *) memalign(64, *size);
+		buffer = (char *) memalign(64, filesize);
 	}
 	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
 	*size = filesize;
@@ -990,7 +1096,6 @@ int loadModules(void)
 			}
 			if (romfile == NULL) {
 				modules[i].buffer = load_file(modules[i].path, &modules[i].size, NULL);
-				modules[i].allocated = 1;
 				if (modules[i].buffer == NULL) {
 					error_printf("Failed to load module '%s'.", modules[i].path);
 
@@ -1004,6 +1109,8 @@ int loadModules(void)
 						}
 					}
 					return -1;
+				} else {
+					modules[i].allocated = 1;
 				}
 			} else {
 				modules[i].allocated = 0;
@@ -1234,7 +1341,7 @@ void printAllModules(void)
 	}
 }
 
-char magic_string[] = "PS2b";
+char magic_string[] __attribute__((aligned(4))) = "PS2b";
 uint32_t *magic_check = (uint32_t *) magic_string;
 
 uint32_t *getSBIOSCallTable(char *addr)
@@ -1459,13 +1566,21 @@ int real_loader(void)
 
 		graphic_setStatusMessage("Checking SBIOS...");
 
-		/* Check for errors in ELF file. */
-		if (check_sections("SBIOS", sbios, sbios_size, 0x1000, 0x10000, NULL) != 0) {
-			free(sbios);
-			return -2;
+		/* Don't check binary file.*/
+		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
+			/* Check for errors in ELF file. */
+			if (check_sections("SBIOS", sbios, sbios_size, 0x1000, 0x10000, NULL) != 0) {
+				free(sbios);
+				return -2;
+			}
+		} else {
+			if (sbios_size >= 0x10000) {
+				error_printf("SBIOS file is too large.");
+				return -2;
+			}
 		}
 
-		for (i = 0; i < sbios_size; i++) {
+		for (i = 0; i < (sbios_size / 4); i++) {
 			if (((uint32_t *) sbios)[i] == *magic_check) {
 				found = 1;
 				SBIOSCallTable = getSBIOSCallTable((char *) (&(((uint32_t *) sbios)[i - 1])));
@@ -1785,13 +1900,22 @@ int real_loader(void)
 #endif
 
 		/* Install SBIOS. */
-		bootinfo->sbios_base = (uint32_t) copy_sections(sbios);
+		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
+			bootinfo->sbios_base = (uint32_t) copy_sections(sbios);
+		} else {
+			/* Copy binary data. */
+			memcpy((void *) SBIOS_START_ADDRESS, sbios, sbios_size);
+			bootinfo->sbios_base = SBIOS_START_ADDRESS;
+		}
 
 		/* Install linux kernel. */
 		entry = copy_sections(buffer);
 
-		/* Verify if everything is correct. */
-		verify_sections(sbios);
+		/* Can only verify ELF files. */
+		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
+			/* Verify if everything is correct. */
+			verify_sections(sbios);
+		}
 		verify_sections(buffer);
 		iop_prints(U2K("Code verified\n"));
 
