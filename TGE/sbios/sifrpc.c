@@ -424,6 +424,12 @@ static void _request_call(SifRpcCallPkt_t *request, void *data)
 	server->rmode      = request->rmode;
 	server->rid        = request->rec_id;
 
+	/* XXX: Could be done easier without queue or in a thread? */
+	/* XXX: The following is done in interrupt context, should not be done here. */
+	server = SifGetNextRequest(base);
+	if (server != NULL) {
+		SifExecRequest(server);
+	}
 #if 0 /* XXX: This code is in PS2SDK. */
 	if (base->thread_id < 0 || base->active == 0)
 		return;
@@ -554,13 +560,13 @@ SifSetRpcQueue(SifRpcDataQueue_t *qd)
 	return queue;
 }
 
-#ifdef F_SifGetNextRequest
 SifRpcServerData_t *
 SifGetNextRequest(SifRpcDataQueue_t *qd)
 {
 	SifRpcServerData_t *server;
+	u32 status;
 
-	DI();
+	core_save_disable(&status);
 
 	server = qd->start;
 	qd->active = 1;
@@ -570,13 +576,11 @@ SifGetNextRequest(SifRpcDataQueue_t *qd)
 		qd->start  = server->next;
 	}
 
-	EI();
+	core_restore(status);
 
 	return server;
 }
-#endif
 
-#if 0
 static void *_rpc_get_fpacket2(struct rpc_data *rpc_data, int rid)
 {
 	if (rid < 0 || rid < rpc_data->client_table_len)
@@ -587,9 +591,10 @@ static void *_rpc_get_fpacket2(struct rpc_data *rpc_data, int rid)
 
 void SifExecRequest(SifRpcServerData_t *sd)
 {
-	SifDmaTransfer_t dmat;
+	tge_sifdma_transfer_t dmat;
 	SifRpcRendPkt_t *rend;
 	void *rec = NULL;
+	u32 status;
 
 	rec = sd->func(sd->rpc_number, sd->buff, sd->size);
 
@@ -599,9 +604,8 @@ void SifExecRequest(SifRpcServerData_t *sd)
 	if (sd->rsize)
 		SifWriteBackDCache(rec, sd->rsize);
 
-#if 0 /* XXX: This code is in PS2SDK. */
-	DI();
-#endif
+
+	core_save_disable(&status);
 
 	if (sd->rid & 4)
 		rend = (SifRpcRendPkt_t *)
@@ -610,9 +614,7 @@ void SifExecRequest(SifRpcServerData_t *sd)
 		rend = (SifRpcRendPkt_t *)
 			_rpc_get_fpacket(&_sif_rpc_data);
 
-#if 0 /* XXX: This code is in PS2SDK. */
-	EI();
-#endif
+	core_restore(status);
 
 	rend->client = sd->client;
 	rend->cid    = 0x8000000a;
@@ -638,10 +640,10 @@ void SifExecRequest(SifRpcServerData_t *sd)
 		dmat.attr = 0;
 	}
 
+	/* XXX: Caution this loops wait until a DMA entry is free. Called in interrupt handler. */
 	while (!SifSetDma(&dmat, 1))
-		nopdelay();
+		;
 }
-#endif
 
 #ifdef F_SifRpcLoop
 void SifRpcLoop(SifRpcDataQueue_t *qd)

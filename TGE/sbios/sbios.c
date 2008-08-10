@@ -358,7 +358,7 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 95 */
 	sbcall_padinfomode,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#if 0 /* XXX: Implementation is buggy. Sound driver lead to Linux kernel crashs. */
+#if 1 /* XXX: Implementation is buggy. Sound driver lead sometimes to Linux kernel crashs. Only working with RTE libsd.irx and sdrdrv.irx. */
 	/* 112 */
 	sbcall_soundinit,
 	/* 113 */

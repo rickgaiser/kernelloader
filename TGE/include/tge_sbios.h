@@ -483,6 +483,8 @@ typedef struct {
 /* TGE_SBCALL_SOUNDGETREG */
 typedef struct {
 	u32	index;
+	/** Output parameter */
+	u32	val;
 } tge_sbcall_soundgetreg_arg_t;
 
 /* TGE_SBCALL_SOUNDSETREG */
