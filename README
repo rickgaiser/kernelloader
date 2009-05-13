@@ -156,6 +156,7 @@ sh # cd pc
 sh # make
 sh # cd ..
 sh # cp pc/sjcrunch_packer script
+sh # cd sjcrunch
 sh # sed <sjcrunch -e s-SJCRUNCH_PATH=.*-SJCRUNCH_PATH=$(pwd)- -e s-SJCRUNCH_PACKER=.*-SJCRUNCH_PACKER=\$SJCRUNCH_PATH/sjcrunch_packer- >/usr/local/ps2dev/ps2sdk/bin/sjcrunch
 sh # chmod +x /usr/local/ps2dev/ps2sdk/bin/sjcrunch
 
