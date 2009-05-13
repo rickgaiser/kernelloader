@@ -4,6 +4,6 @@
 
 #include "menu.h"
 
-void initMenu(Menu *menu, graphic_mode_t mode);
+void initMenu(Menu *menu);
 
 #endif

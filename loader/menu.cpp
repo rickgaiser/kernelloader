@@ -22,7 +22,7 @@ void Menu::paint(void)
 
 		TexCol = GS_SETREG_RGBAQ(0xFF, 0xFF, 0xFF, 0x80, 0x00);
 
-		gsKit_font_print_scaled(gsGlobal, gsFont, x, y, 3, scale, TexCol,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, x, y, 3, scale, TexCol,
 			title);
 		y += 50;
 	}

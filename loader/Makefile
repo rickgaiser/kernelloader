@@ -163,17 +163,17 @@ romdefinitions.h:
 		echo "extern int size_$$file;" >> romdefinitions.h; \
 	done
 
-rominitialize.h: $(RGBFILES)
+rominitialize.h: $(RGB_FILES)
 	rm -f rominitialize.h
 	for file in $(subst -,_,$(subst .,_,$(subst /,_,$(ROM_FILES)))); do \
-		if [ "$${file: -3:3}" = "rgb" ]; then \
+		if [ "`echo $$file | cut -d '_' -f 1 --complement`" = "rgb" ]; then \
 			echo "#include \"$${file}\"" | sed -e "s/_rgb\"/\.h\"/g" >> rominitialize.h; \
 		fi; \
 	done
 	for file in $(subst -,_,$(subst .,_,$(subst /,_,$(ROM_FILES)))); do \
 		echo "rom_files[i].start = $$file;" >> rominitialize.h; \
 		echo "rom_files[i].size = size_$$file;" >> rominitialize.h; \
-		if [ "$${file: -3:3}" = "rgb" ]; then \
+		if [ "`echo $$file | cut -d '_' -f 1 --complement`" = "rgb" ]; then \
 			ufile="`echo $$file | perl -n -e \"s/_rgb\$$//g; print uc($$@);\"`"; \
 			echo "rom_files[i].width = $${ufile}_WIDTH;" >> rominitialize.h; \
 			echo "rom_files[i].height = $${ufile}_HEIGHT;" >> rominitialize.h; \

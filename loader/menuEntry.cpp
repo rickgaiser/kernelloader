@@ -75,7 +75,7 @@ void MenuEntry::paint(int x, int y, int z)
 		gsKit_prim_sprite_texture(gsGlobal, tex, x, y - 3, 0, 0, x + tex->Width, y - 3 + tex->Height, tex->Width, tex->Height, z + 1, 0x80808080 /* color */);
 		x += tex->Width;
 	}
-	gsKit_font_print_scaled(gsGlobal, gsFont, x, y, z + 1, scale, TexCol,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, x, y, z + 1, scale, TexCol,
 		name);
 }
 

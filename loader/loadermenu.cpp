@@ -290,9 +290,6 @@ static char kernelGraphicMode[MAX_INPUT_LEN];
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
 
-/** Current graphic mode. */
-graphic_mode_t graphicMode;
-
 /** Text for auto boot menu. */
 const char *autoBootText[] = {
 	"Auto Boot: off",
@@ -822,7 +819,7 @@ int editString(void *arg)
 void setDefaultKernelParameter(char *text)
 {
 	/* Set commandline for correct video mode. */
-	if(graphicMode == MODE_NTSC) {
+	if(isNTSCMode()) {
 		strcpy(text, commandline_ntsc);
 	} else {
 		strcpy(text, commandline_pal);
@@ -839,11 +836,10 @@ int setDefaultKernelParameterMenu(void *arg)
 	return 0;
 }
 
-void initMenu(Menu *menu, graphic_mode_t mode)
+void initMenu(Menu *menu)
 {
 	int i;
 
-	graphicMode = mode;
 	setDefaultKernelParameter(kernelParameter);
 	strcpy(myIP, "192.168.0.10");
 	strcpy(netmask, "255.255.255.0");
@@ -859,7 +855,7 @@ void initMenu(Menu *menu, graphic_mode_t mode)
 	addConfigTextItem("ps2graphicMode", kernelGraphicMode, MAX_INPUT_LEN);
 
 	menu->setTitle("Boot Menu");
-	menu->addItem("Boot Current Config", loader, (void *) mode);
+	menu->addItem("Boot Current Config", loader, NULL);
 	Menu *fileMenu = menu->addSubMenu("File Menu");
 	fileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	fileMenu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);

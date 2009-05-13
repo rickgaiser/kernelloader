@@ -12,7 +12,7 @@ typedef int (executeMenuFn_t)(void *arg);
 class MenuEntry {
 	protected:
 	GSGLOBAL *gsGlobal;
-	GSFONT *gsFont;
+	GSFONTM *gsFont;
 	const char *name;
 	bool selected;
 	executeMenuFn_t *executeFn;
@@ -26,7 +26,7 @@ class MenuEntry {
 
 	public:
 	/** Normal menu entry with slectable icon. */
-	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex) :
+	MenuEntry(GSGLOBAL *gsGlobal, GSFONTM *gsFont, const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(executeArg),
@@ -37,7 +37,7 @@ class MenuEntry {
 	}
 
 	/** Menu entry for check items. */
-	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char *name, executeMenuFn_t *executeFn, int *checkValue) :
+	MenuEntry(GSGLOBAL *gsGlobal, GSFONTM *gsFont, const char *name, executeMenuFn_t *executeFn, int *checkValue) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(name), selected(false),
 		executeFn(executeFn), executeArg(this),
@@ -48,7 +48,7 @@ class MenuEntry {
 	}
 
 	/** Menu entry for multi selection items. */
-	MenuEntry(GSGLOBAL *gsGlobal, GSFONT *gsFont, const char **valueList, executeMenuFn_t *executeFn, int *multiValue, GSTEXTURE *tex) :
+	MenuEntry(GSGLOBAL *gsGlobal, GSFONTM *gsFont, const char **valueList, executeMenuFn_t *executeFn, int *multiValue, GSTEXTURE *tex) :
 		gsGlobal(gsGlobal), gsFont(gsFont),
 		name(valueList[*multiValue]), selected(false),
 		executeFn(executeFn), executeArg(this),

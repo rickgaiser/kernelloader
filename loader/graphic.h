@@ -8,7 +8,7 @@
 #include "menu.h"
 #include "config.h"
 
-Menu *graphic_main(graphic_mode_t mode);
+Menu *graphic_main(void);
 void graphic_paint(void);
 void graphic_auto_boot_paint(int time);
 int setCurrentMenu(void *arg);
@@ -18,6 +18,7 @@ GSTEXTURE *getTexUp(void);
 GSTEXTURE *getTexBack(void);
 GSTEXTURE *getTexSelected(void);
 GSTEXTURE *getTexUnselected(void);
+bool isNTSCMode(void);
 #endif
 
 #ifdef __cplusplus

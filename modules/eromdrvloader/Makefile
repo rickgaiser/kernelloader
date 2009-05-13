@@ -19,8 +19,6 @@ include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.iopglobal
 
 # A rule to build imports.lst.
-%.o : %.lst
-	echo "#include \"irx_imports.h\"" > build-imports.c
-	cat $< >> build-imports.c
-	$(IOP_CC) $(IOP_CFLAGS) build-imports.c -o $@
-	-rm -f build-imports.c
+%.c : %.lst
+	echo "#include \"irx_imports.h\"" > imports.c
+	cat $< >> imports.c

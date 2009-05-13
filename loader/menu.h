@@ -14,7 +14,7 @@ class Menu {
 	GSGLOBAL *gsGlobal;
 
 	/** Font used for printing text. */
-	GSFONT *gsFont;
+	GSFONTM *gsFont;
 
 	int selectedMenu;
 	int numberOfMenuEntries;
@@ -26,7 +26,7 @@ class Menu {
 	int numberOfMenuItems;
 
 	public:
-	Menu(GSGLOBAL *gsGlobal, GSFONT *gsFont, int numberOfMenuItems) :
+	Menu(GSGLOBAL *gsGlobal, GSFONTM *gsFont, int numberOfMenuItems) :
 		gsGlobal(gsGlobal),
 		gsFont(gsFont),
 		positionX(0),

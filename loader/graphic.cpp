@@ -22,6 +22,12 @@
 /** Maximum number of error messages. */
 #define MAX_MESSAGES 10
 
+/** Maximum texture size in Bytes. */
+#define MAX_TEX_SIZE 0x10000
+
+/** Size of small textures (will be uploaded). */
+#define SMALL_TEXT_SIZE 0x4000
+
 /** True, if graphic is initialized. */
 static bool graphicInitialized = false;
 
@@ -45,7 +51,7 @@ static u64 TexRed;
 static u64 TexBlack;
 
 /** Font used for printing text. */
-static GSFONT *gsFont;
+static GSFONTM *gsFont;
 
 /** File name that is printed on screen. */
 static const char *loadName = NULL;
@@ -102,10 +108,81 @@ int scrollPos = 0;
 
 int inputScrollPos = 0;
 
+u32 globalVram;
+
+static void gsKit_texture_upload_inline(GSGLOBAL *gsGlobal, GSTEXTURE *Texture)
+{
+	static u32 *lastMem;
+	static u32 lastVram;
+
+	/* Check if already uploaded the last time. */
+	if ((lastMem != Texture->Mem) || (lastVram != Texture->Vram)) {
+		/* Texture was not uploaded, need to upload it. */
+		gsKit_setup_tbw(Texture);
+	
+		if (Texture->PSM == GS_PSM_T8)
+		{
+			gsKit_texture_send_inline(gsGlobal, Texture->Mem, Texture->Width, Texture->Height, Texture->Vram, Texture->PSM, Texture->TBW, GS_CLUT_TEXTURE);
+			gsKit_texture_send_inline(gsGlobal, Texture->Clut, 16, 16, Texture->VramClut, Texture->ClutPSM, 1, GS_CLUT_PALLETE);
+	
+		}
+		else if (Texture->PSM == GS_PSM_T4)
+		{
+			gsKit_texture_send_inline(gsGlobal, Texture->Mem, Texture->Width, Texture->Height, Texture->Vram, Texture->PSM, Texture->TBW, GS_CLUT_TEXTURE);
+			gsKit_texture_send_inline(gsGlobal, Texture->Clut, 8,  2, Texture->VramClut, Texture->ClutPSM, 1, GS_CLUT_PALLETE);
+		}
+		else
+		{
+			gsKit_texture_send_inline(gsGlobal, Texture->Mem, Texture->Width, Texture->Height, Texture->Vram, Texture->PSM, Texture->TBW, GS_CLUT_NONE);
+		}
+	}
+}
+
 void paintTexture(GSTEXTURE *tex, int x, int y, int z)
 {
 	if (tex != NULL) {
-		gsKit_prim_sprite_texture(gsGlobal, tex, x, y, 0, 0, x + tex->Width, y + tex->Height, tex->Width, tex->Height, z, 0x80808080 /* color */);
+		if (tex->Vram != GSKIT_ALLOC_ERROR) {
+			u32 size;
+
+			size = gsKit_texture_size_ee(tex->Width, tex->Height, tex->PSM);
+			if (size < SMALL_TEXT_SIZE) {
+				/* No uploading required for small textures. */
+				gsKit_prim_sprite_texture(gsGlobal, tex,
+					x, y, 0, 0, x + tex->Width, y + tex->Height,
+					tex->Width, tex->Height, z,
+					GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00));
+			} else {
+				GSTEXTURE uploadTex;
+				u32 slice;
+				u32 offset;
+
+				/* Need to upload texture, because it is too big for cache. */
+				slice = tex->Height;
+				while (size > MAX_TEX_SIZE) {
+					slice = (slice + 1) >> 1;
+					size = gsKit_texture_size_ee(tex->Width, slice, tex->PSM);
+				}
+	
+				uploadTex = *tex;
+				uploadTex.Height = slice;
+	
+				/* Upload image as slices. */	
+				for (offset = 0; offset < tex->Height; offset += slice) {
+					u32 remaining;
+	
+					remaining = tex->Height - offset;
+					if (remaining < slice) {
+						uploadTex.Height = remaining;
+					}
+					gsKit_texture_upload_inline(gsGlobal, &uploadTex);
+					gsKit_prim_sprite_texture(gsGlobal, &uploadTex,
+						x, y + offset, 0, 0, x + uploadTex.Width, y + offset + uploadTex.Height,
+						uploadTex.Width, uploadTex.Height, z,
+						GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00));
+					uploadTex.Mem = (u32 *) (((u32) uploadTex.Mem) + size);
+				}
+			}
+		}
 	}
 }
 
@@ -169,7 +246,7 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 #if 0
 			printf("Test pos %d i %d lastSpacePos %d %s\n", pos, i, lastSpacePos, lineBuffer);
 #else
-			gsKit_font_print_scaled(gsGlobal, gsFont, x, y, z, scale, TexCol,
+			gsKit_fontm_print_scaled(gsGlobal, gsFont, x, y, z, scale, TexCol,
 				lineBuffer);
 #endif
 			y += 30;
@@ -195,7 +272,7 @@ void graphic_common(void)
 
 	paintTexture(texPenguin, 5, 10, 1);
 
-	gsKit_font_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
 		"Loader for Linux " LOADER_VERSION
 #ifdef RESET_IOP
 		"R"
@@ -219,9 +296,9 @@ void graphic_common(void)
 		"S"
 #endif
 	);
-	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
-	gsKit_font_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
 		"TODAY"
 #ifdef RTE
 		" RTE"
@@ -240,7 +317,7 @@ void graphic_auto_boot_paint(int time)
 	graphic_common();
 
 	snprintf(msg, sizeof(msg), "Auto Boot in %d seconds.", time);
-	gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 		msg);
 
 	gsKit_queue_exec(gsGlobal);
@@ -258,10 +335,10 @@ void graphic_paint(void)
 	graphic_common();
 
 	if (statusMessage != NULL) {
-		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
 			statusMessage);
 	} else if (loadName != NULL) {
-		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
 			loadName);
 		gsKit_prim_sprite(gsGlobal, 50, 120, 50 + 520, 140, 2, White);
 		if (loadPercentage > 0) {
@@ -271,7 +348,7 @@ void graphic_paint(void)
 	}
 	msg = getErrorMessage();
 	if (msg != NULL) {
-		gsKit_font_print_scaled(gsGlobal, gsFont, 50, 170, 3, scale, TexRed,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 170, 3, scale, TexRed,
 			"Error Message:");
 		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0);
 	} else {
@@ -287,40 +364,40 @@ void graphic_paint(void)
 	}
 	if (enableDisc) {
 		paintTexture(texDisc, 100, 200, 100);
-		gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 			"Loading, please wait...");
 	} else {
 		if (msg != NULL) {
 			if (usePad) {
-				gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+				gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 					"Press CROSS to continue.");
 			}
 		} else {
 			if (!isInfoBufferEmpty()) {
 				if (usePad) {
-					gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 						"Press CROSS to continue.");
-					gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 						"Use UP and DOWN to scroll.");
 				}
 			} else {
 				if (inputBuffer != NULL) {
-					gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 						"Please use USB keyboard.");
-					gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 						"Press CROSS to quit.");
 				} else if (menu != NULL) {
 					if (usePad) {
-						gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 							"Press CROSS to select menu.");
-						gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 							"Use UP and DOWN to scroll.");
 					}
 				}
 			}
 		}
 		if (!usePad) {
-			gsKit_font_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+			gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 				"Please wait...");
 		}
 	}
@@ -363,6 +440,8 @@ GSTEXTURE *getTexture(const char *filename)
 	if (romfile != NULL) {
 		tex = (GSTEXTURE *) malloc(sizeof(GSTEXTURE));
 		if (tex != NULL) {
+			u32 size;
+
 			tex->Width = romfile->width;
 			tex->Height = romfile->height;
 			if (romfile->depth == 4) {
@@ -371,15 +450,21 @@ GSTEXTURE *getTexture(const char *filename)
 				tex->PSM = GS_PSM_CT24;
 			}
 			tex->Mem = (u32 *) romfile->start;
-			tex->Vram = gsKit_vram_alloc(gsGlobal, gsKit_texture_size(tex->Width, tex->Height, tex->PSM), GSKIT_ALLOC_USERBUFFER);
 			tex->Filter = GS_FILTER_LINEAR;
-			if (tex->Vram != GSKIT_ALLOC_ERROR) {
-				gsKit_texture_upload(gsGlobal, tex);
+
+			size = gsKit_texture_size_ee(tex->Width, tex->Height, tex->PSM);
+			if (size < SMALL_TEXT_SIZE) {
+				tex->Vram = gsKit_vram_alloc(gsGlobal, gsKit_texture_size(tex->Width, tex->Height, tex->PSM), GSKIT_ALLOC_USERBUFFER);
+				if (tex->Vram != GSKIT_ALLOC_ERROR) {
+					gsKit_texture_upload(gsGlobal, tex);
+				} else {
+					printf("Out of VRAM \"%s\".\n", filename);
+					free(tex);
+					error_printf("Out of VRAM while loading texture (%s).", filename);
+					return NULL;
+				}
 			} else {
-				printf("Out of VRAM \"%s\".\n", filename);
-				free(tex);
-				error_printf("Out of VRAM while loading texture (%s).", filename);
-				return NULL;
+				tex->Vram = globalVram;
 			}
 		} else {
 			error_printf("Out of memory while loading texture (%s).", filename);
@@ -390,25 +475,25 @@ GSTEXTURE *getTexture(const char *filename)
 	return tex;
 }
 
+bool isNTSCMode(void)
+{
+	return (gsGlobal->Mode != GS_MODE_PAL);
+}
+
 /**
  * Initialize graphic screen.
- * @param mode Graphic mode to use.
  */
-Menu *graphic_main(graphic_mode_t mode)
+Menu *graphic_main(void)
 {
 	int i;
 	int numberOfMenuItems;
 
-	//gsGlobal = gsKit_init_global(GS_MODE_AUTO_I);
-	if (mode == MODE_NTSC) {
-		gsGlobal = gsKit_init_global(GS_MODE_NTSC_I);
+	gsGlobal = gsKit_init_global();
+	if (isNTSCMode()) {
 		numberOfMenuItems = 7;
 	} else {
-		gsGlobal = gsKit_init_global(GS_MODE_PAL_I);
 		numberOfMenuItems = 8;
 	}
-	//  GSGLOBAL *gsGlobal = gsKit_init_global(GS_MODE_VGA_640_60);
-
 
 	dmaKit_init(D_CTRL_RELE_OFF, D_CTRL_MFD_OFF, D_CTRL_STS_UNSPEC,
 		D_CTRL_STD_OFF, D_CTRL_RCYC_8, 1 << DMA_CHANNEL_GIF);
@@ -431,13 +516,19 @@ Menu *graphic_main(graphic_mode_t mode)
 
 	gsKit_init_screen(gsGlobal);
 
-	gsFont = gsKit_init_font(GSKIT_FTYPE_FONTM, NULL);
-	if (gsKit_font_upload(gsGlobal, gsFont) != 0) {
+	gsFont = gsKit_init_fontm();
+	if (gsKit_fontm_upload(gsGlobal, gsFont) != 0) {
 		printf("Can't find any font to use\n");
 		SleepThread();
 	}
 
-	gsFont->FontM_Spacing = 0.8f;
+	globalVram = gsKit_vram_alloc(gsGlobal, MAX_TEX_SIZE, GSKIT_ALLOC_USERBUFFER);
+	if (globalVram == GSKIT_ALLOC_ERROR) {
+		printf("Failed to allocate texture buffer.\n");
+		error_printf("Failed to allocate texture buffer.\n");
+	}
+
+	gsFont->Spacing = 0.8f;
 	texFolder = getTexture("folder.rgb");
 	texUp = getTexture("up.rgb");
 	texBack = getTexture("back.rgb");

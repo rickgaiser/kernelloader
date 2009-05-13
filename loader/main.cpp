@@ -1,5 +1,6 @@
 /* Copyright (c) 2007 Mega Man */
 #include <gsKit.h>
+#include <gsFontM.h>
 
 #include "config.h"
 #include "graphic.h"
@@ -21,7 +22,6 @@
  */
 int main(int argc, char **argv)
 {
-	graphic_mode_t mode;
 	Menu *menu;
 	Menu *lastValidMenu = NULL;
 	int new_pad;
@@ -34,19 +34,17 @@ int main(int argc, char **argv)
 	argc = argc;
 	argv = argv;
 
-	if (*((char *) 0x1FC80000 - 0xAE) != 'E') {
-		mode = MODE_NTSC;
-		refreshesPerSecond = 60;
-	} else {
-		mode = MODE_PAL;
-		refreshesPerSecond = 50;
-	}
-
 	/* Disable debug output at startup. */
 	loaderConfig.enableEEDebug = 0;
 
 	/* Setup graphic screen. */
-	menu = graphic_main(mode);
+	menu = graphic_main();
+
+	if (isNTSCMode()) {
+		refreshesPerSecond = 60;
+	} else {
+		refreshesPerSecond = 50;
+	}
 
 	lastValidMenu = menu;
 
@@ -56,7 +54,7 @@ int main(int argc, char **argv)
 	/* Show disc symbol while start up. */
 	setEnableDisc(true);
 
-	initMenu(menu, mode);
+	initMenu(menu);
 
 	loadLoaderModules();
 
