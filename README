@@ -73,6 +73,11 @@ sh # cd ps2toolchain
 sh # chmod +x toolchain.sh
 sh # ./toolchain.sh
 
+After installation you need to remove "-c" from IOP_CFLAGS in file 
+"/usr/local/ps2dev/ps2sdk/samples/Makefile.iopglobal". Maybe this is
+fixed in newer ps2sdk versions. For more information see discussion:
+http://forums.ps2dev.org/viewtopic.php?t=7506
+
 USB
 ###
 You need also to install the usb driver:
@@ -193,13 +198,20 @@ old bootinfo support.
 
 sh # make menuconfig
 
-For initrd support:
 Deactivate "Machine selection"  ---> "Support for old style boot information"
 Activate "Machine selection"  ---> "Support for PS2 Memory Card File System" (choose "*" and not "M")
 Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
 Activate "Block devices" ---> "Initial RAM disk (initrd) support"
 Activate "File systems" ---> "ISO 9660 CDROM file system support" (choose "*" and not "M")
 Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
+
+Slim PSTwo needs access to USB devices:
+Activate "SCSI Support" ---> "SCSI Support" (choose "*" and not "M")
+Activate "SCSI Support" ---> "SCSI disk support" (choose "*" and not "M")
+Activate "USB support" ---> "USB Mass storage support" (choose "*" and not "M")
+Activate "File Systems" ---> "DOS FAT fs support" (choose "*" and not "M")
+Activate "File Systems" ---> "MSDOS fs support" (choose "*" and not "M")
+Activate "File Systems" ---> "VFAT (Windows-95) fs support" (choose "*" and not "M")
 
 Save configuration and then run:
 

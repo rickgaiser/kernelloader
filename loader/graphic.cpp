@@ -1,4 +1,4 @@
-/* Copyright (c) 2007 Mega Man */
+/* Copyright (c) 2007 - 2009 Mega Man */
 #include "gsKit.h"
 #include "dmaKit.h"
 #include "malloc.h"
@@ -23,7 +23,7 @@
 #define MAX_MESSAGES 10
 
 /** Maximum texture size in Bytes. */
-#define MAX_TEX_SIZE 0x10000
+#define MAX_TEX_SIZE 0x30000
 
 /** Size of small textures (will be uploaded). */
 #define SMALL_TEXT_SIZE 0x4000
@@ -145,7 +145,7 @@ void paintTexture(GSTEXTURE *tex, int x, int y, int z)
 			u32 size;
 
 			size = gsKit_texture_size_ee(tex->Width, tex->Height, tex->PSM);
-			if (size < SMALL_TEXT_SIZE) {
+			if (size <= SMALL_TEXT_SIZE) {
 				/* No uploading required for small textures. */
 				gsKit_prim_sprite_texture(gsGlobal, tex,
 					x, y, 0, 0, x + tex->Width, y + tex->Height,
@@ -155,12 +155,26 @@ void paintTexture(GSTEXTURE *tex, int x, int y, int z)
 				GSTEXTURE uploadTex;
 				u32 slice;
 				u32 offset;
+				u32 vramSize;
 
 				/* Need to upload texture, because it is too big for cache. */
 				slice = tex->Height;
-				while (size > MAX_TEX_SIZE) {
+				vramSize = gsKit_texture_size(tex->Width, slice, tex->PSM);
+				while (vramSize > MAX_TEX_SIZE) {
 					slice = (slice + 1) >> 1;
-					size = gsKit_texture_size_ee(tex->Width, slice, tex->PSM);
+					do {
+						size = gsKit_texture_size_ee(tex->Width, slice, tex->PSM);
+						vramSize = gsKit_texture_size(tex->Width, slice, tex->PSM);
+						if (slice == 0) {
+							printf("minimum vramSize 0x%08x\n", vramSize);
+						}
+						if (size & 15) {
+							/* Get next 16 byte aligned size. */
+							/* DMA will only support a start address which is 16 Byte aligned. */
+							/* The start address of the next block is calculated by adding slice. */
+							slice++;
+						}
+					} while (size & 15); /* Wait until size is 16 Byte aligned. */
 				}
 	
 				uploadTex = *tex;
@@ -453,7 +467,7 @@ GSTEXTURE *getTexture(const char *filename)
 			tex->Filter = GS_FILTER_LINEAR;
 
 			size = gsKit_texture_size_ee(tex->Width, tex->Height, tex->PSM);
-			if (size < SMALL_TEXT_SIZE) {
+			if (size <= SMALL_TEXT_SIZE) {
 				tex->Vram = gsKit_vram_alloc(gsGlobal, gsKit_texture_size(tex->Width, tex->Height, tex->PSM), GSKIT_ALLOC_USERBUFFER);
 				if (tex->Vram != GSKIT_ALLOC_ERROR) {
 					gsKit_texture_upload(gsGlobal, tex);
@@ -513,6 +527,7 @@ Menu *graphic_main(void)
 	TexBlack = GS_SETREG_RGBAQ(0x00, 0x00, 0x00, 0x80, 0x00);
 
 	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+	gsGlobal->ZBuffering = GS_SETTING_OFF;
 
 	gsKit_init_screen(gsGlobal);
 

@@ -1,3 +1,8 @@
+2.0
+- Updated to PS2SDK SVN Revision 1588.
+- Updated to gsKit SVN Revision 1588.
+- Fixed PAL/NTSC detection on slim PSTwo.
+
 1.9
 - Support interrupts on slim PSTwo. So USB is working.
 - Support automatic boot (without key or button press).
