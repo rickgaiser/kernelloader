@@ -83,6 +83,7 @@ int _fio_completion_sema;
 
 void fioInitStage2(void *arg)
 {
+	arg = arg;
 	if (_fio_cd.server != NULL) {
 		_fio_init = 1;
 		_fio_block_mode = FIO_WAIT;
@@ -299,8 +300,8 @@ void simulateWaitSema(volatile u32 *sema)
 
 	do {
 		core_save_disable(&status);
-		if (sema > 0) {
-			sema--;
+		if (*sema > 0) {
+			(*sema)--;
 			break;
 		}
 		core_restore(status);
