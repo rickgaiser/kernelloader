@@ -8,7 +8,7 @@
  *  Public License Version 2. See the file "COPYING" in the main
  *  directory of this archive for more details.
  *
- *  This driver replaces the original smap.c in linux 2.4.17
+ *  This driver replaces the original smap.h in linux 2.4.17
  *  This driver is intended to be used with the slim PSTwo
  *  and the smaprpc.irx module of kernelloader.
  */
