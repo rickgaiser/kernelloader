@@ -7,6 +7,7 @@
 
 #include "stddef.h"
 #include "stdio.h"
+#include "smap.h"
 #include "smap_rpc.h"
 #include "main.h"
 #include "pbuf.h"
@@ -53,8 +54,6 @@ void smap_send(u8 *buffer, unsigned int size)
 		unsigned char *data;
 		data = (unsigned char *) pBuf->payload;
 
-		printf("Sending %u Bytes.\n", size); // XXX: Remove printf
-
 		memcpy(data, buffer, size);
 
 		SMapLowLevelOutput(pBuf);
@@ -69,7 +68,6 @@ void *rpcCommandHandler(u32 command, void *buffer, int size)
 	u32 *buf = (u32 *) buffer;
 	int ret = 0;
 
-	printf("Received cmd %lu\n", command); // XXX: remove printf
 	switch (command) {
 		case SMAP_CMD_SEND:
 			smap_send(buffer, size);
@@ -99,6 +97,7 @@ void *rpcCommandHandler(u32 command, void *buffer, int size)
 		}
 
 		default:
+			printf("Received unknown cmd %lu\n", command);
 			ret = -1;
 			break;
 	}

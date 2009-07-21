@@ -401,14 +401,6 @@ err_t SMapLowLevelOutput(PBuf* pOutput)
 static err_t
 SMapIFInit(void)
 {
-#if 0 // XXX: 
-	//Get MAC address.
-
-	memcpy(pNetIF->hwaddr,SMap_GetMACAddress(),6);
-	dbgprintf("MAC address : %02d:%02d:%02d:%02d:%02d:%02d\n",pNetIF->hwaddr[0],pNetIF->hwaddr[1],pNetIF->hwaddr[2],
-				 pNetIF->hwaddr[3],pNetIF->hwaddr[4],pNetIF->hwaddr[5]);
-#endif
-
 	//Enable sending and receiving of data.
 
 	SMap_Start();
@@ -422,7 +414,6 @@ SMapLowLevelInput(PBuf* pBuf)
 	//When we receive data, the interrupt-handler will invoke this function, which means we are in an interrupt-context. Pass on
 	//the received data to EE.
 	
-	printf("Received packet %u\n", pBuf->tot_len); // XXX: remove printf
 	if (pBuf != NULL) {
 		u8 *data = pBuf->payload;
 
