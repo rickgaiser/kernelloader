@@ -115,6 +115,10 @@ AddToQueue(PBuf* pBuf)
 
 			Ret=SMap_OK;
 		}
+		if	(Ret==SMap_OK)
+		{
+			pbuf_free(pBuf);
+		}
 	}
 	else if	(iReqCNT<MAX_REQ_CNT)
 	{
