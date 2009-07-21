@@ -5,6 +5,7 @@
 
 #define SMAP_CMD_SEND 1
 #define SMAP_CMD_SET_BUFFER 2
+#define SMAP_CMD_GET_MAC_ADDR 3
 
 #define SIF_SMAP_RECEIVE 0x07
 

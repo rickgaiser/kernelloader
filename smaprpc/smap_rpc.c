@@ -93,7 +93,13 @@ void *rpcCommandHandler(u32 command, void *buffer, int size)
 			break;
 		}
 
+		case SMAP_CMD_GET_MAC_ADDR: {
+			memcpy(&buf[1], SMap_GetMACAddress(), 6);
+			break;
+		}
+
 		default:
+			ret = -1;
 			break;
 	}
 	buf[0] = ret; //store return code
