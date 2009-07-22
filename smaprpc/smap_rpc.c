@@ -4,6 +4,7 @@
 #include <sifrpc.h>
 #include <ioman.h>
 #include <sysclib.h>
+#include <sifman.h>
 
 #include "stddef.h"
 #include "stdio.h"
@@ -23,8 +24,25 @@ static SifRpcDataQueue_t rpc_queue __attribute__((aligned(64)));
 static SifRpcServerData_t rpc_server __attribute((aligned(64)));
 static int _rpc_buffer[2048] __attribute((aligned(64)));
 
+void pbuf_check_transfers(void)
+{
+	int i;
+
+	for (i = 0; i < NUMBER_OF_BUFFERS; i++) {
+		if (buffers[i].ref != 0) {
+			if (buffers[i].id != 0) {
+				if (SifDmaStat(buffers[i].id) < 0) {
+					/* DMA transfer is complete. */
+					pbuf_free(&buffers[i]);
+				}
+			}
+		}
+	}
+}
+
 u8 pbuf_free(struct pbuf *p)
 {
+	p->id = 0;
 	p->ref = 0;
 	return 1;
 }
@@ -33,12 +51,14 @@ struct pbuf *pbuf_alloc(pbuf_layer l, u16 size, pbuf_flag flag)
 {
 	int i;
 
+	pbuf_check_transfers();
 	for (i = 0; i < NUMBER_OF_BUFFERS; i++) {
 		if (buffers[i].ref == 0) {
 			buffers[i].ref++;
 			buffers[i].payload = &payloadBuffer[FRAME_SIZE * i];
 			buffers[i].next = NULL;
 			buffers[i].len = buffers[i].tot_len = size;
+			buffers[i].id = 0;
 			return &buffers[i];
 		}
 	}

@@ -433,9 +433,9 @@ SMapLowLevelInput(PBuf* pBuf)
 				if (ret == 0) {
 					printf("Failed to send message (ret = %d).\n", ret);
 				}
+				pBuf->id = ret;
 				ee_buffer_pos = (ee_buffer_pos + pBuf->tot_len + DMA_TRANSFER_SIZE - 1) & ~(DMA_TRANSFER_SIZE - 1);
 				nr = (nr + 1) % NR_OF_SMAP_RX_MSGS;
-				/* XXX: free pbuf!!! */
 			} else {
 				printf("Loosing ethernet frame. No EE rx buffer.\n");
 			}

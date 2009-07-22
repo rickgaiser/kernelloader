@@ -30,7 +30,9 @@ struct pbuf {
    * the stack itself, or pbuf->next pointers from a chain.
    */
   u16 ref;
-  
+
+  /** Transfer id of received frame which is sent to the EE. */
+  int id;  
 };
 
 typedef int err_t;
@@ -51,5 +53,6 @@ typedef enum {
 
 u8 pbuf_free(struct pbuf *p);
 struct pbuf *pbuf_alloc(pbuf_layer l, u16 size, pbuf_flag flag);
+void pbuf_check_transfers(void);
 
 #endif

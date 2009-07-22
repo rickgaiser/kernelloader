@@ -21,5 +21,6 @@
 #include "thsemap.h"
 #include "thevent.h"
 #include "sifcmd.h"
+#include "sifman.h"
 
 #endif /* IOP_IRX_IMPORTS_H */

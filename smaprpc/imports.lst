@@ -56,3 +56,7 @@ I_sceSifRegisterRpc
 I_sceSifRpcLoop
 I_sceSifSendCmd
 sifcmd_IMPORTS_end
+
+sifman_IMPORTS_start
+I_sceSifDmaStat
+sifman_IMPORTS_end
