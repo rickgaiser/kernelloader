@@ -1,0 +1,8 @@
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+
+dmacman_IMPORTS_start
+I_dmac_set_dpcr2
+I_dmac_get_dpcr2
+dmacman_IMPORTS_end
