@@ -3,4 +3,28 @@ patched jump must be also a nop.
 
 Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd() is not correctly checked.
 
-Move hard disc initialisation from EE side to IOP side, so ps2link modules need not to be loaded before.
+Check if ps2link modules need not to be loaded before.
+
+Some memory sticks doesn't work within kernelloader.
+
+EXT2/EXT3 file system support in kernelloader for USB and harddisc.
+
+HTTP support in kernelloader.
+
+FTP support in kernelloader.
+
+DVD video support in Linux kernel.
+
+Boot from burned DVD video (installer).
+
+Why does CTRL-C not work?
+
+Linux installer program.
+
+DVD Video support in Linux.
+
+Kernelloader muss auch starten, wenn module nicht geladen wurde.
+
+Fat PS2 hdd and ethernet interrupts not working with new dev9init.irx module.
+
+Audio support in Linux.
