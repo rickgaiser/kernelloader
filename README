@@ -87,6 +87,8 @@ After installation you need to remove "-c" from IOP_CFLAGS in file
 fixed in newer ps2sdk versions. For more information see discussion:
 http://forums.ps2dev.org/viewtopic.php?t=7506
 
+Recommended is revision 1588 of ps2sdk.
+
 USB
 ###
 You need also to install the usb driver:
@@ -149,7 +151,7 @@ GSKIT
 #####
 The graphic library is used for displaying everything. You need to install it:
 sh # cd $PS2SDKSRC
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/gsKit
+sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/gsKit
 sh # cd gsKit
 sh # make
 sh # make install
@@ -352,6 +354,10 @@ File IO driver on IOP.
 poweroff.irx
 Required: No, only for ps2link.
 To get poweroff button working when hard disc is used (DEV9, ps2link).
+
+dev9init.irx
+Required: Yes, only for fat PS2. Incompatible with slim PSTwo.
+Configure dev9 (expansion bay, ethernet + hdd).
 
 ps2dev9.irx
 Required: Yes, for slim PSTwo and for ps2link.

@@ -1,9 +1,11 @@
-PS2LINUXDVD = /media/dvd
+PS2LINUXDVD = /media/cdrom
 TARGET_IP = 192.168.0.23
 EXAMPLE_ELF = ../ps2tut_01/demo1.elf
 #EXAMPLE_ELF = ../hello/hello.elf
 
 # Debug output using shared memory (working without RPC).
+# This is not working in newer versions, because shared memory
+# address is bad and seems to be used by modules on IOP side.
 SHARED_MEM_DEBUG = no
 
 # Reset IOP at start
@@ -28,3 +30,6 @@ SCREENSHOT = yes
 
 # Activate debug for SBIOS.
 SBIOS_DEBUG = no
+
+# Activate printf callback in SBIOS
+CALLBACK_DEBUG = yes

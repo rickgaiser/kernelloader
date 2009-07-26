@@ -2,6 +2,8 @@
 - Updated to PS2SDK SVN Revision 1588.
 - Updated to gsKit SVN Revision 1588.
 - Fixed PAL/NTSC detection on slim PSTwo.
+- Fixed ethernet on slim PSTwo (smaprpc.irx + Linux patch).
+- Initialize fat PS2 dev9 from IOP side (ethernet + hdd, dev9init.irx).
 
 1.9
 - Support interrupts on slim PSTwo. So USB is working.

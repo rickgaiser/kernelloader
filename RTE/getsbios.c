@@ -5,7 +5,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#define FILENAME "/pbpx_955.09"
+#define FILENAME "/Pbpx_955.09"
 
 int main(int argc, char *argv[])
 {

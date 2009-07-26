@@ -1,0 +1,45 @@
+SBIOS debug patch
+#################
+
+This patch enables the TGE SBIOS debug output. You can see the
+messages in Linux with dmesg.
+In config.mk the following configuration is required:
+CALLBACK_DEBUG = yes
+
+diff -urp --exclude .depend linux-2.4.17_ps2.orig/arch/mips/ps2/prom.c linux-2.4.17_slim_ps2/arch/mips/ps2/prom.c
+--- linux-2.4.17_ps2.orig/arch/mips/ps2/prom.c	2002-07-10 08:14:52.000000000 +0200
++++ linux-2.4.17_slim_ps2/arch/mips/ps2/prom.c	2009-06-02 14:53:11.000000000 +0200
+@@ -40,6 +40,12 @@ extern void *akmem_bootinfo;
+ extern int akmem_bootinfo_size;
+ #endif /* CONFIG_AKMEM */
+ 
++void sbios_prints(const char *text)
++{
++	printk("SBIOS: %s", text);
++}
++
++
+ void __init prom_init(int argc, char **argv, char **envp)
+ {
+ 	struct ps2_bootinfo *bootinfo;
+@@ -106,8 +112,10 @@ void __init prom_init(int argc, char **a
+ 	       bootinfo, oldbootinfo ? "(old style)" : "");
+ 	printk("boot option string at %p: %s\n",
+ 	       ps2_bootinfo->opt_string, arcs_cmdline);
++	sbios(SB_SET_PRINTS_CALLBACK, sbios_prints);
+ }
+ 
++
+ void __init prom_free_prom_memory(void)
+ {
+ }
+diff -urp --exclude .depend linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h linux-2.4.17_slim_ps2/include/asm/ps2/sbcall.h
+--- linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h	2003-03-13 09:14:01.000000000 +0100
++++ linux-2.4.17_slim_ps2/include/asm/ps2/sbcall.h	2009-06-02 14:42:55.000000000 +0200
+@@ -85,6 +85,9 @@ struct sb_setrgbyc_arg {
+     int rgbyc;
+ };
+ 
++/** Debug output in TGE (not supported by RTE). */
++#define SB_SET_PRINTS_CALLBACK 15
++

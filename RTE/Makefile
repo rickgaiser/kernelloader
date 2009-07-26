@@ -6,7 +6,7 @@ CFLAGS = -Wall -g
 include ../config.mk
 
 SBIOS_ADDR = 0x80001000
-VIRT_OFFSET = $(shell ./getVirtOffset.pl $(PS2LINUXDVD)/pbpx_955.09)
+VIRT_OFFSET = $(shell ./getVirtOffset.pl $(PS2LINUXDVD)/Pbpx_955.09)
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
 
 INSTALL_FILES = sbios.elf cdvdman.irx cdvdfsv.irx iopintr.irx dmarelay.irx \

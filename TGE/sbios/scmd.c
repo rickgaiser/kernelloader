@@ -454,7 +454,9 @@ int cdvdLockS(const char *file, int line)
 		printf("cdvdLockS %s:%d failed 2\n", file, line);
 		return 1;
 	}
+#if 0
 	printf("cdvdLockS %s:%d ok\n", file, line);
+#endif
 
 	return 0;
 }
@@ -467,7 +469,7 @@ void cdvdUnlockS(const char *file, int line)
 {
 	file = file;
 	line = line;
-#if 1
+#if 0
 	printf("cdvdUnlockS %s:%d\n", file, line);
 #endif
 	sbios_unlock(&cdvdMutexS);

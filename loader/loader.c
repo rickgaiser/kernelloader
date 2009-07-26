@@ -382,6 +382,14 @@ moduleEntry_t modules[] = {
 		.ps2link = -1
 	},
 	{
+		.path = "host:dev9init.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.dev9init = -1,
+	},
+	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
 		.argLen = 0,
@@ -405,6 +413,16 @@ moduleEntry_t modules[] = {
 		.load = LOAD_ON_PS2LINK,
 		.ps2link = -1,
 		.ps2smap = 1
+	},
+ 	{
+		.path = "host:smaprpc.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.ps2link = -1,
+		.ps2smap = 1,
+		.slim = 1,
 	},
 	{
 		.path = "host:ps2link.irx",
@@ -1126,7 +1144,7 @@ int loadModules(void)
 }
 
 /** Start all IOP modules. */
-void startModules(void)
+void startModules(struct ps2_bootinfo *bootinfo)
 {
 	int i;
 	int rv;
@@ -1143,6 +1161,28 @@ void startModules(void)
 				ret = SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
 				if (ret < 0) {
 					rv = ret;
+				} else {
+					if (modules[i].dev9init) {
+						if (rv < 0) {
+							bootinfo->pccard_type = 0;
+						} else {
+							bootinfo->pccard_type = 0x0100;
+							if (loaderConfig.enableDev9) {
+								const char *pcicType;
+
+								pcicType = getPcicType();
+								if (strlen(pcicType) > 0) {
+									/* User configured calue in menu. */
+									bootinfo->pcic_type = atoi(pcicType);
+								} else {
+									/* Auto detect type. */
+									bootinfo->pcic_type = rv;
+								}
+							}
+
+						}
+						rv = 0;
+					}
 				}
 			} else {
 				rv = SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
@@ -1736,7 +1776,7 @@ int real_loader(void)
 		graphic_setStatusMessage("Starting modules");
 		//printf("Starting modules\n");
 
-		startModules();
+		startModules(bootinfo);
 
 		graphic_setStatusMessage("Started all modules");
 
@@ -1760,26 +1800,6 @@ int real_loader(void)
 		graphic_setStatusMessage("Copying files and start...");
 
 		disable_interrupts();
-		if (loaderConfig.enableDev9) {
-			/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
-			if (ps2dev9_init() == 0) {
-				const char *pcicType;
-
-				/* Activate hard disc. */
-				ata_setup();
-
-				/* Tell Linux to activate HDD and Network. */
-				bootinfo->pccard_type = 0x0100;
-				pcicType = getPcicType();
-				if (strlen(pcicType) > 0) {
-					/* User configured calue in menu. */
-					bootinfo->pcic_type = atoi(pcicType);
-				} else {
-					/* Auto detect type. */
-					bootinfo->pcic_type = pcic_get_cardtype();
-				}
-			}
-		}
 
 		ee_kmode_enter();
 #ifdef USER_SPACE_SUPPORT

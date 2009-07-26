@@ -52,6 +52,8 @@ extern "C" {
 		int slim;
 		/** -1, if non free module, 1 if free module. */
 		int free;
+		/** -1, if dev9init.irx, 0 otherwise. */
+		int dev9init;
 	} moduleEntry_t;
 
 	typedef struct {

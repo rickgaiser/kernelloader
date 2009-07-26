@@ -8,6 +8,8 @@ all:
 	make -C kernel
 	make -C sharedmem
 	make -C eedebug
+	make -C smaprpc
+	make -C dev9init
 	make -C TGE
 	if [ -e $(PS2LINUXDVD)/pbpx_955.09 ]; then \
 		make -C RTE; \
@@ -27,6 +29,8 @@ clean:
 	make -C hello clean
 	make -C sharedmem clean
 	make -C eedebug clean
+	make -C dev9init clean
+	make -C smaprpc clean
 	make -C TGE clean
 	make -C RTE clean
 	make -C modules clean

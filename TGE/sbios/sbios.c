@@ -237,6 +237,11 @@ static const char *sbiosDescription[] = {
 };
 #endif
 
+#ifdef CALLBACK_DEBUG
+int sbcall_register_prints_callback(callback_prints_t *callback);
+void no_prints(const char *text);
+#endif
+
 static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 0 */
 	sbcall_getver,
@@ -252,7 +257,13 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	sbcall_setgscrt,
 	/* 6 */
 	sbcall_setrgbyc,
-	0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+#ifdef CALLBACK_DEBUG
+	/* 15, extension by TGE. Not supported by RTE. */
+	sbcall_register_prints_callback,
+#else
+	0,
+#endif
 	/* 16 */
 	sbcall_sifinit,
 	/* 17 */
@@ -510,6 +521,22 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	0
 
 };
+
+#ifdef CALLBACK_DEBUG
+callback_prints_t *callback_prints = no_prints;
+
+void no_prints(const char *text)
+{
+	text = text;
+}
+
+int sbcall_register_prints_callback(callback_prints_t *callback)
+{
+	callback_prints = callback;
+	printf("Registered callback function 0x%x.\n", (u32) callback);
+	return 0;
+}
+#endif
 
 int sbios(tge_sbcall_t sbcall, void *arg)
 {

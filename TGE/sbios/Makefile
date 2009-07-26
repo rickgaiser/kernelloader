@@ -25,6 +25,11 @@ EE_FILES += printf snprintf
 else
 ifeq ($(FILEIO_DEBUG),yes)
 EE_FILES += printf snprintf
+else
+ifeq ($(CALLBACK_DEBUG),yes)
+EE_FILES += printf snprintf
+EE_CFLAGS += -DCALLBACK_DEBUG -fno-builtin
+endif
 endif
 endif
 ifeq ($(SHARED_MEM_DEBUG),yes)

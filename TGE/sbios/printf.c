@@ -21,6 +21,20 @@ int printf(const char *format, ...)
 }
 #endif
 
+#ifdef CALLBACK_DEBUG
+int printf(const char *format, ...)
+{
+	char buffer[MAX_BUFFER];
+	int ret;
+	va_list varg;
+	va_start(varg, format);
+	ret = vsnprintf(buffer, MAX_BUFFER, format, varg);
+	callback_prints(buffer);
+	va_end(varg);
+	return ret;
+}
+#endif
+
 #ifdef FILEIO_DEBUG
 int rpc_printf(const char *format, ...)
 {

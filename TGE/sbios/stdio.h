@@ -10,7 +10,7 @@ int rpc_printf(const char *format, ...);
 /** Do nothing. */
 #define rpc_printf(args...) do {} while(0)
 #endif
-#ifdef SHARED_MEM_DEBUG
+#if defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG)
 int printf(const char *format, ...);
 #else
 #ifdef FILEIO_DEBUG
@@ -23,5 +23,11 @@ int printf(const char *format, ...);
 #endif
 int snprintf(char *str, int len, const char *fmt, ...);
 int vsnprintf(char *b, int len, const char *fmt, va_list pvar);
+
+#ifdef CALLBACK_DEBUG
+typedef void callback_prints_t(const char *text);
+extern callback_prints_t *callback_prints;
+#endif
+
 
 #endif

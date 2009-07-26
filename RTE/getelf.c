@@ -7,7 +7,7 @@
 #include <elf.h>
 
 #if 0
-#define FILENAME "/pbpx_955.09"
+#define FILENAME "/Pbpx_955.09"
 #else
 #define FILENAME "/modules/modrt.img"
 #endif
