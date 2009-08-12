@@ -57,7 +57,6 @@
 	/* Barrier. */ \
 	__asm__ __volatile__("sync.p"::);
 
-
 #if 0
 /** Debug print. */
 #define dprintf printf
@@ -382,14 +381,6 @@ moduleEntry_t modules[] = {
 		.ps2link = -1
 	},
 	{
-		.path = "host:dev9init.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL,
-		.load = LOAD_ON_NOT_PS2LINK,
-		.dev9init = -1,
-	},
-	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
 		.argLen = 0,
@@ -548,6 +539,14 @@ moduleEntry_t modules[] = {
 		.ps2link = 1,
 		.tge = 1
 #endif
+	},
+	{
+		.path = "host:dev9init.irx",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.load = LOAD_ON_NOT_PS2LINK,
+		.dev9init = -1,
 	},
 	{
 #ifdef RTE
