@@ -80,17 +80,47 @@ static int ata_reset_devices()
 	return ata_wait_busy(0x80);
 }
 
+static void ata_pio_mode(int mode)
+{
+	USE_SPD_REGS;
+	u16 val = 0x92;
+
+	switch (mode) {
+		case 1:
+			val = 0x72;
+			break;
+		case 2:
+			val = 0x32;
+			break;
+		case 3:
+			val = 0x24;
+			break;
+		case 4:
+			val = 0x23;
+			break;
+	}
+
+	SPD_REG16(SPD_R_PIO_MODE) = val;
+}
+
 void ata_setup(void)
 {
+	USE_SPD_REGS;
+
+	if (!(SPD_REG16(SPD_R_REV_3) & SPD_CAPS_ATA) || !(SPD_REG16(SPD_R_REV_8) & 0x02)) {
+		M_PRINTF("HDD is not connected, exiting.\n");
+		return;
+	}
+
+	ata_pio_mode(0);
+
 	if (ata_bus_reset() != 0) {
 		M_PRINTF("Failed ata_bus_reset().\n");
 		return;
 	}
 
-	if (ata_reset_devices() != 0) {
-		M_PRINTF("Failed ata_reset_devices().\n");
-		return;
-	}
+	ata_reset_devices();
+
 	dev9IntrEnable(SPD_INTR_ATA0);
 	dev9IntrEnable(SPD_INTR_ATA1);
 }
