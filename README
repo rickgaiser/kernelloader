@@ -77,7 +77,7 @@ PS2SDK
 To compile kernelloader you need PS2SDK, if you don't use it already
 install it as follows:
 
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2toolchain
+sh # svn co -r 1601 svn://svn.ps2dev.org/ps2/trunk/ps2toolchain
 sh # cd ps2toolchain
 sh # chmod +x toolchain.sh
 sh # ./toolchain.sh
@@ -87,13 +87,13 @@ After installation you need to remove "-c" from IOP_CFLAGS in file
 fixed in newer ps2sdk versions. For more information see discussion:
 http://forums.ps2dev.org/viewtopic.php?t=7506
 
-Recommended is revision 1588 of ps2sdk.
+Recommended is revision 1601 of ps2sdk.
 
 USB
 ###
 You need also to install the usb driver:
 
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/usb_mass
+sh # svn co -r 1601 svn://svn.ps2dev.org/ps2/trunk/usb_mass
 sh # cd usb_mass
 sh # cd iop
 sh # make
@@ -103,7 +103,7 @@ STL
 ###
 STL is used and need to be installed:
 
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/stlport
+sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/stlport
 sh # cd stlport
 sh # make
 sh # make install
@@ -111,7 +111,7 @@ sh # make install
 ZLIB
 ####
 ZLIB need to be installed:
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/zlib
+sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/zlib
 sh # cd zlib
 sh # make
 sh # make install
@@ -122,12 +122,12 @@ If you want to debug something then you also need ps2link, but the
 following steps are not required, when you don't activate it in
 config.mk.
 
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2eth
+sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2eth
 sh # cd ps2eth
 sh # make
 sh # cp smap/ps2smap.irx /usr/local/ps2dev/ps2sdk/iop/irx/
 sh # cd ..
-sh # svn co svn://svn.ps2dev.org/ps2/trunk/ps2link
+sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2link
 sh # cd ps2link
 sh # make
 sh # cp iop/ps2link.irx /usr/local/ps2dev/ps2sdk/iop/irx/
