@@ -4,6 +4,10 @@
 - Fixed PAL/NTSC detection on slim PSTwo.
 - Fixed ethernet on slim PSTwo (smaprpc.irx + Linux patch).
 - Initialize fat PS2 dev9 from IOP side (ethernet + hdd, dev9init.irx).
+- Easier menu
+- Added menu entry "Restore defaults" in "File Menu". This will restore all defaults except the kernel and initrd path.
+- Detect slim PSTwo or fat PS2 automatically if no configuration was loaded or if "Restore defaults" is selected.
+- I don't know if auto detection is working for fat PS2 V11 (SCPH-5000?). I have a SCPH-50004 with ROM version 0190, but I am not sure if it is V10 or V11. I choosed ROM version 0190 as last fat PS2 version.
 
 1.9
 - Support interrupts on slim PSTwo. So USB is working.

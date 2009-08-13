@@ -30,7 +30,7 @@ static const char *sbiosDescription[] = {
 	"unknown",
 	"unknown",
 	"unknown",
-	"unknown",
+	"SB_REGISTER_DEBUG_CALLBACK",
 	"SB_SIFINIT",
 	"SB_SIFEXIT",
 	"SB_SIFSETDMA",

@@ -27,47 +27,24 @@ extern "C" {
 		const char *args;
 		/** Whether module should be loaded. */
 		int load;
-		/** 0 = no dependency on ps2link. 1 = don't use with ps2link, -1 = use
-		 * with ps2link. */
-		int ps2link;
-		/** Should be used with rte, but not with tge. */
-		int rte;
-		/** Should be used with tge, but not with rte. */
-		int tge;
-		/** New rom modules. */
-		int newmods;
-		/** Old rom modules. */
-		int oldmods;
-		/** Module only for debug reasons. */
-		int debug;
 		/** True, if allocated memory is used. */
 		int allocated;
 		/** True, if ps2smap module. */
 		int ps2smap;
-		/** True, if eedebug.irx, IOP debug output is required. */
-		int eedebug;
-		/** True, if required for video DVDs. */
-		int dvdv;
-		/** -1, if for fat PS2, 1 if for slim PSTwo. */
+		/** -1, if for fat PS2, 1 if for slim PSTwo, 0 for both. */
 		int slim;
-		/** -1, if non free module, 1 if free module. */
-		int free;
 		/** -1, if dev9init.irx, 0 otherwise. */
 		int dev9init;
+		/** 1, if default module, 0 otherwise. */
+		int defaultmod;
 	} moduleEntry_t;
 
 	typedef struct {
-		int newModules;
-		int enableTGE;
-		int enablePS2LINK;
-		int enableDebug;
 		int enableSBIOSTGE;
+		int newModulesInTGE;
 		int enableDev9;
 		int enableEEDebug;
-		int newModulesInTGE;
-		int slimPSTwo;
 		int autoBootTime;
-		int free;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;

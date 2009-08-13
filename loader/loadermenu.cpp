@@ -48,7 +48,7 @@ loader_config_t loaderConfig;
 static char configfile[MAX_PATH_LEN];
 static char kernelFilename[MAX_PATH_LEN];
 static char initrdFilename[MAX_PATH_LEN];
-static int *sbiosCallEnabled;
+static int *sbiosCallEnabled = NULL;
 static const char *sbiosDescription[] = {
 	"0 SB_GETVER",
 	"1 SB_HALT",
@@ -65,7 +65,7 @@ static const char *sbiosDescription[] = {
 	"12 unknown",
 	"13 unknown",
 	"14 unknown",
-	"15 unknown",
+	"15 SB_REGISTER_DEBUG_CALLBACK", /* Added by TGE for debug puspose, not used in RTE. */
 	"16 SB_SIFINIT",
 	"17 SB_SIFEXIT",
 	"18 SB_SIFSETDMA",
@@ -418,157 +418,6 @@ int fsFile(void *arg)
 
 int fsDir(void *arg);
 
-void checkTGEandDebug(moduleEntry_t * module)
-{
-	if (module->dvdv) {
-		module->load = 1;
-	}
-	if (loaderConfig.enableTGE) {
-		if (module->rte) {
-			module->load = 0;
-		}
-		if (module->tge) {
-			if (loaderConfig.newModules) {
-				/* Enable all new ROM modules */
-				if (module->newmods) {
-					if (loaderConfig.free) {
-						/* Enable only free modules. */
-						if (module->free >= 0) {
-							module->load = 1;
-						} else {
-							module->load = 0;
-						}
-					} else {
-						/* Enable only non free modules. */
-						if (module->free <= 0) {
-							module->load = 1;
-						} else {
-							module->load = 0;
-						}
-					}
-				}
-				if (module->oldmods) {
-					module->load = 0;
-				}
-			} else {
-				/* Enable all old ROM modules */
-				if (module->oldmods) {
-					module->load = 1;
-				}
-				if (module->newmods) {
-					module->load = 0;
-				}
-			}
-		}
-	} else {
-		if (module->rte) {
-			module->load = 1;
-		}
-		if (module->tge) {
-			module->load = 0;
-		}
-		if (module->newmods || module->oldmods) {
-			module->load = 0;
-		}
-	}
-	if (loaderConfig.enableDebug) {
-		if (module->debug) {
-			if (module->eedebug && !loaderConfig.enableEEDebug) {
-				/* System will hang PR#17. */
-				module->load = 0;
-			} else {
-				module->load = 1;
-			}
-		}
-	} else {
-		if (module->debug) {
-			module->load = 0;
-		}
-	}
-	if (loaderConfig.slimPSTwo) {
-		if (module->load) {
-			if (module->slim < 0) {
-				/* Module is not for slim PSTwo. */
-				module->load = 0;
-			}
-		}
-	} else {
-		if (module->load) {
-			if (module->slim > 0) {
-				/* Module is not for fat PS2. */
-				module->load = 0;
-			}
-		}
-	}
-}
-
-int submitConfiguration(void *arg)
-{
-	int i;
-
-	arg = arg;
-
-	for (i = 0; i < getNumberOfModules(); i++) {
-		moduleEntry_t *module;
-
-		module = getModuleEntry(i);
-
-		if (loaderConfig.enablePS2LINK) {
-			if (module->ps2link == 1) {
-				module->load = 0;
-			} else if (module->ps2link == -1) {
-				module->load = 1;
-
-				/* Enable module if compatible with TGE/RTE. */
-				checkTGEandDebug(module);
-			} else {
-				checkTGEandDebug(module);
-			}
-		} else {
-			if (module->ps2link == 1) {
-				module->load = 1;
-			} else if (module->ps2link == -1) {
-				module->load = 0;
-			}
-			/* Enable module if required for TGE/RTE or disable it if it is for
-			 * the opposite (RTE/TGE). */
-			checkTGEandDebug(module);
-		}
-	}
-
-	return 0;
-}
-
-int enableAllModules(void *arg)
-{
-	int i;
-
-	arg = arg;
-
-	for (i = 0; i < getNumberOfModules(); i++) {
-		moduleEntry_t *module;
-
-		module = getModuleEntry(i);
-		module->load = 1;
-	}
-	return 0;
-}
-
-int disableAllModules(void *arg)
-{
-	int i;
-
-	arg = arg;
-
-	for (i = 0; i < getNumberOfModules(); i++) {
-		moduleEntry_t *module;
-
-		module = getModuleEntry(i);
-		module->load = 0;
-	}
-	return 0;
-}
-
 int enableAllSBIOSCalls(void *arg)
 {
 	int i;
@@ -836,9 +685,12 @@ int setDefaultKernelParameterMenu(void *arg)
 	return 0;
 }
 
-void initMenu(Menu *menu)
+int setDefaultConfiguration(void *arg)
 {
+	int slim;
 	int i;
+
+	(void) arg;
 
 	setDefaultKernelParameter(kernelParameter);
 	strcpy(myIP, "192.168.0.10");
@@ -847,6 +699,54 @@ void initMenu(Menu *menu)
 	strcpy(pcicType, "");
 	strcpy(kernelGraphicMode, "");
 	strcpy(configfile, CONFIG_FILE);
+
+	loaderConfig.enableSBIOSTGE = 1;
+	loaderConfig.newModulesInTGE = 0;
+	loaderConfig.enableDev9 = 1;
+	loaderConfig.enableEEDebug = 0;
+	loaderConfig.autoBootTime = 0;
+
+	if (sbiosCallEnabled == NULL) {
+		sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
+	}
+	if (sbiosCallEnabled != NULL) {
+		enableAllSBIOSCalls(NULL);
+	} else {
+		error_printf("Not enough memory.");
+	}
+
+	if (isSlimPSTwo()) {
+		/* Value for slim PSTwo. */
+		slim = 1;
+	} else {
+		/* Value for fat PS2. */
+		slim = -1;
+	}
+
+	for (i = 0; i < getNumberOfModules(); i++) {
+		moduleEntry_t *module;
+
+		module = getModuleEntry(i);
+
+		if (module->defaultmod) {
+			if ((module->slim == 0) || (module->slim == slim)) {
+				module->load = 1;
+			} else {
+				module->load = 0;
+			}
+		} else {
+			module->load = 0;
+		}
+	}
+
+	return 0;
+}
+
+void initMenu(Menu *menu)
+{
+	int i;
+
+	setDefaultConfiguration(NULL);
 
 	addConfigTextItem("KernelParameter", kernelParameter, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
@@ -858,6 +758,7 @@ void initMenu(Menu *menu)
 	menu->addItem("Boot Current Config", loader, NULL);
 	Menu *fileMenu = menu->addSubMenu("File Menu");
 	fileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	fileMenu->addItem("Restore defaults", setDefaultConfiguration, NULL);
 	fileMenu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
 	fileMenu->addItem("Load Config", mcLoadConfig, (void *) configfile);
 	fileMenu->addItem("Save Current Config", mcSaveConfig, configfile);
@@ -920,8 +821,6 @@ void initMenu(Menu *menu)
 		""
 	};
 	configFileMenu->addItem(ccdfsParam.menuName, fsroot, (void *) &ccdfsParam);
-
-	loaderConfig.autoBootTime = 0;
 
 	Menu *linuxMenu = menu->addSubMenu("Select Kernel");
 	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
@@ -1060,40 +959,12 @@ void initMenu(Menu *menu)
 	configMenu->addItem("Default Kernel Parameter", setDefaultKernelParameterMenu, kernelParameter);
 	configMenu->addItem("Edit PCIC Type", editString, pcicType);
 
-	/* Module Config Menu */
-	Menu *moduleConfigMenu;
-	moduleConfigMenu = configMenu->addSubMenu("Module Configuration");
-	moduleConfigMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
-		getTexBack());
-	loaderConfig.newModules = 0;
-	moduleConfigMenu->addCheckItem("New Modules", &loaderConfig.newModules);
-	loaderConfig.enableTGE = 1;
-	moduleConfigMenu->addCheckItem("Enable TGE (ow RTE mc)",
-		&loaderConfig.enableTGE);
-#ifdef PS2LINK
-	loaderConfig.enablePS2LINK = 1;
-#else
-	loaderConfig.enablePS2LINK = 0;
-#endif
-	moduleConfigMenu->addCheckItem("Enable PS2LINK (debug)",
-		&loaderConfig.enablePS2LINK);
-	loaderConfig.enableDebug = 0;
-	moduleConfigMenu->addCheckItem("Enable debug modules", &loaderConfig.enableDebug);
-	loaderConfig.slimPSTwo = 0;
-	moduleConfigMenu->addCheckItem("Slim PSTwo", &loaderConfig.slimPSTwo);
-	loaderConfig.free = 0;
-	moduleConfigMenu->addCheckItem("Use free modules",
-		&loaderConfig.free);
-	moduleConfigMenu->addItem("Submit above config", submitConfiguration, NULL);
-
 	/* Module Menu */
 	Menu *moduleMenu;
 
-	moduleMenu = moduleConfigMenu->addSubMenu("Module List");
-	moduleMenu->addItem(moduleConfigMenu->getTitle(), setCurrentMenu, moduleConfigMenu,
+	moduleMenu = configMenu->addSubMenu("Module List");
+	moduleMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
 		getTexBack());
-	moduleMenu->addItem("Enable all modules", enableAllModules, NULL);
-	moduleMenu->addItem("Disable all modules", disableAllModules, NULL);
 
 	/* Add list with all modules. */
 	for (i = 0; i < getNumberOfModules(); i++) {
@@ -1104,35 +975,26 @@ void initMenu(Menu *menu)
 		moduleMenu->addCheckItem(module->path, &module->load);
 	}
 
-	loaderConfig.enableSBIOSTGE = 1;
 	configMenu->addCheckItem("Use SBIOS from TGE (ow RTE)",
 		&loaderConfig.enableSBIOSTGE);
-	loaderConfig.newModulesInTGE = 0;
 	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
-	loaderConfig.enableDev9 = 1;
 	configMenu->addCheckItem("Enable hard disc and network",
 		&loaderConfig.enableDev9);
 	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);
 
 	/* SBIOS Calls Menu */
-	sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
-	if (sbiosCallEnabled != NULL) {
-		Menu *sbiosCallsMenu;
+	Menu *sbiosCallsMenu;
 
-		sbiosCallsMenu = configMenu->addSubMenu("Enabled SBIOS Calls");
-		sbiosCallsMenu->addItem(configMenu->getTitle(), setCurrentMenu,
-			configMenu, getTexBack());
-		sbiosCallsMenu->addItem("Enable all Calls", enableAllSBIOSCalls, NULL);
-		sbiosCallsMenu->addItem("Disable all Calls", disableAllSBIOSCalls,
-			NULL);
-		sbiosCallsMenu->addItem("Set default for RTE", defaultSBIOSCalls, NULL);
-		enableAllSBIOSCalls(NULL);
-		for (i = 0; i < numberOfSbiosCalls; i++) {
-			sbiosCallsMenu->addCheckItem(sbiosDescription[i],
-				&sbiosCallEnabled[i]);
-		}
-	} else {
-		error_printf("Not enough memory.");
+	sbiosCallsMenu = configMenu->addSubMenu("Enabled SBIOS Calls");
+	sbiosCallsMenu->addItem(configMenu->getTitle(), setCurrentMenu,
+		configMenu, getTexBack());
+	sbiosCallsMenu->addItem("Enable all Calls", enableAllSBIOSCalls, NULL);
+	sbiosCallsMenu->addItem("Disable all Calls", disableAllSBIOSCalls,
+		NULL);
+	sbiosCallsMenu->addItem("Set default for RTE", defaultSBIOSCalls, NULL);
+	for (i = 0; i < numberOfSbiosCalls; i++) {
+		sbiosCallsMenu->addCheckItem(sbiosDescription[i],
+			&sbiosCallEnabled[i]);
 	}
 	menu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
 	menu->addItem("Power off", poweroff, NULL);

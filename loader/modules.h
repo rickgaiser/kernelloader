@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 int loadLoaderModules(void);
+int isSlimPSTwo(void);
 #ifdef __cplusplus
 }
 #endif

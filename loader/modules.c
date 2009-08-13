@@ -206,11 +206,26 @@ static int moduleLoaderNumberOfModules = sizeof(moduleList) / sizeof(moduleLoade
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
 
+static char version[256];
+
+static int romver;
+
+int isSlimPSTwo(void)
+{
+	if (romver > 0x0190) {
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
 int loadLoaderModules(void)
 {
 	int i;
 	int rv;
 	int lrv = -1;
+	int ret;
+	int fd;
 
 #ifdef RESET_IOP
 	graphic_setStatusMessage("Reseting IOP");
@@ -238,6 +253,15 @@ int loadLoaderModules(void)
 
 	graphic_setStatusMessage("Add eedebug handler");
 	addEEDebugHandler();
+
+	graphic_setStatusMessage("Checking ROM Version");
+	fd = open("rom0:ROMVER", O_RDONLY);
+	if (fd >= 0) {
+		ret = read(fd, version, sizeof(version));
+		close(fd);
+		version[4] = 0;
+		romver = strtoul(version, NULL, 16);
+	}
 
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {

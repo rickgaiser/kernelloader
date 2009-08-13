@@ -87,14 +87,6 @@ typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
 
-#ifdef PS2LINK
-#define LOAD_ON_PS2LINK 1
-#define LOAD_ON_NOT_PS2LINK 0
-#else
-#define LOAD_ON_PS2LINK 0
-#define LOAD_ON_NOT_PS2LINK 1
-#endif
-
 /** Modules that should be loaded. */
 moduleEntry_t modules[] = {
 	{
@@ -102,35 +94,26 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0, //LOAD_ON_NOT_PS2LINK,
-		.ps2link = 1,
-		.debug = 1,
-		.eedebug = 1
 	},
 	{
 		.path = CONFIG_DIR "/init.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = "rom0:ADDDRV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.dvdv = 1,
-		.slim = -1 /* XXX: Don't know why, but it is not working with slim PSTwo. */
+		.defaultmod = 1,
 	},
 	{
 		.path = "host:eromdrvloader.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.dvdv = 1,
-		.slim = -1 /* XXX: Don't know why, but it is not working with slim PSTwo. */
+		.defaultmod = 1,
 	},
 	{
 #ifdef RTE
@@ -141,44 +124,31 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XSIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1,
-		.free = -1
 	},
 	{
 		.path = "host:freesio2.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1,
-		.free = 1
 	},
 	{
 		.path = "rom0:SIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
+		.defaultmod = 1,
 	},
 	{
 		.path = "rom1:SIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0
 	},
 	{
 #ifdef RTE
@@ -189,26 +159,19 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XMCMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1
 	},
 	{
 		.path = "rom0:MCMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
+		.defaultmod = 1,
 	},
 	{
 #ifdef RTE
@@ -219,26 +182,19 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XMCSERV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1
 	},
 	{
 		.path = "rom0:MCSERV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
+		.defaultmod = 1,
 	},
 	{
 #ifdef RTE
@@ -249,43 +205,31 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XPADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1,
-		.free = -1
 	},
 	{
 		.path = "host:freepad.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1,
-		.free = 1
 	},
 	{
 		.path = "rom0:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
+		.defaultmod = 1,
 	},
 	{
 		.path = "rom1:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 #ifdef RTE
@@ -296,35 +240,24 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:LIBSD",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.free = -1
 	},
 	{
 		.path = "rom1:LIBSD",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.free = -1
 	},
 	{
 		.path = "host:freesd.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.free = 1
 	},
 	{
 #ifdef RTE
@@ -335,74 +268,60 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom1:SDRDRV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.free = -1
 	},
 	{
 		.path = "host:audsrv.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.free = 1
 	},
 	{
 		.path = "host:ioptrap.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.debug = 1
 	},
 	{
 		.path = "host:iomanX.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.debug = 1
+		.defaultmod = 1,
+		.slim = 1,
 	},
 	{
 		.path = "host:poweroff.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
+		.defaultmod = 1,
+		.slim = 1,
 	},
 	{
 		.path = "host:ps2dev9.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
+		.defaultmod = 1,
+		.slim = 1,
 	},
 	{
 		.path = "host:ps2ip.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
 	},
 	{
 		.path = "host:ps2smap.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1,
 		.ps2smap = 1
 	},
  	{
@@ -410,9 +329,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_NOT_PS2LINK,
-		.ps2link = -1,
-		.ps2smap = 1,
+		.defaultmod = 1,
 		.slim = 1,
 	},
 	{
@@ -420,8 +337,6 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
-		.ps2link = -1
 	},
 #ifdef NAPLINK
 	{
@@ -429,18 +344,15 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.ps2link = 1
 	},
 	{
 		.path = "host:npm-2301.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.ps2link = 1
 	},
 #endif
+#if 0 /* Debug module is unstable. */
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,
@@ -451,8 +363,8 @@ moduleEntry_t modules[] = {
 #else
 		.load = 0,
 #endif
-		.debug = 1
 	},
+#endif
 	{
 #ifdef RTE
 		.path = "host:RTE/iopintr.irx",
@@ -462,11 +374,6 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-#if 0 /* Only USB is working. */
-		.ps2link = 1,
-#endif
-		.rte = 1
 	},
 	{
 		/* Interrupt relay when DEV9 is not loaded. */
@@ -474,10 +381,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_NOT_PS2LINK,
-		/* Everything is working when ps2link is not loaded. */
-		.ps2link = 1,
-		.tge = 1,
+		.defaultmod = 1,
 		.slim = -1
 	},
 	{
@@ -486,10 +390,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		/* Everything is working when ps2link is not loaded. */
-		.ps2link = 1,
-		.tge = 1,
+		.defaultmod = 1,
 		.slim = 1
 	},
 	{
@@ -498,11 +399,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_PS2LINK,
 		/* Only hard disc and USB is working. */
-		.ps2link = -1,
-		.tge = 1,
-		.slim = -1
 	},
 	{
 		/* Interrupt relay when DEV9 is loaded and slim PSTwo. */
@@ -510,11 +407,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 		/* Only hard disc and USB is working. */
-		.ps2link = -1,
-		.tge = 1,
-		.slim = 1
 	},
 	{
 #ifdef RTE
@@ -525,28 +418,22 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.ps2link = 1,
-		.rte = 1
 	},
 	{
 		.path = "host:TGE/dmarelay.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-#if 0 /* Module is broken. */
-		.load = LOAD_ON_NOT_PS2LINK,
-		.ps2link = 1,
-		.tge = 1
-#endif
+		/* XXX: Module is broken. */
 	},
 	{
 		.path = "host:dev9init.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = LOAD_ON_NOT_PS2LINK,
+		.defaultmod = 1,
 		.dev9init = -1,
+		.slim = -1,
 	},
 	{
 #ifdef RTE
@@ -557,33 +444,25 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XCDVDMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1
 	},
 	{
 		.path = "rom0:CDVDMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
+		.defaultmod = 1,
 	},
 	{
 		.path = "rom1:CDVDMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 #ifdef RTE
@@ -594,82 +473,66 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.rte = 1
 	},
 	{
 		.path = "rom0:XCDVDFSV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
-		.tge = 1,
-		.newmods = 1
 	},
 	{
 		.path = "rom0:CDVDFSV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 1,
-		.tge = 1,
-		.oldmods = 1
 	},
 	{
 		.path = "rom1:CDVDFSV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = "rom1:RMMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = "rom1:RMMAN2",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = CONFIG_DIR "/module1.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = CONFIG_DIR "/module2.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = CONFIG_DIR "/module3.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = CONFIG_DIR "/module4.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 	{
 		.path = CONFIG_DIR "/module5.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.load = 0,
 	},
 };
 
