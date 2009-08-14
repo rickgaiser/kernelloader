@@ -1711,7 +1711,10 @@ int real_loader(void)
 		iop_dprints(U2K("Kernel mode print\n"));
 		iop_dprintf(U2K("Stack 0x%08x\n"), sp);
 
-		if (!isSlimPSTwo()) {
+		if (isSlimPSTwo()) {
+			/* Use value 0x0200 to inform Linux about slim PSTwo. This was not part of Sony's Linux. */
+			bootinfo->pccard_type = 0x0200;
+		} else {
 			if (loaderConfig.enableDev9) {
 				/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
 				if (ps2dev9_init() == 0) {
