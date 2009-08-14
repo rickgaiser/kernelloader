@@ -36,6 +36,9 @@
 #include "kernelgraphic.h"
 #include "zlib.h"
 #include "configuration.h"
+#include "ps2dev9.h"
+#include "hdd.h"
+#include "modules.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
@@ -431,9 +434,11 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+#if 0 /* Module seems not to be required. */
 		.defaultmod = 1,
-		.dev9init = -1,
 		.slim = -1,
+#endif
+		.dev9init = -1,
 	},
 	{
 #ifdef RTE
@@ -1026,11 +1031,14 @@ void startModules(struct ps2_bootinfo *bootinfo)
 				} else {
 					if (modules[i].dev9init) {
 						if (rv < 0) {
+							/* Tell Linux that DEV9 is disabled. */
 							bootinfo->pccard_type = 0;
 						} else {
-							bootinfo->pccard_type = 0x0100;
 							if (loaderConfig.enableDev9) {
 								const char *pcicType;
+
+								/* Tell Linux that DEV9 is enabled. */
+								bootinfo->pccard_type = 0x0100;
 
 								pcicType = getPcicType();
 								if (strlen(pcicType) > 0) {
@@ -1667,6 +1675,14 @@ int real_loader(void)
 #ifdef USER_SPACE_SUPPORT
 		iop_kmode_enter();
 #endif
+
+		/* Be sure that all interrupts are disabled. */
+		__asm__ __volatile__("mtc0 %0, $12\nsync.p\n"::"r" (
+			(0<<30) /* Deactivate COP2: VPU0 -> not used by loader */
+			| (1<<29) /* Activate COP1: FPU -> used by compiler and functions like printf. */
+			| (1<<28) /* Activate COP0: EE Core system control processor. */
+			| (1<<16) /* eie */));
+
 		gmode = getGraphicMode();
 		if (gmode[0] != 0) {
 			int mode = atoi(gmode);
@@ -1694,6 +1710,29 @@ int real_loader(void)
 
 		iop_dprints(U2K("Kernel mode print\n"));
 		iop_dprintf(U2K("Stack 0x%08x\n"), sp);
+
+		if (!isSlimPSTwo()) {
+			if (loaderConfig.enableDev9) {
+				/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
+				if (ps2dev9_init() == 0) {
+					const char *pcicType;
+	
+					/* Activate hard disc. */
+					ata_setup();
+	
+					/* Tell Linux to activate HDD and Network. */
+					bootinfo->pccard_type = 0x0100;
+					pcicType = getPcicType();
+					if (strlen(pcicType) > 0) {
+						/* User configured calue in menu. */
+						bootinfo->pcic_type = atoi(pcicType);
+					} else {
+						/* Auto detect type. */
+						bootinfo->pcic_type = pcic_get_cardtype();
+					}
+				}
+			}
+		}
 
 		/* Setup exceptions: */
 		/* TLB Refill */
