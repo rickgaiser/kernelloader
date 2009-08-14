@@ -20,6 +20,9 @@ https://playstation2-linux.com/files/ps2stuff/binutils-2.9EE-cross.tar.gz
 initrd:
 http://playstation2-linux.com/files/diskless/ps2boot-1.tar.gz
 
+You can also download the the kernel source and initrd at:
+http://sourceforge.net/projects/kernelloader/files
+
 sh # su
 sh # tar -xzf gcc-2.95.2-cross.tar.gz -C /usr/local
 sh # tar -xzf binutils-2.9EE-cross.tar.gz -C /usr/local
@@ -32,25 +35,14 @@ sh # cd usr/src/linux-2.4.17_ps2
 
 There is no patch required to start Linux.
 
-The following patch is recommended to get initrd working:
+The following patch and files are recommended to get around many problems:
 
-sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-initrd.patch
-
-To get interrupts working on slim PSTwo (USB), you need this patch:
-
-sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-rpc-irq.patch
-
-To get ethernet working on slim PSTwo, you need to
-replace the smap driver:
-
-sh # cp ../driver_slim_smaprpc/smap.c drivers/ps2/
-sh # cp ../driver_slim_smaprpc/smap.h drivers/ps2/
-
-This installs the Linux driver for smaprpc.irx.
-
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-all_fat_and_slim.patch
+sh # cp ../kernelloader/driver_slim_smaprpc/smap.c drivers/ps2/smaprpc.c
+sh # cp ../kernelloader/driver_slim_smaprpc/smap.h drivers/ps2/smaprpc.h
 
 You can add support for printk over ps2link by patching Linux (system
-start is slower):
+start is slower, this is not recommended for normal user):
 
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-printk.patch
 
@@ -206,6 +198,14 @@ Linux
 #####
 Now you should compile the Linux kernel. Run menu config and deactivate
 old bootinfo support.
+
+The easiest way is, if you copy the configuration:
+
+sh # cp ../kernelloader/kernelconfig .config
+
+This includes much stuff into the kernel.
+
+But you can also do it manually and configure only required options:
 
 sh # make menuconfig
 

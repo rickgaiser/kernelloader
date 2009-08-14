@@ -43,7 +43,7 @@
 /*
  * SMAP control structure(smap channel)
  */
-struct smap_chan {
+struct smaprpc_chan {
 	spinlock_t spinlock;
 	struct net_device *net_dev;
 	u_int32_t flags;
@@ -65,6 +65,6 @@ struct smap_chan {
 };
 
 /* flags */
-#define	SMAP_F_OPENED		(1<<0)
+#define	SMAPRPC_F_OPENED		(1<<0)
 
 #endif	/* __SMAP_H__ */

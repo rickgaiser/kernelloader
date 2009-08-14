@@ -1,5 +1,5 @@
 2.0
-- Updated to PS2SDK SVN Revision 1588.
+- Updated to PS2SDK SVN Revision 1601.
 - Updated to gsKit SVN Revision 1588.
 - Fixed PAL/NTSC detection on slim PSTwo.
 - Fixed ethernet on slim PSTwo (smaprpc.irx + Linux patch).
@@ -8,6 +8,7 @@
 - Added menu entry "Restore defaults" in "File Menu". This will restore all defaults except the kernel and initrd path.
 - Detect slim PSTwo or fat PS2 automatically if no configuration was loaded or if "Restore defaults" is selected.
 - I don't know if auto detection is working for fat PS2 V11 (SCPH-5000?). I have a SCPH-50004 with ROM version 0190, but I am not sure if it is V10 or V11. I choosed ROM version 0190 as last fat PS2 version.
+- There should be less problems with USB sticks in kernelloader.
 
 1.9
 - Support interrupts on slim PSTwo. So USB is working.

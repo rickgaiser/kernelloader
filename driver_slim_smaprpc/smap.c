@@ -15,7 +15,7 @@
 
 #if defined(linux)
 
-#include "smap.h"
+#include "smaprpc.h"
 
 #include <asm/ps2/sifdefs.h>
 #include <asm/ps2/sbcall.h>
@@ -42,32 +42,32 @@ typedef struct {
     u32 size;
 } iop_sifCmdSmapIrq_t;
 
-struct smap_chan *smap_chan = NULL;
-u32 smap_rpc_data[2048] __attribute__((aligned(16)));
+static struct smaprpc_chan *smaprpc_chan = NULL;
+static u32 smap_rpc_data[2048] __attribute__((aligned(16)));
 
 /*--------------------------------------------------------------------------*/
 
-static int  smap_start_xmit(struct sk_buff *skb, struct net_device *net_dev);
-static struct net_device_stats * smap_get_stats(struct net_device *net_dev);
-static int  smap_open(struct net_device *net_dev);
-static int  smap_close(struct net_device *net_dev);
-static int  smap_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd);
+static int  smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev);
+static struct net_device_stats * smaprpc_get_stats(struct net_device *net_dev);
+static int  smaprpc_open(struct net_device *net_dev);
+static int  smaprpc_close(struct net_device *net_dev);
+static int  smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd);
 
-static void smap_rpcend_notify(void *arg);
-static void smap_rpc_setup(struct smap_chan *smap);
+static void smaprpc_rpcend_notify(void *arg);
+static void smaprpc_rpc_setup(struct smaprpc_chan *smap);
 
-static int smap_thread(void *arg);
-static void smap_run(struct smap_chan *smap);
-static void  smap_start_xmit2(struct smap_chan *smap);
+static int smaprpc_thread(void *arg);
+static void smaprpc_run(struct smaprpc_chan *smap);
+static void  smaprpc_start_xmit2(struct smaprpc_chan *smap);
 
-static void smap_skb_queue_init(struct smap_chan *smap, struct sk_buff_head *head);
-static void smap_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
-static void smap_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
-static struct sk_buff *smap_skb_dequeue(struct sk_buff_head *head);
+static void smaprpc_skb_queue_init(struct smaprpc_chan *smap, struct sk_buff_head *head);
+static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
+static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
+static struct sk_buff *smaprpc_skb_dequeue(struct sk_buff_head *head);
 
 /*--------------------------------------------------------------------------*/
 
-static void smap_skb_queue_init(struct smap_chan *smap, struct sk_buff_head *head)
+static void smaprpc_skb_queue_init(struct smaprpc_chan *smap, struct sk_buff_head *head)
 {
 	unsigned long flags;
 
@@ -78,19 +78,19 @@ static void smap_skb_queue_init(struct smap_chan *smap, struct sk_buff_head *hea
 	return;
 }
 
-static void smap_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk)
+static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk)
 {
 	(void)skb_queue_tail(head, newsk);
 	return;
 }
 
-static void smap_skb_requeue(struct sk_buff_head *head, struct sk_buff *newsk)
+static void smaprpc_skb_requeue(struct sk_buff_head *head, struct sk_buff *newsk)
 {
 	(void)skb_queue_head(head, newsk);
 	return;
 }
 
-static struct sk_buff *smap_skb_dequeue(struct sk_buff_head *head)
+static struct sk_buff *smaprpc_skb_dequeue(struct sk_buff_head *head)
 {
 	struct sk_buff *skb;
 
@@ -102,14 +102,14 @@ static struct sk_buff *smap_skb_dequeue(struct sk_buff_head *head)
 
 /* return value: 0 if success, !0 if error */
 static int
-smap_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
+smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
 {
-	struct smap_chan *smap = net_dev->priv;
+	struct smaprpc_chan *smap = net_dev->priv;
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
 
-	smap_skb_enqueue(&smap->txqueue, skb);
+	smaprpc_skb_enqueue(&smap->txqueue, skb);
 	wake_up_interruptible(&smap->wait_smaprun);
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 	return(0);
@@ -118,28 +118,28 @@ smap_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
 /*--------------------------------------------------------------------------*/
 
 static struct net_device_stats *
-smap_get_stats(struct net_device *net_dev)
+smaprpc_get_stats(struct net_device *net_dev)
 {
-	struct smap_chan *smap = net_dev->priv;
+	struct smaprpc_chan *smap = net_dev->priv;
 
 	return(&smap->net_stats);
 }
 
-static void smap_run(struct smap_chan *smap)
+static void smaprpc_run(struct smaprpc_chan *smap)
 {
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
 	while (smap->txqueue.qlen > 0) {
 		spin_unlock_irqrestore(&smap->spinlock, flags);
-		smap_start_xmit2(smap);
+		smaprpc_start_xmit2(smap);
 		spin_lock_irqsave(&smap->spinlock, flags);
 	}
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 }
 
 
-static void smap_start_xmit2(struct smap_chan *smap)
+static void smaprpc_start_xmit2(struct smaprpc_chan *smap)
 {
 	int rv;
 	struct completion compl;
@@ -147,7 +147,7 @@ static void smap_start_xmit2(struct smap_chan *smap)
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
-	skb = smap_skb_dequeue(&smap->txqueue);
+	skb = smaprpc_skb_dequeue(&smap->txqueue);
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 	if (skb == NULL)
 		return;
@@ -161,14 +161,14 @@ static void smap_start_xmit2(struct smap_chan *smap)
 			SIF_RPCM_NOWAIT,
 			(void *) smap_rpc_data, skb->len,
 			smap_rpc_data, sizeof(smap_rpc_data),
-			(ps2sif_endfunc_t)smap_rpcend_notify,
+			(ps2sif_endfunc_t)smaprpc_rpcend_notify,
 			(void *)&compl);
 	} while (rv == -E_SIF_PKT_ALLOC);
 	if (rv != 0) {
-		printk("%s: smap_start_xmit2: callrpc failed, (%d)\n", smap->net_dev->name, rv);
+		printk("%s: smaprpc_start_xmit2: callrpc failed, (%d)\n", smap->net_dev->name, rv);
 
 		spin_lock_irqsave(&smap->spinlock, flags);
-		smap_skb_requeue(&smap->txqueue, skb);
+		smaprpc_skb_requeue(&smap->txqueue, skb);
 		spin_unlock_irqrestore(&smap->spinlock, flags);
 	} else {
 		wait_for_completion(&compl);
@@ -179,24 +179,24 @@ static void smap_start_xmit2(struct smap_chan *smap)
 }
 
 static int
-smap_open(struct net_device *net_dev)
+smaprpc_open(struct net_device *net_dev)
 {
-	struct smap_chan *smap = net_dev->priv;
+	struct smaprpc_chan *smap = net_dev->priv;
 
-	smap->flags |= SMAP_F_OPENED;
-	smap_skb_queue_init(smap, &smap->txqueue);
+	smap->flags |= SMAPRPC_F_OPENED;
+	smaprpc_skb_queue_init(smap, &smap->txqueue);
 
 	return(0);	/* success */
 }
 
 static int
-smap_close(struct net_device *net_dev)
+smaprpc_close(struct net_device *net_dev)
 {
-	struct smap_chan *smap = net_dev->priv;
+	struct smaprpc_chan *smap = net_dev->priv;
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
-	smap->flags &= ~SMAP_F_OPENED;
+	smap->flags &= ~SMAPRPC_F_OPENED;
 
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 
@@ -206,9 +206,9 @@ smap_close(struct net_device *net_dev)
 /*--------------------------------------------------------------------------*/
 
 static int
-smap_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
+smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
 {
-	struct smap_chan *smap = net_dev->priv;
+	struct smaprpc_chan *smap = net_dev->priv;
 	int retval = 0;
 
 	printk("%s: PlayStation 2 SMAP ioctl %d\n", net_dev->name, cmd);
@@ -222,7 +222,7 @@ smap_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
 	return(retval);
 }
 
-static void smap_rpc_setup(struct smap_chan *smap)
+static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 {
 	int loop;
 	int rv;
@@ -237,7 +237,7 @@ static void smap_rpc_setup(struct smap_chan *smap)
 	/* bind smaprpc.irx module */
 	for (loop = 100; loop; loop--) {
 		rv = ps2sif_bindrpc(&smap->cd_smap_rpc, SMAP_BIND_RPC_ID,
-			SIF_RPCM_NOWAIT, smap_rpcend_notify, (void *)&compl);
+			SIF_RPCM_NOWAIT, smaprpc_rpcend_notify, (void *)&compl);
 		if (rv < 0) {
 			printk("%s: smap rpc setup: bind rv = %d.\n", smap->net_dev->name, rv);
 			break;
@@ -259,7 +259,7 @@ static void smap_rpc_setup(struct smap_chan *smap)
 			SIF_RPCM_NOWAIT,
 			(void *) smap_rpc_data, 32,
 			smap_rpc_data, sizeof(smap_rpc_data),
-			(ps2sif_endfunc_t)smap_rpcend_notify,
+			(ps2sif_endfunc_t)smaprpc_rpcend_notify,
 			(void *)&compl);
 	} while (rv == -E_SIF_PKT_ALLOC);
 	if (rv != 0) {
@@ -286,7 +286,7 @@ static void smap_rpc_setup(struct smap_chan *smap)
 				SIF_RPCM_NOWAIT,
 				(void *) smap_rpc_data, 32,
 				smap_rpc_data, 4,
-				(ps2sif_endfunc_t)smap_rpcend_notify,
+				(ps2sif_endfunc_t)smaprpc_rpcend_notify,
 				(void *)&compl);
 		} while (rv == -E_SIF_PKT_ALLOC);
 		if (rv != 0) {
@@ -303,9 +303,9 @@ static void smap_rpc_setup(struct smap_chan *smap)
 	smap->rpc_initialized = -1;
 }
 
-static int smap_thread(void *arg)
+static int smaprpc_thread(void *arg)
 {
-	struct smap_chan *smap = (struct smap_chan *)arg;
+	struct smaprpc_chan *smap = (struct smaprpc_chan *)arg;
 	unsigned long flags;
 
 	spin_lock_irqsave(&current->sigmask_lock, flags);
@@ -320,7 +320,7 @@ static int smap_thread(void *arg)
 	daemonize();
 
 	/* Set the name of this process. */
-	sprintf(current->comm, "smap");		/* up to 16B */
+	sprintf(current->comm, "smaprpc");		/* up to 16B */
         
 	unlock_kernel();
 
@@ -332,7 +332,7 @@ static int smap_thread(void *arg)
 		add_wait_queue(&smap->wait_smaprun, &wait);
 		set_current_state(TASK_INTERRUPTIBLE);
 
-		smap_run(smap);
+		smaprpc_run(smap);
 
 		schedule();
 		remove_wait_queue(&smap->wait_smaprun, &wait);
@@ -347,7 +347,7 @@ static int smap_thread(void *arg)
 	return(0);
 }
 
-static void smap_rpcend_notify(void *arg)
+static void smaprpc_rpcend_notify(void *arg)
 {
 	complete((struct completion *)arg);
 	return;
@@ -355,7 +355,7 @@ static void smap_rpcend_notify(void *arg)
 
 static void handleSmapIRQ(iop_sifCmdSmapIrq_t *pkt, void *arg)
 {
-	struct smap_chan *smap = (struct smap_chan *) arg;
+	struct smaprpc_chan *smap = (struct smaprpc_chan *) arg;
 	struct sk_buff *skb;
 	u8 *data;
 	int i;
@@ -379,28 +379,35 @@ static void handleSmapIRQ(iop_sifCmdSmapIrq_t *pkt, void *arg)
 	netif_rx(skb);
 }
 
+extern int ps2_pccard_present;
+
 int
-smap_probe(struct net_device *net_dev)
+smaprpc_probe(struct net_device *net_dev)
 {
-	struct smap_chan *smap = NULL;
+	struct smaprpc_chan *smap = NULL;
 	int modflag = 0;
 	struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
+
+	if (ps2_pccard_present != 0x0200) {
+		printk("PlayStation 2 HDD/Ethernet device NOT present (slim PSTwo).\n");
+		return(-ENODEV);
+	}
 
 	if (net_dev == NULL)
 		modflag = 1;
 
-	if (smap_chan != NULL) {
+	if (smaprpc_chan != NULL) {
 		printk("PlayStation 2 SMAP: already used\n");
 		return(-ENODEV);
 	}
 
 	/* alloc & clear control structure */
-	smap = kmalloc(sizeof(struct smap_chan), GFP_KERNEL);
+	smap = kmalloc(sizeof(struct smaprpc_chan), GFP_KERNEL);
 	if (smap == NULL) {
 		printk("PlayStation 2 SMAP: memory alloc error\n");
 		return(-ENOMEM);
 	}
-	memset(smap, 0, sizeof(struct smap_chan));
+	memset(smap, 0, sizeof(struct smaprpc_chan));
 
 	/* get & init network device structure */
 	if (modflag) {
@@ -416,11 +423,11 @@ smap_probe(struct net_device *net_dev)
 	net_dev->priv = smap;
 	SET_MODULE_OWNER(net_dev);
 
-	net_dev->open = smap_open;
-	net_dev->stop = smap_close;
-	net_dev->do_ioctl = smap_ioctl;
-	net_dev->hard_start_xmit = smap_start_xmit;
-	net_dev->get_stats = smap_get_stats;
+	net_dev->open = smaprpc_open;
+	net_dev->stop = smaprpc_close;
+	net_dev->do_ioctl = smaprpc_ioctl;
+	net_dev->hard_start_xmit = smaprpc_start_xmit;
+	net_dev->get_stats = smaprpc_get_stats;
 	net_dev->set_mac_address = NULL;
 
 	spin_lock_init(&smap->spinlock);
@@ -434,10 +441,10 @@ smap_probe(struct net_device *net_dev)
 		printk("Failed to initialize smap IRQ handler. Receive will not work.\n");
 	}
 
-	smap_rpc_setup(smap);
+	smaprpc_rpc_setup(smap);
 
 	if (smap->rpc_initialized) {
-		kernel_thread(smap_thread, (void *)smap, 0);
+		kernel_thread(smaprpc_thread, (void *)smap, 0);
 
 		printk("PlayStation 2 SMAP(Ethernet) device driver.\n");
 
@@ -448,14 +455,14 @@ error:
 	if (smap) {
 		kfree(smap);
 	}
-	smap_chan = NULL;
+	smaprpc_chan = NULL;
 	return(-ENODEV);
 }
 
 void
-smap_cleanup_module(void)
+smaprpc_cleanup_module(void)
 {
-	struct smap_chan *smap = smap_chan;
+	struct smaprpc_chan *smap = smaprpc_chan;
 	struct net_device *net_dev;
 
 	if (smap == NULL) {
@@ -503,18 +510,18 @@ end:
 		/* XXX: Disable device. */
 		kfree(smap);
 	}
-	smap_chan = NULL;
+	smaprpc_chan = NULL;
 	return;
 }
 
 int __init
-smap_init_module(void)
+smaprpc_init_module(void)
 {
-	return(smap_probe(NULL));
+	return(smaprpc_probe(NULL));
 }
 
-module_init(smap_init_module);
-module_exit(smap_cleanup_module);
+module_init(smaprpc_init_module);
+module_exit(smaprpc_cleanup_module);
 
 MODULE_AUTHOR("Mega Man");
 MODULE_DESCRIPTION("PlayStation 2 ethernet device driver");

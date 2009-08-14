@@ -1,0 +1,230 @@
+diff -urp linux-2.4.17_ps2.orig/arch/mips/kernel/irq.c linux-2.4.17_ps2.fat_and_slim/arch/mips/kernel/irq.c
+--- linux-2.4.17_ps2.orig/arch/mips/kernel/irq.c	2002-03-04 11:31:35.000000000 +0100
++++ linux-2.4.17_ps2.fat_and_slim/arch/mips/kernel/irq.c	2009-08-14 12:01:31.000000000 +0200
+@@ -121,11 +121,11 @@ int handle_IRQ_event(unsigned int irq, s
+ 	if (!(action->flags & SA_INTERRUPT))
+ 		__sti();
+ 
+-	do {
++	while (action) {
+ 		status |= action->flags;
+ 		action->handler(irq, action->dev_id, regs);
+ 		action = action->next;
+-	} while (action);
++	}
+ 	if (status & SA_SAMPLE_RANDOM)
+ 		add_interrupt_randomness(irq);
+ 	__cli();
+@@ -363,6 +363,23 @@ out:
+ 	return 1;
+ }
+ 
++void handleSimulatedIRQ(int irq)
++{
++	struct irqaction * action;
++
++	if (irq < NR_IRQS) {
++		irq_desc_t *desc = irq_desc + irq;
++
++		action = desc->action;
++
++		while (action) {
++			action->handler(irq, action->dev_id, NULL);
++			action = action->next;
++		}
++	}
++}
++
++
+ /**
+  *	request_irq - allocate an interrupt line
+  *	@irq: Interrupt line to allocate
+diff -urp linux-2.4.17_ps2.orig/arch/mips/Makefile linux-2.4.17_ps2.fat_and_slim/arch/mips/Makefile
+--- linux-2.4.17_ps2.orig/arch/mips/Makefile	2002-11-20 13:14:52.000000000 +0100
++++ linux-2.4.17_ps2.fat_and_slim/arch/mips/Makefile	2009-08-14 11:47:11.000000000 +0200
+@@ -114,9 +114,11 @@ endif
+ # arch/mips/ramdisk
+ #
+ ifdef CONFIG_BLK_DEV_INITRD 
++ifdef CONFIG_EMBEDDED_RAMDISK
+ CORE_FILES      += arch/mips/ramdisk/ramdisk.o
+ SUBDIRS		+= arch/mips/ramdisk
+ endif
++endif
+ 
+ 
+ GCCFLAGS	+= -pipe
+diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/prom.c linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/prom.c
+--- linux-2.4.17_ps2.orig/arch/mips/ps2/prom.c	2002-07-10 08:14:52.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/prom.c	2009-08-14 12:02:04.000000000 +0200
+@@ -40,6 +40,12 @@ extern void *akmem_bootinfo;
+ extern int akmem_bootinfo_size;
+ #endif /* CONFIG_AKMEM */
+ 
++void sbios_prints(const char *text)
++{
++	printk("SBIOS: %s", text);
++}
++
++
+ void __init prom_init(int argc, char **argv, char **envp)
+ {
+ 	struct ps2_bootinfo *bootinfo;
+@@ -106,8 +112,10 @@ void __init prom_init(int argc, char **a
+ 	       bootinfo, oldbootinfo ? "(old style)" : "");
+ 	printk("boot option string at %p: %s\n",
+ 	       ps2_bootinfo->opt_string, arcs_cmdline);
++	sbios(SB_SET_PRINTS_CALLBACK, sbios_prints);
+ }
+ 
++
+ void __init prom_free_prom_memory(void)
+ {
+ }
+diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/sbcall.c
+--- linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c	2002-04-12 12:20:16.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/sbcall.c	2009-08-14 11:47:24.000000000 +0200
+@@ -42,6 +42,14 @@ EXPORT_SYMBOL(ps2sif_getotherdata);
+ EXPORT_SYMBOL(ps2sif_removerpc);
+ EXPORT_SYMBOL(ps2sif_removerpcqueue);
+ 
++typedef struct t_SifCmdHeader
++{
++	u32 size;
++	void *dest;
++	int cid;
++	u32 unknown;
++} SifCmdHeader_t;
++
+ /*
+  *  SIF DMA functions
+  */
+@@ -319,6 +327,19 @@ static void sif1_dma_handler(int irq, vo
+     spin_unlock(&ps2sif_dma_lock);
+ }
+ 
++static uint32_t usrCmdHandler[256];
++
++typedef struct {
++	struct t_SifCmdHeader    sifcmd;
++	u32 data[16];
++} iop_sifCmdBufferIrq_t;
++
++void handleRPCIRQ(iop_sifCmdBufferIrq_t *sifCmdBufferIrq, void *arg)
++{
++	extern void handleSimulatedIRQ(int irq);
++
++	handleSimulatedIRQ(sifCmdBufferIrq->data[0]);
++}
+ 
+ /*
+  *  Initialize
+@@ -326,8 +347,17 @@ static void sif1_dma_handler(int irq, vo
+ 
+ int __init ps2sif_init(void)
+ {
++	struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
++	struct sb_sifsetcmdbuffer_arg setcmdhandlerbufferparam;
+     init_waitqueue_head(&ps2sif_dma_waitq);
+ 
++    setcmdhandlerbufferparam.db = usrCmdHandler;
++    setcmdhandlerbufferparam.size = sizeof(usrCmdHandler) / 8;
++
++	addcmdhandlerparam.fid = 0x20;
++	addcmdhandlerparam.func = handleRPCIRQ;
++	addcmdhandlerparam.data = NULL;
++
+     if (sbios(SB_SIFINIT, 0) < 0)
+ 	return -1;
+     if (sbios(SB_SIFINITCMD, 0) < 0)
+@@ -336,6 +366,13 @@ int __init ps2sif_init(void)
+ 	return -1;
+     if (request_irq(IRQ_DMAC_6, sif1_dma_handler, SA_INTERRUPT, "SIF1 DMA", NULL))
+ 	return -1;
++	if (sbios(SB_SIFSETCMDBUFFER, &setcmdhandlerbufferparam) < 0) {
++		printk("Failed to initialize EEDEBUG handler (1).\n");
++	} else {
++		if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++			printk("Failed to initialize SIF IRQ handler.\n");
++		}
++	}
+     if (sbios(SB_SIFINITRPC, 0) < 0)
+ 	return -1;
+ 
+diff -urp linux-2.4.17_ps2.orig/drivers/ps2/Makefile linux-2.4.17_ps2.fat_and_slim/drivers/ps2/Makefile
+--- linux-2.4.17_ps2.orig/drivers/ps2/Makefile	2002-10-15 10:23:34.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/drivers/ps2/Makefile	2009-08-14 11:59:57.000000000 +0200
+@@ -26,6 +26,7 @@ ps2rm-objs			:= rm.o
+ ps2sysconf-objs			:= sysconf.o
+ ps2sysproc-objs			:= sysproc.o
+ ps2smap-objs			:= smap.o
++ps2smaprpc-objs			:= smaprpc.o
+ ps2dev-objs			:= ps2dev.o ps2event.o ps2mem.o ps2dma.o ps2image.o
+ 
+ obj-$(CONFIG_PS2_PAD)		+= ps2pad.o
+@@ -37,6 +38,7 @@ obj-$(CONFIG_PS2_RM)		+= ps2rm.o
+ obj-$(CONFIG_PS2_SYSCONF)	+= ps2sysconf.o 
+ obj-$(CONFIG_PS2_SYSPROC)	+= ps2sysproc.o 
+ obj-$(CONFIG_PS2_ETHER_SMAP)	+= ps2smap.o
++obj-$(CONFIG_PS2_ETHER_SMAP)	+= ps2smaprpc.o
+ obj-$(CONFIG_PS2_PS2DEV)	+= ps2devmod.o
+ obj-y				+= mcfs/ps2mcfsarc.o
+ 
+@@ -60,5 +62,7 @@ ps2sysproc.o: $(ps2sysproc-objs)
+ 	$(LD) -r -o $@ $(ps2sysproc-objs)
+ ps2smap.o: $(ps2smap-objs)
+ 	$(LD) -r -o $@ $(ps2smap-objs)
++ps2smaprpc.o: $(ps2smaprpc-objs)
++	$(LD) -r -o $@ $(ps2smaprpc-objs)
+ ps2devmod.o: $(ps2dev-objs)
+ 	$(LD) -r -o $@ $(ps2dev-objs)
+diff -urp linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sbcall.h
+--- linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h	2003-03-13 09:14:01.000000000 +0100
++++ linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sbcall.h	2009-08-14 12:03:15.000000000 +0200
+@@ -85,6 +85,9 @@ struct sb_setrgbyc_arg {
+     int rgbyc;
+ };
+ 
++/** Debug output in TGE (not supported by RTE). */
++#define SB_SET_PRINTS_CALLBACK 15
++
+ /*
+  *  SIF DMA services
+  */
+Nur in linux-2.4.17_ps2.fat_and_slim/include/asm/ps2: sbcall.h.orig.
+diff -urp linux-2.4.17_ps2.orig/include/asm/ps2/sifdefs.h linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sifdefs.h
+--- linux-2.4.17_ps2.orig/include/asm/ps2/sifdefs.h	2002-04-09 10:11:52.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sifdefs.h	2009-08-14 16:19:12.000000000 +0200
+@@ -114,6 +114,7 @@ typedef struct _sif_queue_data {
+ /* calling error */
+ #define SIF_RPCE_GETP	1	/* fail to get packet data */
+ #define SIF_RPCE_SENDP	2	/* fail to send dma packet */
++#define E_SIF_PKT_ALLOC 0xd610	/* Can't allocate SIF packet. */
+ 
+ /* functions */
+ 
+diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sbcall.h
+--- linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h	2003-03-13 09:14:01.000000000 +0100
++++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sbcall.h	2009-08-14 12:03:15.000000000 +0200
+@@ -85,6 +85,9 @@ struct sb_setrgbyc_arg {
+     int rgbyc;
+ };
+ 
++/** Debug output in TGE (not supported by RTE). */
++#define SB_SET_PRINTS_CALLBACK 15
++
+ /*
+  *  SIF DMA services
+  */
+Nur in linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2: sbcall.h.orig.
+diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h
+--- linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h	2002-04-09 10:11:52.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h	2009-08-14 16:19:12.000000000 +0200
+@@ -114,6 +114,7 @@ typedef struct _sif_queue_data {
+ /* calling error */
+ #define SIF_RPCE_GETP	1	/* fail to get packet data */
+ #define SIF_RPCE_SENDP	2	/* fail to send dma packet */
++#define E_SIF_PKT_ALLOC 0xd610	/* Can't allocate SIF packet. */
+ 
+ /* functions */
+ 
