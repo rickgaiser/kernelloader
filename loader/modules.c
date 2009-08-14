@@ -146,9 +146,7 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "ps2smap.irx",
 		.argLen = 0,
-		//.argLen = 39,
 		.args = NULL,
-		//.args = "192.168.0.10\000255.255.255.0\000192.168.0.1",
 		.ps2smap = 1
 	},
 #ifdef PS2LINK
