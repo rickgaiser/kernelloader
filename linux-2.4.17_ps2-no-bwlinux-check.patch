@@ -1,0 +1,45 @@
+--- linux-2.4.17_ps2/arch/mips/ps2/prom.c	2009-07-19 15:54:09.000000000 +0200
++++ linux-2.4.17_ps2/arch/mips/ps2/prom.c	2009-09-04 22:49:07.000000000 +0200
+@@ -51,6 +51,7 @@ void __init prom_init(int argc, char **a
+ 	struct ps2_bootinfo *bootinfo;
+ 	int oldbootinfo = 0;
+ 	unsigned long sbios_signature;
++	int version;
+ 
+ 	/* default bootinfo */
+ 	memset(&ps2_bootinfox, 0, sizeof(struct ps2_bootinfo));
+@@ -106,13 +107,22 @@ void __init prom_init(int argc, char **a
+ 	sbios = *(int (**)(int,void*))(ps2_bootinfo->sbios_base + SBIOS_ENTRY);
+ 	add_memory_region(0, ps2_bootinfo->maxmem & PAGE_MASK, BOOT_MEM_RAM);
+ 
+-	printk("PlayStation 2 SIF BIOS: %04x\n", sbios(SB_GETVER, 0));
++	version = sbios(SB_GETVER, 0);
++	printk("PlayStation 2 SIF BIOS: %04x\n", version);
+ 
+ 	printk("use boot information at %p%s\n",
+ 	       bootinfo, oldbootinfo ? "(old style)" : "");
+ 	printk("boot option string at %p: %s\n",
+ 	       ps2_bootinfo->opt_string, arcs_cmdline);
+ 	sbios(SB_SET_PRINTS_CALLBACK, sbios_prints);
++
++	if (version == 0x200) {
++		/* Beta kit */
++		*(unsigned char *)0x80007c20 = 0;
++	} else if (version == 0x250) {
++		/* 1.0 kit */
++		*(unsigned char *)0x800081b0 = 0;
++	}
+ }
+ 
+ 
+--- linux-2.4.17_ps2/include/linux/ps2/mcio.h	2009-09-04 22:50:52.000000000 +0200
++++ linux-2.4.17_ps2/include/linux/ps2/mcio.h	2009-09-04 22:51:07.000000000 +0200
+@@ -14,7 +14,7 @@
+ 
+ #define PS2MC_NAME_MAX	31
+ #define PS2MC_PATH_MAX	1023
+-#define PS2MC_BASEDIR	"BWLINUX"
++#define PS2MC_BASEDIR	""
+ 
+ #define PS2MC_INVALIDPORTSLOT	-1
+ #define PS2MC_TYPE_EMPTY	0

@@ -38,6 +38,7 @@ There is no patch required to start Linux.
 The following patch and files are recommended to get around many problems:
 
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-all_fat_and_slim.patch
+sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-no-bwlinux-check.patch
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.c drivers/ps2/smaprpc.c
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.h drivers/ps2/smaprpc.h
 
