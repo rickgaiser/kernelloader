@@ -348,6 +348,10 @@ void graphic_paint(void)
 	}
 	graphic_common();
 
+	if (enableDisc) {
+		paintTexture(texDisc, 100, 300, 40);
+	}
+
 	if (statusMessage != NULL) {
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
 			statusMessage);
@@ -377,7 +381,6 @@ void graphic_paint(void)
 		}
 	}
 	if (enableDisc) {
-		paintTexture(texDisc, 100, 200, 100);
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 			"Loading, please wait...");
 	} else {
