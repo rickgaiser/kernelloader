@@ -462,8 +462,10 @@ int defaultSBIOSCalls(void *arg)
 
 int setCurrentMenuAndStopCDVD(void *arg)
 {
-	CDVD_Stop();
-	CDVD_FlushCache();
+	if (isDVDVSupported()) {
+		CDVD_Stop();
+		CDVD_FlushCache();
+	}
 	setCurrentMenu(arg);
 
 	return 0;
@@ -573,15 +575,17 @@ int fsroot(void *arg)
 		rootParam->fileMenu = rootParam->menu->getSubMenu(rootParam->menuName);
 	}
 	strcpy(rootParam->fileName, rootParam->fsName);
-	if (strcmp(rootParam->fsName, "cdfs:") == 0) {
-		DiskType type;
-
-		type = CDDA_DiskType();
-
-		if (type == DiskType_DVDV) {
-			CDVD_SetDVDV(1);
-		} else {
-			CDVD_SetDVDV(0);
+	if (isDVDVSupported()) {
+		if (strcmp(rootParam->fsName, "cdfs:") == 0) {
+			DiskType type;
+	
+			type = CDDA_DiskType();
+	
+			if (type == DiskType_DVDV) {
+				CDVD_SetDVDV(1);
+			} else {
+				CDVD_SetDVDV(0);
+			}
 		}
 	}
 	fsGenerateDirListMenu(rootParam, true);
@@ -608,25 +612,29 @@ int mcLoadConfig(void *arg)
 	setCurrentMenu(NULL);
 	setEnableDisc(true);
 
-	if (strncmp(configfile, "cdfs:", 5) == 0) {
-		DiskType type;
-
-		type = CDDA_DiskType();
-
-		if (type == DiskType_DVDV) {
-			CDVD_SetDVDV(1);
-		} else {
-			CDVD_SetDVDV(0);
+	if (isDVDVSupported()) {
+		if (strncmp(configfile, "cdfs:", 5) == 0) {
+			DiskType type;
+	
+			type = CDDA_DiskType();
+	
+			if (type == DiskType_DVDV) {
+				CDVD_SetDVDV(1);
+			} else {
+				CDVD_SetDVDV(0);
+			}
 		}
 	}
 
 	if (loadConfiguration(configfile) < 0) {
 		error_printf("Failed to load configuration \"%s\".", configfile);
 	}
-	if (strncmp(configfile, "cdfs:", 5) == 0) {
-		/* Stop CD when finished. */
-		CDVD_Stop();
-		CDVD_FlushCache();
+	if (isDVDVSupported()) {
+		if (strncmp(configfile, "cdfs:", 5) == 0) {
+			/* Stop CD when finished. */
+			CDVD_Stop();
+			CDVD_FlushCache();
+		}
 	}
 	setCurrentMenu(menu);
 	setEnableDisc(false);

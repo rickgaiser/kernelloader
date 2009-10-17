@@ -7,6 +7,7 @@ extern "C" {
 #endif
 int loadLoaderModules(void);
 int isSlimPSTwo(void);
+int isDVDVSupported(void);
 #ifdef __cplusplus
 }
 #endif

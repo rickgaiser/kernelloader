@@ -13,6 +13,7 @@
 #include "graphic.h"
 #include "getelf.h"
 #include "configuration.h"
+#include "modules.h"
 
 #define	ELFMAG		"\177ELF"
 
@@ -153,20 +154,24 @@ int copyRTEELF(void *arg)
 
 	setEnableDisc(-1);
 
-	type = CDDA_DiskType();
-
-	/* Detect disk type, so loading will work. */
-	if (type == DiskType_DVDV) {
-		CDVD_SetDVDV(1);
-	} else {
-		CDVD_SetDVDV(0);
+	if (isDVDVSupported()) {
+		type = CDDA_DiskType();
+	
+		/* Detect disk type, so loading will work. */
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
 	}
 
 	rv = real_copyRTEELF(arg);
 
-	/* Always stop CD/DVD when an error happened. */
-	CDVD_Stop();
-	CDVD_FlushCache();
+	if (isDVDVSupported()) {
+		/* Always stop CD/DVD when an error happened. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+	}
 
 	setEnableDisc(0);
 

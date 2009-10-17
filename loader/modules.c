@@ -41,6 +41,10 @@ typedef struct
 	int loadCfg;
 	/** True, if module can be loaded from "mc0:/kloader/". */
 	int checkMc;
+	/** True, if module is responsible eromdrv. */
+	int eromdrv;
+	/** True, if it is SMS module which controls DVDV. */
+	int sms_mod;
 } moduleLoaderEntry_t;
 
 
@@ -68,7 +72,8 @@ static moduleLoaderEntry_t moduleList[] = {
 		/* Module is required to access video DVDs */
 		.path = "eromdrvloader.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.eromdrv = -1
 	},
 #if defined(RESET_IOP)
 	{
@@ -104,13 +109,15 @@ static moduleLoaderEntry_t moduleList[] = {
 		.path = "SMSUTILS.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.sms_mod = -1
 	},
 	{
 		.path = "SMSCDVD.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.sms_mod = -1
 	},
 #if defined(RESET_IOP)
 	{
@@ -208,6 +215,8 @@ static char version[256];
 
 static int romver;
 
+static int eromdrvSupport;
+
 int isSlimPSTwo(void)
 {
 	if (romver > 0x0190) {
@@ -215,6 +224,11 @@ int isSlimPSTwo(void)
 	} else {
 		return 0;
 	}
+}
+
+int isDVDVSupported(void)
+{
+	return eromdrvSupport;
 }
 
 int loadLoaderModules(void)
@@ -270,7 +284,7 @@ int loadLoaderModules(void)
 			lrv = loadConfiguration(CONFIG_FILE);
 		}
 		graphic_setStatusMessage(moduleList[i].path);
-		printf("Loading module %s)\n", moduleList[i].path);
+		printf("Loading module (%s)\n", moduleList[i].path);
 
 		if (moduleList[i].ps2smap) {
 			moduleList[i].args = getPS2MAPParameter(&moduleList[i].argLen);
@@ -285,20 +299,26 @@ int loadLoaderModules(void)
 			rv = -1;
 		}
 		if (rv < 0) {
-			romfile = rom_getFile(moduleList[i].path);
-			if (romfile != NULL) {
-				int ret;
-
-				ret = SifExecModuleBuffer(romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
-				if (ret < 0) {
-					rv = ret;
+			if ((moduleList[i].sms_mod == 0) || (isDVDVSupported())) {
+				romfile = rom_getFile(moduleList[i].path);
+				if (romfile != NULL) {
+					int ret;
+	
+					ret = SifExecModuleBuffer(romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
+					if (ret < 0) {
+						rv = ret;
+					}
+				} else {
+					rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
 				}
-			} else {
-				rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
-			}
-			if (rv < 0) {
-				printf("Failed to load module \"%s\".", moduleList[i].path);
-				error_printf("Failed to load module \"%s\".", moduleList[i].path);
+				if (rv < 0) {
+					printf("Failed to load module \"%s\".", moduleList[i].path);
+					error_printf("Failed to load module \"%s\".", moduleList[i].path);
+				} else {
+					if (moduleList[i].eromdrv != 0) {
+						eromdrvSupport = -1;
+					}
+				}
 			}
 		}
 	}
@@ -307,29 +327,31 @@ int loadLoaderModules(void)
 
 	fileXioInit();
 
-	CDDA_Init();
-	CDVD_Init();
+	if (isDVDVSupported()) {
+		CDDA_Init();
+		CDVD_Init();
 
-	if (lrv != NULL) {
-		DiskType type;
-
-		type = CDDA_DiskType();
-
-		if (type == DiskType_DVDV) {
-			CDVD_SetDVDV(1);
-		} else {
-			CDVD_SetDVDV(0);
-		}
-
-		lrv = loadConfiguration(DVD_CONFIG_FILE);
+		if (lrv != NULL) {
+			DiskType type;
+	
+			type = CDDA_DiskType();
+	
+			if (type == DiskType_DVDV) {
+				CDVD_SetDVDV(1);
+			} else {
+				CDVD_SetDVDV(0);
+			}
+	
+			lrv = loadConfiguration(DVD_CONFIG_FILE);
 #if 0
-		if (lrv != 0) {
-			error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);
-		}
+			if (lrv != 0) {
+				error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);
+			}
 #endif
-		/* Stop CD when finished. */
-		CDVD_Stop();
-		CDVD_FlushCache();
+			/* Stop CD when finished. */
+			CDVD_Stop();
+			CDVD_FlushCache();
+		}
 	}
 
 	return 0;

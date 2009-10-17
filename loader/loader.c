@@ -1913,20 +1913,24 @@ int loader(void *arg)
 
 	arg = arg;
 
-	type = CDDA_DiskType();
-
-	/* Detect disk type, so loading will work. */
-	if (type == DiskType_DVDV) {
-		CDVD_SetDVDV(1);
-	} else {
-		CDVD_SetDVDV(0);
+	if (isDVDVSupported()) {
+		type = CDDA_DiskType();
+	
+		/* Detect disk type, so loading will work. */
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
 	}
 
 	rv = real_loader();
 
-	/* Always stop CD/DVD when an error happened. */
-	CDVD_Stop();
-	CDVD_FlushCache();
+	if (isDVDVSupported()) {
+		/* Always stop CD/DVD when an error happened. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+	}
 
 	return rv;
 }

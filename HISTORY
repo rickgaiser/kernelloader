@@ -1,3 +1,6 @@
+2.1
+- Disable DVD access if loading of eromdrvloader.irx failed.
+
 2.0
 - Updated to PS2SDK SVN Revision 1601.
 - Updated to gsKit SVN Revision 1588.

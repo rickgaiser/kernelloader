@@ -12,6 +12,7 @@
 #include "graphic.h"
 #include "getsbios.h"
 #include "configuration.h"
+#include "modules.h"
 
 char rteElf[1024] = "cdfs:pbpx_955.09";
 char rteElfOffset[1024] = "16773120";
@@ -206,20 +207,24 @@ int copyRTESBIOS(void *arg)
 
 	setEnableDisc(-1);
 
-	type = CDDA_DiskType();
-
-	/* Detect disk type, so loading will work. */
-	if (type == DiskType_DVDV) {
-		CDVD_SetDVDV(1);
-	} else {
-		CDVD_SetDVDV(0);
+	if (isDVDVSupported()) {
+		type = CDDA_DiskType();
+	
+		/* Detect disk type, so loading will work. */
+		if (type == DiskType_DVDV) {
+			CDVD_SetDVDV(1);
+		} else {
+			CDVD_SetDVDV(0);
+		}
 	}
 
 	rv = real_copyRTESBIOS(arg);
 
-	/* Always stop CD/DVD when an error happened. */
-	CDVD_Stop();
-	CDVD_FlushCache();
+	if (isDVDVSupported()) {
+		/* Always stop CD/DVD when an error happened. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+	}
 
 	setEnableDisc(0);
 
