@@ -285,6 +285,7 @@ static char ps2linkParams[3 * MAX_INPUT_LEN];
 static char myIP[MAX_INPUT_LEN];
 static char netmask[MAX_INPUT_LEN];
 static char gatewayIP[MAX_INPUT_LEN];
+static char dnsIP[MAX_INPUT_LEN];
 static char kernelGraphicMode[MAX_INPUT_LEN];
 
 /** Parameter for IOP reset. */
@@ -657,6 +658,14 @@ int setExampleKernel(void *arg)
 	return 0;
 }
 
+int setWWWKernel(void *arg)
+{
+	char *fileName = (char *) arg;
+
+	strcpy(fileName, "http://mesh.dl.sourceforge.net/project/kernelloader/Linux%202.4/Linux%202.4.17%20Kernel/vmlinux_fat_and_slim_v2.gz");
+	return 0;
+}
+
 int showFilename(void *arg)
 {
 	char *fileName = (char *) arg;
@@ -704,6 +713,7 @@ int setDefaultConfiguration(void *arg)
 	strcpy(myIP, "192.168.0.10");
 	strcpy(netmask, "255.255.255.0");
 	strcpy(gatewayIP, "192.168.0.1");
+	strcpy(dnsIP, "192.168.0.1");
 	strcpy(pcicType, "");
 	strcpy(kernelGraphicMode, "");
 	strcpy(configfile, CONFIG_FILE);
@@ -760,6 +770,7 @@ void initMenu(Menu *menu)
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkNetmask", netmask, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkGatewayIP", gatewayIP, MAX_INPUT_LEN);
+	addConfigTextItem("ps2DNSIP", dnsIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2graphicMode", kernelGraphicMode, MAX_INPUT_LEN);
 
 	menu->setTitle("Boot Menu");
@@ -838,6 +849,7 @@ void initMenu(Menu *menu)
 	//linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
 	linuxMenu->addItem("Edit Filename", editString, (void *) &kernelFilename);
 	linuxMenu->addItem("Example Kernel", setExampleKernel, (void *) &kernelFilename);
+	linuxMenu->addItem("Linux Kernel from WWW", setWWWKernel, (void *) &kernelFilename);
 
 	static fsRootParam_t kusbParam = {
 		kernelFilename,
@@ -1015,6 +1027,7 @@ void initMenu(Menu *menu)
 	ps2linkMenu->addItem("Set IP address", editString, myIP);
 	ps2linkMenu->addItem("Set Netmask", editString, netmask);
 	ps2linkMenu->addItem("Set Gateway IP address", editString, gatewayIP);
+	ps2linkMenu->addItem("Set DNS IP address", editString, dnsIP);
 
 	configMenu->addItem("Set Graphic Mode", editString, kernelGraphicMode);
 
@@ -1098,6 +1111,11 @@ extern "C" {
 		*len += strlen(&ps2linkParams[*len]) + 1;
 
 		return ps2linkParams;
+	}
+
+	const char *getPS2DNS(int *len) {
+		*len = strlen(dnsIP) + 1;
+		return dnsIP;
 	}
 
 	const char *getGraphicMode(void) {

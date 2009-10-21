@@ -1,5 +1,9 @@
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.
+- Added DNS client which supports TCP connections only.
+- Added support for downloading files from internet (HTTP).
+  Instead of a file name a URL can be specified. The DNS server
+  need to be configured in the ps2link menu.
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.

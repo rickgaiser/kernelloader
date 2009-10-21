@@ -45,6 +45,8 @@ typedef struct
 	int eromdrv;
 	/** True, if it is SMS module which controls DVDV. */
 	int sms_mod;
+	/** True, if module handles DNS. */
+	int dns;
 } moduleLoaderEntry_t;
 
 
@@ -165,6 +167,19 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 #endif
 #endif
+	{
+		.path = "dns.irx",
+		.argLen = 0,
+		.args = NULL,
+		.checkMc = -1,
+		.dns = -1
+	},
+	{
+		.path = "ps2http.irx",
+		.argLen = 0,
+		.args = NULL,
+		.checkMc = -1
+	},
 #ifdef NAPLINK
 	{
 		.path = "npm-usbd.irx",
@@ -288,6 +303,9 @@ int loadLoaderModules(void)
 
 		if (moduleList[i].ps2smap) {
 			moduleList[i].args = getPS2MAPParameter(&moduleList[i].argLen);
+		}
+		if (moduleList[i].dns) {
+			moduleList[i].args = getPS2DNS(&moduleList[i].argLen);
 		}
 		if (moduleList[i].checkMc) {
 			static char file[256];

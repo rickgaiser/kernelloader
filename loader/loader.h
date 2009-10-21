@@ -59,6 +59,7 @@ extern "C" {
 	char *getKernelParameter(void);
 	void waitForUser(void);
 	const char *getPS2MAPParameter(int *len);
+	const char *getPS2DNS(int *len);
 	const char *getGraphicMode(void);
 	void printAllModules(void);
 	void DelayThread(int delay);

@@ -82,6 +82,9 @@ http://forums.ps2dev.org/viewtopic.php?t=7506
 
 Recommended is revision 1601 of ps2sdk.
 
+For HTTP download support the following patch is required:
+http://forums.ps2dev.org/viewtopic.php?t=12531
+
 USB
 ###
 You need also to install the usb driver:

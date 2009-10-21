@@ -62,6 +62,8 @@ MODULES = \
 	ioptrap.irx \
 	poweroff.irx \
 	ps2ip.irx \
+	dns.irx \
+	ps2http.irx \
 	ps2link.irx \
 	ps2smap.irx \
 	sharedmem.irx \
