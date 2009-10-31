@@ -393,8 +393,6 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.defaultmod = 1,
-		.slim = 1
 	},
 	{
 		/* Interrupt relay when DEV9 is loaded. */
@@ -410,6 +408,8 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1
 		/* Only hard disc and USB is working. */
 	},
 	{
@@ -1655,7 +1655,7 @@ int real_loader(void)
 		printAllModules();
 		iopaddr = SifGetReg(0x80000000);
 
-		if (!isInfoBufferEmpty()) {
+		if (!isInfoBufferEmpty() || (getErrorMessage() != NULL)) {
 			/* Print queued eedebug messages. (Anything printed by IOP). */
 			waitForUser();
 		}
@@ -1712,8 +1712,10 @@ int real_loader(void)
 		iop_dprintf(U2K("Stack 0x%08x\n"), sp);
 
 		if (isSlimPSTwo()) {
-			/* Use value 0x0200 to inform Linux about slim PSTwo. This was not part of Sony's Linux. */
-			bootinfo->pccard_type = 0x0200;
+			if (loaderConfig.enableDev9) {
+				/* Use value 0x0200 to inform Linux about slim PSTwo. This was not part of Sony's Linux. */
+				bootinfo->pccard_type = 0x0200;
+			}
 		} else {
 			if (loaderConfig.enableDev9) {
 				/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
