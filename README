@@ -81,9 +81,8 @@ fixed in newer ps2sdk versions. For more information see discussion:
 http://forums.ps2dev.org/viewtopic.php?t=7506
 
 Recommended is revision 1601 of ps2sdk.
-
-For HTTP download support the following patch is required:
-http://forums.ps2dev.org/viewtopic.php?t=12531
+To get download support (URL/HTTP) of kernels and initrd the
+Revision 1643 of ps2sdk/fs/http/bin/ps2http.irx is required.
 
 USB
 ###
