@@ -53,7 +53,7 @@ Initrd is now loaded and copied later to lower memory address behind kernel.
 PR#8 - Solved
 Network can only send, but not receive.
 -
-Network is at working with SCPH-10350 and SCPH-10281.
+Network is working with SCPH-10350 and SCPH-10281.
 DMA is currently not supported. Linux 2.4.17 driver binds to different RPC server.
 But it seems that Sony never delivered any responsible IOP module.
 
@@ -94,7 +94,7 @@ PR#12 - Workaround
 USB is not working with V12 and higher slim PSTwo console. This was
 reported in ps2dev forums. I don't have a slim PS2, so I can't test it.
 -
-slim PSTwo need to be selected in module configuration and must be submitted.
+Go to "File Menu" and select "Restore defaults".
 Then a Linux kernel with a patch is required (linux-2.4.17_ps2-rpc-irq.patch).
 
 PR#13
@@ -138,3 +138,54 @@ not known until everything is extracted. The progress bar shows the complete ava
 memory, when loading the kernel.
 -
 You need to strip the kernel using program "ee-strip".
+
+PR#22
+Sound is not working.
+-
+Sound is only owkring with the modules from RTE. Put in the disc from RTE and go to
+the "Configuration Menu" -> "RTE Copy Menu" and select "Copy RTE modules". This
+will copy the RTE modules from the disc to the memory card.
+Then go up and select "Module List". You need to enable:
+mc0:kloader/libsd.irx
+mc0:kloader/sdrdrv.irx
+
+PR#23
+USB is not working if sound modules of RTE are loaded.
+-
+You need to enable the patch for libsd.
+
+PR#24
+USB is unstable with slim PSTwo (v15 and higher).
+-
+There is somewhere a deadlock. This is diffcult to debug.
+
+PR#25
+Region detection is not working. The result is that eromdrvloader.irx can't be
+loaded.
+-
+The workaround currently is to use a european slim PSTwo or a old fat PS2 or
+slim PSTwo (v12).
+
+PR#26
+If loading of kernel fails, the configuration can't be saved. The file is destroyed.
+Menu entry "Reboot" is not working.
+
+PR#27
+DNS over UDP is not working.
+-
+Only DNS over TCP is working. You need to use different name server.
+
+PR#28
+Downloading from webserver not working after changing the IP configuration (DNS, Gateway).
+-
+You need to reboot. The IP configuration becomes valid after reboot.
+
+PR#29
+Kernelloader is not starting or Linux is not starting if no DVD is inserted.
+-
+You need to insert a PS2 compatible disc and close the tray.
+
+PR#30
+Network is not working in kernelloader.
+-
+You need to connect the network cable before starting kernelloader.

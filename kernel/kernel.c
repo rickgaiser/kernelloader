@@ -176,7 +176,7 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 
 #if 1
 	/* Simulate a program using RPC was already started,
-	 * because we RPC is already initialized on IOP side
+	 * because RPC is already initialized on IOP side
 	 * and we will not receive Sreg 0. Otherwise SifInitRpc
 	 * will hang.
 	 */ 

@@ -723,6 +723,7 @@ int setDefaultConfiguration(void *arg)
 	loaderConfig.enableDev9 = 1;
 	loaderConfig.enableEEDebug = 0;
 	loaderConfig.autoBootTime = 0;
+	loaderConfig.patchLibsd = 1;
 
 	if (sbiosCallEnabled == NULL) {
 		sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
@@ -1000,6 +1001,8 @@ void initMenu(Menu *menu)
 	configMenu->addCheckItem("TGE SBIOS for New Modules", &loaderConfig.newModulesInTGE);
 	configMenu->addCheckItem("Enable hard disc and network",
 		&loaderConfig.enableDev9);
+	configMenu->addCheckItem("Patch libsd (enable USB)",
+		&loaderConfig.patchLibsd);
 	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);
 
 	/* SBIOS Calls Menu */

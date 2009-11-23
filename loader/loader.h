@@ -37,6 +37,8 @@ extern "C" {
 		int dev9init;
 		/** 1, if default module, 0 otherwise. */
 		int defaultmod;
+		/** -1, if sdlib, 0 otherwise. */
+		int libsd;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -45,6 +47,7 @@ extern "C" {
 		int enableDev9;
 		int enableEEDebug;
 		int autoBootTime;
+		int patchLibsd;
 	} loader_config_t;
 
 	extern loader_config_t loaderConfig;
