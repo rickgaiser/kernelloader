@@ -1,0 +1,39 @@
+Version 0
+---------
+2002/12/04 .9	Added support (read-only) for filesystems with multiple
+		    partitions.
+2002/09/04 .8	Added preliminary support for modifiying directories. (broken)
+2002/09/03	Changes to compile correctly on the PS2.
+2002/09/03	Fixed memory leak on ps2fs_read_inode error.
+2002/09/03	Superblock now locked when allocating or freeing blocks.
+2002/09/03 .7	Added support for extending and truncating files.
+2002/09/02	Fixed bug preventing inode data from getting written to disk.
+2002/08/17 .6	Added support for writing within files (no blockcount changes).
+2002/05/21 .5	Fixed statfs() for filesystems with block sizes other than 8k.
+2002/04/27 .4	Added workaround for compiler bug on PS2 Linux Beta Release 1
+		    (strspn() call in super.c/parse_options()).
+2002/04/27	Fixed compilation error on kernel 2.2 (no simple_strtol()).
+2002/04/26	Fixed bug in block count calculation for stat() result.
+2002/04/26	Allowed mounting first partition without -opartition=...
+		    for mounting partitions off loop devices, etc.
+2002/04/26	Added tzoffset mount option to set filesystem time zone offset.
+2002/04/26	Fixed case of a directory block with just one entry (entry
+		    size == 0x200, top bit got cut off).
+2002/04/26	Fixed statfs() results.
+2002/04/23	Corrected PS2 partition header definition based on PS2
+		    Linux Beta Release 1 kernel source.
+2002/03/10 .3	Fixed compilation bug under kernel 2.4.x.
+2002/03/10	Fixed support for partitions with cluster sizes other than 8k.
+2002/03/04 .2	Added statfs() support.
+2002/03/04	Removed out-of-date restriction on root inode number.
+2002/03/04	Fixed bug reading directories with a size exactly a
+		    multiple of PAGE_CACHE_SIZE.
+2002/03/04	Fixed incorrect number of blocks in stat() result (i_blocks
+		    is in units of 512 bytes, not filesystem blocks).
+2002/03/04	Fixed bug causing hangs when handling directories with
+		    unused sectors at the end (improper handling of
+		    dirent.inode==0 case).
+2002/03/04	Added Unicode (UTF8) to EUC-JP conversion.
+2002/03/04	Fixed processing of directory entries ("last entry" bit is
+		    really top bit of size).
+2002/03/03 .1	Initial release.

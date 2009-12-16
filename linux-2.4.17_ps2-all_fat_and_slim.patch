@@ -178,31 +178,6 @@ diff -urp linux-2.4.17_ps2.orig/drivers/ps2/Makefile linux-2.4.17_ps2.fat_and_sl
 +	$(LD) -r -o $@ $(ps2smaprpc-objs)
  ps2devmod.o: $(ps2dev-objs)
  	$(LD) -r -o $@ $(ps2dev-objs)
-diff -urp linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sbcall.h
---- linux-2.4.17_ps2.orig/include/asm/ps2/sbcall.h	2003-03-13 09:14:01.000000000 +0100
-+++ linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sbcall.h	2009-08-14 12:03:15.000000000 +0200
-@@ -85,6 +85,9 @@ struct sb_setrgbyc_arg {
-     int rgbyc;
- };
- 
-+/** Debug output in TGE (not supported by RTE). */
-+#define SB_SET_PRINTS_CALLBACK 15
-+
- /*
-  *  SIF DMA services
-  */
-Nur in linux-2.4.17_ps2.fat_and_slim/include/asm/ps2: sbcall.h.orig.
-diff -urp linux-2.4.17_ps2.orig/include/asm/ps2/sifdefs.h linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sifdefs.h
---- linux-2.4.17_ps2.orig/include/asm/ps2/sifdefs.h	2002-04-09 10:11:52.000000000 +0200
-+++ linux-2.4.17_ps2.fat_and_slim/include/asm/ps2/sifdefs.h	2009-08-14 16:19:12.000000000 +0200
-@@ -114,6 +114,7 @@ typedef struct _sif_queue_data {
- /* calling error */
- #define SIF_RPCE_GETP	1	/* fail to get packet data */
- #define SIF_RPCE_SENDP	2	/* fail to send dma packet */
-+#define E_SIF_PKT_ALLOC 0xd610	/* Can't allocate SIF packet. */
- 
- /* functions */
- 
 diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sbcall.h
 --- linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h	2003-03-13 09:14:01.000000000 +0100
 +++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sbcall.h	2009-08-14 12:03:15.000000000 +0200
@@ -216,7 +191,6 @@ diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h linux-2.4.17_ps2.f
  /*
   *  SIF DMA services
   */
-Nur in linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2: sbcall.h.orig.
 diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h
 --- linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h	2002-04-09 10:11:52.000000000 +0200
 +++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h	2009-08-14 16:19:12.000000000 +0200
@@ -228,3 +202,25 @@ diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h linux-2.4.17_ps2.
  
  /* functions */
  
+diff -urp -x .depend linux-2.4.17_ps2/fs/Config.in linux-2.4.17_ps2.fat_and_slim/fs/Config.in
+--- linux-2.4.17_ps2/fs/Config.in	2002-11-08 12:30:32.000000000 +0100
++++ linux-2.4.17_ps2.fat_and_slim/fs/Config.in	2009-12-15 23:47:07.000000000 +0100
+@@ -107,6 +107,7 @@ if [ "$CONFIG_XFS_FS" != "n" ]; then
+        define_bool CONFIG_HAVE_XFS_DMAPI y
+     fi
+ fi
++tristate 'PS2 filesystem support' CONFIG_PS2_FS
+ 
+ if [ "$CONFIG_NET" = "y" ]; then
+ 
+diff -urp -x .depend linux-2.4.17_ps2/fs/Makefile linux-2.4.17_ps2.fat_and_slim/fs/Makefile
+--- linux-2.4.17_ps2/fs/Makefile	2002-05-28 16:41:48.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/fs/Makefile	2009-12-15 23:45:13.000000000 +0100
+@@ -68,6 +68,7 @@ subdir-$(CONFIG_SUN_OPENPROMFS)	+= openp
+ 
+ subdir-$(CONFIG_XFS_DMAPI)	+= xfs_dmapi
+ subdir-$(CONFIG_XFS_FS)		+= xfs
++subdir-$(CONFIG_PS2_FS)		+= ps2fs
+ mod-subdirs			+= xfs
+ # xfs_support is used by xfs and a couple of other SGI components.  Because CML1
+ # does not correctly handle inter-menu dependencies, set CONFIG_XFS_SUPPORT

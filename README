@@ -41,6 +41,7 @@ sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-all_fat_and_slim.patch
 sh # patch -p1 <../kernelloader/linux-2.4.17_ps2-no-bwlinux-check.patch
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.c drivers/ps2/smaprpc.c
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.h drivers/ps2/smaprpc.h
+sh # cp -r ../kernelloader/driver_ps2fs/ps2fs fs/
 
 You can add support for printk over ps2link by patching Linux (system
 start is slower, this is not recommended for normal user):
@@ -218,6 +219,7 @@ Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
 Activate "Block devices" ---> "Initial RAM disk (initrd) support"
 Activate "File systems" ---> "ISO 9660 CDROM file system support" (choose "*" and not "M")
 Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
+Activate "File systems" ---> "PS2 file system support" (choose "*" and not "M")
 
 Slim PSTwo needs access to USB devices:
 Activate "SCSI Support" ---> "SCSI Support" (choose "*" and not "M")
@@ -226,6 +228,7 @@ Activate "USB support" ---> "USB Mass storage support" (choose "*" and not "M")
 Activate "File Systems" ---> "DOS FAT fs support" (choose "*" and not "M")
 Activate "File Systems" ---> "MSDOS fs support" (choose "*" and not "M")
 Activate "File Systems" ---> "VFAT (Windows-95) fs support" (choose "*" and not "M")
+Activate "Console drivers" ---> "Frame-buffer support" ---> "Console scrollback support"
 
 Save configuration and then run:
 
@@ -235,8 +238,11 @@ sh # make
 You should strip it, to reduce loading time and to prevent out of memory errors (less than 12MB available).
 sh # /usr/local/ps2/bin/ee-strip vmlinux
 
-You need to copy the file "linux-2.4.17_ps2/vmlinux" on a ps2 memroy card
-or a USB memroy stick and insert it into your PS2.
+You can compress the file:
+sh # gzip vmlinux
+
+You need to copy the file "linux-2.4.17_ps2/vmlinux.gz" on a ps2 memory card
+or a USB memory stick and insert it into your PS2.
 
 Initrd
 ######
