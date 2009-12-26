@@ -1,3 +1,8 @@
 modload_IMPORTS_start
  I_LoadStartModuleExt
 modload_IMPORTS_end
+
+cdvdman_IMPORTS_start
+ I_sceCdInit
+ I_sceCdReadNVM
+cdvdman_IMPORTS_end

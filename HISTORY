@@ -6,6 +6,8 @@
   need to be configured in the ps2link menu.
 - Added patch for libsd which enables USB support when using
   sound modules from RTE with newer slim PSTwo (v15)
+- Read DVD region from NVM. This should work at least with
+  SCPH-77004. eromdrvloader.irx error should be fixed (untested).
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.
