@@ -10,18 +10,14 @@
 #include "defs.h"
 #include "irx.h"
 
-#include "intrman.h"
-#include "thbase.h"
-#include "stdio.h"
-#include <sifman.h>
-#include <sifcmd.h>
-
 #ifdef DEV9_SUPPORT
 #include "speedregs.h"
 #include "dev9.h"
 #endif
 
 #include "tge_hwdefs.h"
+#include "usb.h"
+#include "irx_imports.h"
 
 IRX_ID("intrelay", 1, 1);
 
@@ -178,6 +174,8 @@ int _start(int argc, char *argv[])
 		printf("cannot create thread\n");
 		return -1;
 	}
+
+	initUSB();
 
 	StartThread(res, NULL);
 	return 0;

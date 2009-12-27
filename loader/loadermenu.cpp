@@ -719,7 +719,6 @@ int setDefaultConfiguration(void *arg)
 	strcpy(configfile, CONFIG_FILE);
 
 	loaderConfig.enableSBIOSTGE = 1;
-	loaderConfig.newModulesInTGE = 0;
 	loaderConfig.enableDev9 = 1;
 	loaderConfig.enableEEDebug = 0;
 	loaderConfig.autoBootTime = 0;
@@ -737,9 +736,12 @@ int setDefaultConfiguration(void *arg)
 	if (isSlimPSTwo()) {
 		/* Value for slim PSTwo. */
 		slim = 1;
+		/* New modules seems to be more stable on slim on heavy USB use. */
+		loaderConfig.newModulesInTGE = 1;
 	} else {
 		/* Value for fat PS2. */
 		slim = -1;
+		loaderConfig.newModulesInTGE = 0;
 	}
 
 	for (i = 0; i < getNumberOfModules(); i++) {

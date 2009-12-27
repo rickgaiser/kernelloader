@@ -4,7 +4,6 @@
 
 int ps2dev9_init(void);
 int pcic_get_cardtype(void);
-void DelayThread(int delay);
 void dev9IntrEnable(int mask);
 
 #endif

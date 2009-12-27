@@ -15,6 +15,7 @@
 #ifdef DEV9_SUPPORT
 #include "dev9.h"
 #endif
+#include "dmacman.h"
 #include "intrman.h"
 #include "loadcore.h"
 #include "sifman.h"

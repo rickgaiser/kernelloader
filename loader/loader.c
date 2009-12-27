@@ -26,7 +26,6 @@
 #include "graphic.h"
 #include "smem.h"
 #include "smod.h"
-#include "usb.h"
 #include "ps2dev9.h"
 #include "hdd.h"
 #include "debug.h"
@@ -133,6 +132,8 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "host:freesio2.irx",
@@ -146,6 +147,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 		.path = "rom1:SIO2MAN",
@@ -168,6 +170,8 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "rom0:MCMAN",
@@ -175,6 +179,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 #ifdef RTE
@@ -191,6 +196,8 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "rom0:MCSERV",
@@ -198,6 +205,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 #ifdef RTE
@@ -227,6 +235,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 		.path = "rom1:PADMAN",
@@ -459,6 +468,8 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "rom0:CDVDMAN",
@@ -466,6 +477,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 		.path = "rom1:CDVDMAN",
@@ -1910,9 +1922,6 @@ int real_loader(void)
 			flush_tlbs();
 			iop_prints(U2K("TLBs flushed.\n"));
 #endif
-
-			/* Setup USB. */
-			initUSB();
 
 			iop_prints(U2K("Jump to kernel!\n"));
 			ret = entry(0 /* unused */, NULL /* unused */, (char **) ((u32) bootinfo | KSEG0_MASK), NULL /* unused */);

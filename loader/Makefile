@@ -3,7 +3,7 @@ PACKEDFILE = kloader.elf
 include ../config.mk
 
 EE_BIN = $(PROGRAM).elf
-EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o usb.o
+EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o
 EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o
 EE_OBJS += kernelgraphic.o SMS_SIF.o SMS_CDVD.o SMS_CDDA.o getrte.o getsbios.o getelf.o
 EE_OBJS += ps2dev9.o hdd.o
