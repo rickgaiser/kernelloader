@@ -373,7 +373,7 @@ int mcInit(tge_sbcall_rpc_arg_t *carg)
 		
 	default:
 		//printf("mcInit: already initialized.\n");
-		carg->result = 0;
+		carg->result = 1;
 		carg->endfunc(carg->efarg, carg->result);
 		break;
 	}
