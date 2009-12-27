@@ -408,8 +408,11 @@ intrelay-dev9-rpc.irx
 Required: Yes
 Redirects interrupts from IOP to EE.
 You need only one module. The normal module is "intrelay-direct.irx". If you
-use ps2link or ps2dev9 you need to load "intrelay-dev9.irx". When you have a
-slim PSTwo you should use a module with "rpc" in the name and a Linux patch:
+use ps2link or ps2dev9 you need to load "intrelay-dev9.irx". The RTE module
+"iopintr.irx" doesn't include the USB initialisation. "intrelay-*.irx" modules
+include the USB initialisation, so it is recommended to use "intrelay-*.irx"
+instead of the RTE module. When you have a slim PSTwo you should use a module
+with "rpc" in the name and a Linux patch:
 
 linux-2.4.17_ps2-rpc-irq.patch
 

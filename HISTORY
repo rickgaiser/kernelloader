@@ -8,6 +8,17 @@
   sound modules from RTE with newer slim PSTwo (v15)
 - Read DVD region from NVM. This should work at least with
   SCPH-77004. eromdrvloader.irx error should be fixed (untested).
+- Moved USB initialisation from EE to IOP CPU. This makes USB more
+  stable on slim PSTwo.
+- Fixed bug in SBIOS code for MC. The bug caused system to hang
+  if the XMCMAN and XMCSERV modules are used or on heavy USB usage
+  on slim PSTwo.
+- The SBIOS code causes system hang if XPADMAN is used or on heavy
+  USB usage. PADMAN is disabled by default on a slim PSTwo.
+  Disabling means that the PS2 game pad can't be used in Linux.
+- By default the new modules are used on slim PSTwo. This makes USB
+  more stable. Sometimes there are wrong data written to USB memory
+  devices on slim PSTwo.
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.
