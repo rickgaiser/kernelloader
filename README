@@ -449,11 +449,15 @@ libsd.irx
 freesd.irx
 Required: Yes, for sound.
 Need to be loaded to get sound working. Only the RTE module is working.
+ROM1:/LIBSD from SCPH-77004 is working with sdrdrv.irx from RTE.
 
 SDRDRV
 sdrdrv.irx
 Required: Yes, for sound with original Sony Linux Kernel.
-Sound server. Only the RTE module is working.
+Sound server. Only the RTE module and ROM1:/SDRDRV from SCPH-39004 is working.
+Modules from SCPH-50004 and higher are not working (SDR driver version 4.0.1 (C) SCEI).
+The RTE version is: SDR driver version 2.0.0 (C)SCEI
+The SCPH-39004 version is: sdr driver version 1.4.0 (C)SCEI
 
 audsrv.irx
 Required: Yes, for sound with special Linux Kernel.
