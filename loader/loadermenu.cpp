@@ -19,6 +19,7 @@
 #include "getrte.h"
 #include "getsbios.h"
 #include "getelf.h"
+#include "libkbd.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -763,6 +764,32 @@ int setDefaultConfiguration(void *arg)
 	return 0;
 }
 
+int reloadModules(void *arg)
+{
+	if (isDVDVSupported()) {
+		/* Always stop CD/DVD when an error happened. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+
+		CDDA_Exit();
+	}
+
+	PS2KbdClose();
+	deinitializeController();
+
+	/* Show disc symbol while start up. */
+	setEnableDisc(true);
+
+	loadLoaderModules();
+
+	setEnableDisc(false);
+
+	initializeController();
+
+	PS2KbdInit();
+	return 0;
+}
+
 void initMenu(Menu *menu)
 {
 	int i;
@@ -1026,13 +1053,14 @@ void initMenu(Menu *menu)
 	menu->addItem("Reboot", reboot, NULL);
 
 	/* PS2LINK debug entries. */
-	Menu *ps2linkMenu = configMenu->addSubMenu("PS2LINK Options");
-	ps2linkMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
+	Menu *netMenu = configMenu->addSubMenu("Net Options");
+	netMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
 		getTexBack());
-	ps2linkMenu->addItem("Set IP address", editString, myIP);
-	ps2linkMenu->addItem("Set Netmask", editString, netmask);
-	ps2linkMenu->addItem("Set Gateway IP address", editString, gatewayIP);
-	ps2linkMenu->addItem("Set DNS IP address", editString, dnsIP);
+	netMenu->addItem("Set IP address", editString, myIP);
+	netMenu->addItem("Set Netmask", editString, netmask);
+	netMenu->addItem("Set Gateway IP address", editString, gatewayIP);
+	netMenu->addItem("Set DNS IP address", editString, dnsIP);
+	netMenu->addItem("Reload modules", reloadModules, NULL);
 
 	configMenu->addItem("Set Graphic Mode", editString, kernelGraphicMode);
 

@@ -19,6 +19,8 @@
 - By default the new modules are used on slim PSTwo. This makes USB
   more stable. Sometimes there are wrong data written to USB memory
   devices on slim PSTwo.
+- Add ability to reload modules in kernelloader (to activate a changed
+  network configuration).
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.

@@ -297,6 +297,8 @@ int loadLoaderModules(void)
 		/* Load configuration when necessary modules are loaded. */
 		if (moduleList[i].loadCfg) {
 			lrv = loadConfiguration(CONFIG_FILE);
+			/* Load configuration on startup and not on IOP reset. */
+			moduleList[i].loadCfg = 0;
 		}
 		graphic_setStatusMessage(moduleList[i].path);
 		printf("Loading module (%s)\n", moduleList[i].path);
