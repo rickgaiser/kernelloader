@@ -255,6 +255,13 @@ moduleEntry_t modules[] = {
 		.libsd = -1,
 	},
 	{
+		.path = CONFIG_DIR "/LIBSD.IRX",
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+		.libsd = -1,
+	},
+	{
 		.path = "rom0:LIBSD",
 		.buffered = 0,
 		.argLen = 0,
@@ -281,6 +288,12 @@ moduleEntry_t modules[] = {
 #else
 		.path = CONFIG_DIR "/sdrdrv.irx",
 #endif
+		.buffered = -1,
+		.argLen = 0,
+		.args = NULL,
+	},
+	{
+		.path = CONFIG_DIR "/SDRDRV.IRX",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
