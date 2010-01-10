@@ -659,14 +659,6 @@ int setExampleKernel(void *arg)
 	return 0;
 }
 
-int setWWWKernel(void *arg)
-{
-	char *fileName = (char *) arg;
-
-	strcpy(fileName, "http://mesh.dl.sourceforge.net/project/kernelloader/Linux%202.4/Linux%202.4.17%20Kernel/vmlinux_fat_and_slim_v2.gz");
-	return 0;
-}
-
 int showFilename(void *arg)
 {
 	char *fileName = (char *) arg;
@@ -723,7 +715,7 @@ int setDefaultConfiguration(void *arg)
 	loaderConfig.enableDev9 = 1;
 	loaderConfig.enableEEDebug = 0;
 	loaderConfig.autoBootTime = 0;
-	loaderConfig.patchLibsd = 1;
+	loaderConfig.patchLibsd = 0;
 
 	if (sbiosCallEnabled == NULL) {
 		sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
@@ -879,7 +871,6 @@ void initMenu(Menu *menu)
 	//linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
 	linuxMenu->addItem("Edit Filename", editString, (void *) &kernelFilename);
 	linuxMenu->addItem("Example Kernel", setExampleKernel, (void *) &kernelFilename);
-	linuxMenu->addItem("Linux Kernel from WWW", setWWWKernel, (void *) &kernelFilename);
 
 	static fsRootParam_t kusbParam = {
 		kernelFilename,
