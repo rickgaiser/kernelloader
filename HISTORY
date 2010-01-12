@@ -21,6 +21,9 @@
   devices on slim PSTwo.
 - Add ability to reload modules in kernelloader (to activate a changed
   network configuration).
+- Add SBIOS call for reading burned DVD video discs. This allows to
+  run live Linux DVDs. A patched Linux kernel is required to use the
+  new SBIOS call (vmlinux_fat_and_slim_v4.gz).
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.

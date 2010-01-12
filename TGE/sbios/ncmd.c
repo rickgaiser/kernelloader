@@ -6,7 +6,7 @@
 ## (C) 2002 Nicholas Van Veen (nickvv@xtra.co.nz)
 #     2003 loser (loser@internalreality.com)
 # (c) 2004 Marcus R. Brown <mrbrown@0xd6.org> Licenced under Academic Free License version 2.0
-# (c) 2007 Mega Man
+# (c) 2007 - 2010 Mega Man
 # Review ps2sdk README & LICENSE files for further details.
 #
 # $Id$
@@ -122,6 +122,15 @@ static void cdAlignReadBuffer(void *rarg)
 	carg->endfunc(carg->efarg, carg->result);
 }
 
+static void cdCallback(void *rarg)
+{
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+
+	CDVD_UNLOCKN();
+	carg->result = 0;
+	carg->endfunc(carg->efarg, carg->result);
+}
+
 // read data from cd
 // non-blocking, requires cdSync() call
 // 
@@ -184,40 +193,42 @@ int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 	return 0;
 }
 
-#ifdef F_cdDvdRead
-int cdDvdRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
+/**
+ * Read DVD video and normal DVD discs.
+ * Sector size is 2064 instead of 2048 in sbcall_cdvdread.
+ * Data contain a 12 Byte header followed by the normal 2048
+ * Bytes.
+ */
+int sbcall_cdvdread_video(tge_sbcall_rpc_arg_t *carg)
 {
+	tge_sbcall_cdvdread_arg_t *arg = carg->sbarg;
+	CdvdReadMode_t *mode = arg->readmode;
+
+#if 0 /* not done in RTE */
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
+#endif
 	if (CD_CHECK_NCMD(CD_NCMD_DVDREAD) == 0)
-		return 0;
+		return -2;
 
-	readData[0] = lbn;
-	readData[1] = nsectors;
-	readData[2] = (u32)buf;
-	readData[3] = (rm->retries) | (rm->readSpeed << 8) | (rm->sectorType << 16);
+	readData[0] = arg->lbn;
+	readData[1] = arg->sectors;
+	readData[2] = (u32) arg->buf;
+	readData[3] = (mode->retries) | (mode->readSpeed << 8) | (mode->sectorType << 16);
 	readData[4] = (u32)_rd_intr_data;
 
-	SifWriteBackDCache(buf, nsectors * 2064);
+	SifWriteBackDCache(arg->buf, arg->sectors * 2064);
 	SifWriteBackDCache(_rd_intr_data, 144);
 	SifWriteBackDCache(readData, 24);
 
-	cdCallbackNum = CD_NCMD_DVDREAD;
-	cbSema = 1;
-
-	if (SifCallRpc(&clientNCmd, CD_NCMD_DVDREAD, SIF_RPC_M_NOWAIT, readData, 24,
-				NULL, 0, NULL, NULL) < 0) {
-		cdCallbackNum = 0;
-		cbSema = 0;
-		SignalSema(nCmdSemaId);
+	if (SifCallRpc(&clientNCmd, CD_NCMD_DVDREAD, SIF_RPC_M_NOWAIT, readData, 24, 0, 0,
+		(void *) cdCallback, carg) < 0) {
 		CDVD_UNLOCKN();
 		return -SIF_RPCE_SENDP;
 	}
 
-	SignalSema(nCmdSemaId);
-	return 1;
+	return 0;
 }
-#endif
 
 #ifdef F_cdCddaRead
 int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
@@ -629,7 +640,7 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 
 	if (cdDebug > 0) {
 		printf("cdread end\n");
-	]
+	}
 	SignalSema(nCmdSemaId);
 	return 1;
 }

@@ -211,7 +211,7 @@ static const char *sbiosDescription[] = {
 	"SBR_CDVD_READCONFIG",
 	"SBR_CDVD_WRITECONFIG",
 	"SBR_CDVD_RCBYCTL",
-	"unknown",
+	"SBR_CDVD_READ_DVD", /* Added by TGE. */
 	"unknown",
 	"unknown",
 	"unknown",
@@ -369,7 +369,7 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 95 */
 	sbcall_padinfomode,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-#if 1 /* XXX: Implementation is buggy. Sound driver lead sometimes to Linux kernel crashs. Only working with RTE libsd.irx and sdrdrv.irx. */
+	/* Sound is working with RTE libsd.irx and sdrdrv.irx and old versions from game discs. */
 	/* 112 */
 	sbcall_soundinit,
 	/* 113 */
@@ -394,32 +394,6 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	0,
 	/* 123 */
 	sbcall_soundremote,
-#else
-	/* 112 */
-	0,
-	/* 113 */
-	0,
-	/* 114 */
-	0,
-	/* 115 */
-	0,
-	/* 116 */
-	0,
-	/* 117 */
-	0,
-	/* 118 */
-	0,
-	/* 119 */
-	0,
-	/* 120 */
-	0,
-	/* 121 */
-	0,
-	/* 122 */
-	0,
-	/* 123 */
-	0,
-#endif
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 144 */
 	sbcall_mcinit,
@@ -481,7 +455,7 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	/* 187 */
 	sbcall_cdvdtrayrequest,
 	/* 188 */
-	0,
+	0, /* Installs callback function in RTE, not supported in TGE. */
 	/* 189 */
 	0,
 	/* 190 */
@@ -496,7 +470,9 @@ static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
 	0,
 	/* 195 */
 	0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 196 */
+	sbcall_cdvdread_video, /* Not part of RTE, needed to read burned DVD video discs. */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 208 */
 	0,
 	/* 209 */

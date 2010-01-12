@@ -247,7 +247,7 @@ static const char *sbiosDescription[] = {
 	"193 SBR_CDVD_READCONFIG",
 	"194 SBR_CDVD_WRITECONFIG",
 	"195 SBR_CDVD_RCBYCTL",
-	"196 unknown",
+	"196 SBR_CDVD_READ_DVD", /* Added by TGE. */
 	"197 unknown",
 	"198 unknown",
 	"199 unknown",
@@ -452,7 +452,7 @@ int defaultSBIOSCalls(void *arg)
 	arg = arg;
 
 	for (i = 0; i < numberOfSbiosCalls; i++) {
-		if ((i >= 176) && (i <= 195)) {
+		if ((i >= 176) && (i <= 196)) {
 			/* Disable CDVD, because of some problems. */
 			sbiosCallEnabled[i] = 0;
 		} else {

@@ -191,6 +191,16 @@ diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sbcall.h linux-2.4.17_ps2.f
  /*
   *  SIF DMA services
   */
+@@ -608,6 +608,9 @@ struct sbr_cdvd_rcbyctl_arg {
+     int stat;
+ };
+ 
++/* Uses sbr_cdvd_read_arg */
++#define SBR_CDVD_READ_DVD		196
++
+ /*
+  * Remote Controller
+  */
 diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h
 --- linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h	2002-04-09 10:11:52.000000000 +0200
 +++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/sifdefs.h	2009-08-14 16:19:12.000000000 +0200
@@ -224,3 +234,140 @@ diff -urp -x .depend linux-2.4.17_ps2/fs/Makefile linux-2.4.17_ps2.fat_and_slim/
  mod-subdirs			+= xfs
  # xfs_support is used by xfs and a couple of other SGI components.  Because CML1
  # does not correctly handle inter-menu dependencies, set CONFIG_XFS_SUPPORT
+diff -rup linux-2.4.17_ps2.orig/drivers/ps2/cdvd.c linux-2.4.17_ps2.fat_and_slim/drivers/ps2/cdvd.c
+--- linux-2.4.17_ps2.orig/drivers/ps2/cdvd.c	2003-04-03 09:33:14.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/drivers/ps2/cdvd.c	2010-01-12 15:18:28.000000000 +0100
+@@ -45,6 +45,9 @@
+ #define DISC_NODISC	1
+ #define DISC_RETRY	2
+ 
++#define DVD_DATA_SECT_SIZE 2064
++#define DVD_DATA_OFFSET 12
++
+ /*
+  * data types
+  */
+@@ -288,9 +291,15 @@ ps2cdvd_check_cache(void)
+ 	DPRINT(DBG_READ, "REQ %p: sec=%ld  n=%ld  buf=%p\n",
+ 	       CURRENT, CURRENT->sector,
+ 	       CURRENT->current_nr_sectors, CURRENT->buffer);
+-	memcpy(CURRENT->buffer,
+-	       ps2cdvd.databuf + DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd.databuf_addr),
+-	       DATA_SECT_SIZE);
++	if (ps2cdvd.disc_type == SCECdDVDV) {
++		memcpy(CURRENT->buffer,
++		       ps2cdvd.databuf + DVD_DATA_OFFSET + DVD_DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd.databuf_addr),
++		       DATA_SECT_SIZE);
++	} else {
++		memcpy(CURRENT->buffer,
++		       ps2cdvd.databuf + DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd.databuf_addr),
++		       DATA_SECT_SIZE);
++	}
+ 	spin_lock_irqsave(&io_request_lock, flags);
+ 	end_request(1);
+ 	spin_unlock_irqrestore(&io_request_lock, flags);
+@@ -452,9 +461,16 @@ ps2cdvd_thread(void *arg)
+ 	       sn * 4, ps2cdvd_databuf_size, ps2cdvd.databuf,
+ 	       nsects != ps2cdvd_databuf_size ? "(retry)" : "");
+ 	ps2cdvd.databuf_nsects = 0;
+-	if (ps2cdvdcall_read(sn, nsects, ps2cdvd.databuf,
+-			     &ps2cdvd.data_mode) != 0) {
+-	    NEW_STATE(STAT_CHECK_DISC);
++	if (ps2cdvd.disc_type == SCECdDVDV) {
++		if (ps2cdvdcall_read_dvd(sn, nsects, ps2cdvd.databuf,
++				     &ps2cdvd.data_mode) != 0) {
++		    NEW_STATE(STAT_CHECK_DISC);
++		}
++	} else {
++		if (ps2cdvdcall_read(sn, nsects, ps2cdvd.databuf,
++				     &ps2cdvd.data_mode) != 0) {
++		    NEW_STATE(STAT_CHECK_DISC);
++		}
+ 	}
+ 	res = ps2cdvdcall_geterror();
+ 	if (res == SCECdErNO) {
+@@ -684,12 +700,22 @@ checkdisc()
+      *  read label
+      */
+     if (read_label) {
+-	if (ps2cdvdcall_read(16, 1, ps2cdvd.labelbuf, &ps2cdvd.label_mode)!=0||
+-	    ps2cdvdcall_geterror() != SCECdErNO) {
+-	    DPRINT(DBG_DIAG, "read() failed\n");
+-	    res = DISC_ERROR;
+-	    goto error_out;
++	if (ps2cdvd.disc_type == SCECdDVDV) {
++		if (ps2cdvdcall_read_dvd(16, 1, ps2cdvd.labelbuf, &ps2cdvd.label_mode)!=0||
++		    ps2cdvdcall_geterror() != SCECdErNO) {
++		    DPRINT(DBG_DIAG, "read() failed\n");
++		    res = DISC_ERROR;
++		    goto error_out;
++		}
++	} else {
++		if (ps2cdvdcall_read(16, 1, ps2cdvd.labelbuf, &ps2cdvd.label_mode)!=0||
++		    ps2cdvdcall_geterror() != SCECdErNO) {
++		    DPRINT(DBG_DIAG, "read() failed\n");
++		    res = DISC_ERROR;
++		    goto error_out;
++		}
+ 	}
++	memcpy(ps2cdvd.labelbuf, ps2cdvd.labelbuf + DVD_DATA_OFFSET, DATA_SECT_SIZE);
+ 	ps2cdvd.label_valid = 1;
+ 	DPRINT(DBG_DLOCK, "label is valid\n");
+ #ifdef PS2CDVD_DEBUG
+@@ -752,7 +778,6 @@ spindown(void)
+     case SCECdPSCDDA:		/* PS CD DA */
+     case SCECdPSCD:		/* PS CD */
+     case SCECdPS2DVD:		/* PS2 DVD */
+-    case SCECdDVDV:		/* DVD video */
+     case SCECdIllgalMedia:	/* illegal media */
+     case SCECdUNKNOWN:		/* unknown */
+ 	DPRINT(DBG_INFO, "spindown: data\n");
+@@ -763,6 +788,15 @@ spindown(void)
+ 	ps2cdvd_invalidate_discinfo();
+ 	break;
+ 
++    case SCECdDVDV:		/* DVD video */
++	DPRINT(DBG_INFO, "spindown: data\n");
++	mode = ps2cdvd.data_mode;
++	mode.spindlctrl = SCECdSpinX2;
++	if (ps2cdvdcall_read_dvd(16, 1, ps2cdvd.databuf, &mode) != 0)
++	    DPRINT(DBG_DIAG, "spindown: data failed\n");
++	ps2cdvd_invalidate_discinfo();
++	break;
++
+     case SCECdCDDA:		/* CD DA */
+ 	DPRINT(DBG_INFO, "spindown: CD-DA\n");
+ 	mode = ps2cdvd.cdda_mode;
+@@ -860,7 +894,7 @@ int __init ps2cdvd_init(void)
+ 	 * allocate buffer
+ 	 */
+ 	DPRINT(DBG_VERBOSE, "init: allocate diaklabel buffer\n");
+-	ps2cdvd.labelbuf = kmalloc(2048, GFP_KERNEL);
++	ps2cdvd.labelbuf = kmalloc(DVD_DATA_SECT_SIZE, GFP_KERNEL);
+ 	if (ps2cdvd.labelbuf == NULL) {
+ 		printk(KERN_ERR "ps2cdvd: Can't allocate buffer\n");
+ 		ps2cdvd_cleanup();
+diff -rup linux-2.4.17_ps2.orig/include/asm-mips/ps2/cdvdcall.h linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/cdvdcall.h
+--- linux-2.4.17_ps2.orig/include/asm-mips/ps2/cdvdcall.h	2009-08-14 16:19:43.000000000 +0200
++++ linux-2.4.17_ps2.fat_and_slim/include/asm-mips/ps2/cdvdcall.h	2010-01-12 15:12:15.000000000 +0100
+@@ -216,3 +216,20 @@ static __inline__ int ps2cdvdcall_rcbyct
+ 
+ 	return (res);
+ }
++
++static __inline__ int ps2cdvdcall_read_dvd(u_int lbn, u_int sectors, void *buf,
++				       struct sceCdRMode *rmode)
++{
++	struct sbr_cdvd_read_arg arg;
++	int res;
++
++	arg.lbn = lbn;
++	arg.sectors = sectors;
++	arg.buf = buf;
++	arg.rmode = rmode;
++
++	if (sbios_rpc(SBR_CDVD_READ_DVD, &arg, &res) < 0)
++		return (-1);
++
++	return (res);
++}
