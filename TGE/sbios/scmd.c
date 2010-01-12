@@ -368,6 +368,14 @@ s32 cdPowerOff(u32 * result)
 	CDVD_UNLOCKS();
 	return *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
 }
+
+static void MmodeStage2(void *rarg)
+{
+	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+	CDVD_UNLOCKS();
+	carg->result = 1;
+	carg->endfunc(carg->efarg, carg->result);
+}
 #endif
 
 // set media mode
@@ -388,7 +396,7 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 	memcpy(sCmdSendBuff, &arg->media, 4);
 	SifWriteBackDCache(sCmdSendBuff, 4);
 
-	if (SifCallRpc(&clientSCmd, CD_SCMD_MMODE, SIF_RPC_M_NOWAIT, sCmdSendBuff, 4, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
+	if (SifCallRpc(&clientSCmd, CD_SCMD_MMODE, SIF_RPC_M_NOWAIT, sCmdSendBuff, 4, sCmdRecvBuff, 4, MmodeStage2, carg) < 0) {
 		CDVD_UNLOCKS();
 		return -SIF_RPCE_SENDP;
 	}
