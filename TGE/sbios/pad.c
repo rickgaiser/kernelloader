@@ -250,7 +250,7 @@ static void padInitCallback(void *rarg)
 			/* Go to next stage. */
 			padInitialiseCounter++;
 		} else {
-			iop_prints("Padman version number invalid.\n");
+			printf("Padman version number invalid.\n");
 			carg->result = -6;
 		}
 		break;
@@ -262,7 +262,7 @@ static void padInitCallback(void *rarg)
 		break;
 #endif
 	default:
-		iop_prints("padInitCallback() called with illegal state.\n");
+		printf("padInitCallback() called with illegal state.\n");
 		carg->result = -20;
 		break;
 	}
@@ -324,7 +324,7 @@ int sbcall_padinit(tge_sbcall_rpc_arg_t *carg)
 
 		if (SifCallRpc(&padsif[0], 1, SIF_RPC_M_NOWAIT, buffer, 128, buffer, 128,
 			padInitCallback, carg) < 0) {
-			iop_prints("Failed padGetModVersion\n");
+			printf("Failed padGetModVersion\n");
 			return -SIF_RPCE_SENDP;
 		}
 		break;
@@ -614,6 +614,7 @@ int sbcall_padinfomode(tge_sbcall_padinfomode_arg_t *arg)
 	if (*(int *) (&buffer[20]) == 1) {
 		padSetReqState(arg->port, arg->slot, PAD_RSTAT_BUSY);
 	}
+
 	return *(int *) (&buffer[20]);
 #else
 
@@ -922,6 +923,7 @@ int sbcall_padsetactdirect(tge_sbcall_rpc_arg_t *carg)
 }
 
 
+#if 0
 /*
  * Dunno about this one.. always returns 1?
  * I guess it should've returned if the pad was connected..
@@ -944,9 +946,11 @@ int padGetConnection(int port, int slot)
 		return -SIF_RPCE_SENDP;
 	}
 
+	/* XXX: Callback missing. */
 	return *(int *) (&buffer[12]);
 #endif
 }
+#endif
 
 int sbcall_padgetreqstate(tge_sbcall_padgetreqstate_arg_t *arg)
 {

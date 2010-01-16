@@ -120,7 +120,7 @@ void FlushCache(int operation)
 			break;
 		case 1:
 			/* Invalidate DCache. */
-			iop_prints("Invalidate DCache not supported (1).\n");
+			printf("Invalidate DCache not supported (1).\n");
 			break;
 		case 2:
 			/* Invalidate ICache. */
@@ -129,7 +129,7 @@ void FlushCache(int operation)
 		case 3:
 			/* Invalidate Cache. */
 			invalidateICacheAll();
-			iop_prints("Invalidate DCache not supported (3).\n");
+			printf("Invalidate DCache not supported (3).\n");
 			break;
 	}
 	core_restore(status);
