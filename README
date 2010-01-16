@@ -219,7 +219,6 @@ Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
 Activate "Block devices" ---> "Initial RAM disk (initrd) support"
 Activate "File systems" ---> "ISO 9660 CDROM file system support" (choose "*" and not "M")
 Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
-Activate "File systems" ---> "PS2 file system support" (choose "*" and not "M")
 
 Slim PSTwo needs access to USB devices:
 Activate "SCSI Support" ---> "SCSI Support" (choose "*" and not "M")
@@ -228,7 +227,13 @@ Activate "USB support" ---> "USB Mass storage support" (choose "*" and not "M")
 Activate "File Systems" ---> "DOS FAT fs support" (choose "*" and not "M")
 Activate "File Systems" ---> "MSDOS fs support" (choose "*" and not "M")
 Activate "File Systems" ---> "VFAT (Windows-95) fs support" (choose "*" and not "M")
+
+Recommended:
 Activate "Console drivers" ---> "Frame-buffer support" ---> "Console scrollback support"
+Activate "File systems" ---> "PS2 file system support" (choose "*" and not "M")
+
+DHCP support:
+Activate "Networking Options" ---> "Socket Filtering"
 
 Save configuration and then run:
 
