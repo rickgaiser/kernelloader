@@ -248,6 +248,7 @@ int isDVDVSupported(void)
 
 int loadLoaderModules(void)
 {
+	static int load_dvd_config = -1;
 	int i;
 	int rv;
 	int lrv = -1;
@@ -347,7 +348,9 @@ int loadLoaderModules(void)
 
 	fileXioInit();
 
-	if (isDVDVSupported()) {
+	if (load_dvd_config && isDVDVSupported()) {
+		load_dvd_config = 0;
+
 		CDDA_Init();
 		CDVD_Init();
 
@@ -361,7 +364,7 @@ int loadLoaderModules(void)
 			} else {
 				CDVD_SetDVDV(0);
 			}
-	
+
 			lrv = loadConfiguration(DVD_CONFIG_FILE);
 #if 0
 			if (lrv != 0) {
