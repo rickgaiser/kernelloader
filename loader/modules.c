@@ -351,12 +351,16 @@ int loadLoaderModules(void)
 	if (load_dvd_config && isDVDVSupported()) {
 		load_dvd_config = 0;
 
+		graphic_setStatusMessage("Init DVD driver");
+
 		CDDA_Init();
 		CDVD_Init();
 
 		if (lrv != NULL) {
 			DiskType type;
 	
+			graphic_setStatusMessage("Load config from DVD");
+
 			type = CDDA_DiskType();
 	
 			if (type == DiskType_DVDV) {
@@ -375,6 +379,7 @@ int loadLoaderModules(void)
 			CDVD_Stop();
 			CDVD_FlushCache();
 		}
+		graphic_setStatusMessage(NULL);
 	}
 
 	return 0;
