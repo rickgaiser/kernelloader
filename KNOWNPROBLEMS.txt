@@ -78,7 +78,7 @@ leads to segmentation faults when starting system later.
 -
 Fixed in linux initrd patch.
 
-PR#11
+PR#11 - Solved
 New ROM modules and TGE version with support for it leads to linux panic:
 Scheduling in interrupt.
 -
@@ -93,6 +93,8 @@ Only working if XMCMAN.IRX, XMCSERV.IRX and XPADMAN.IRX is not loaded.
 At least padman.irx from RTE is working.
 -
 Update: Only XPADMAN.IRX should not be loaded.
+-
+Update: Fixed SBIOS code for XPADMAN.IRX. New modules are now working.
 
 PR#12 - Workaround
 USB is not working with V12 and higher slim PSTwo console. This was

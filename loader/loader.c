@@ -222,6 +222,8 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "host:freepad.irx",
@@ -513,12 +515,16 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
 	},
 	{
 		.path = "rom0:CDVDFSV",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 1,
+		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
 	},
 	{
 		.path = "rom1:CDVDFSV",

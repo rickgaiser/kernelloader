@@ -2,20 +2,23 @@
 - Disable DVD access if loading of eromdrvloader.irx failed.
 - Added DNS client which supports TCP connections only.
 - Added support for downloading files from internet (HTTP).
-  Instead of a file name a URL can be specified. The DNS server
-  need to be configured in the ps2link menu.
+  Instead of a file name a URL can be specified (for example:
+  http://www.server.com/filename). The DNS server need to be
+  configured in the net options menu.
 - Added patch for libsd which enables USB support when using
-  sound modules from RTE with newer slim PSTwo (v15)
+  sound modules from RTE with newer slim PSTwo (v15). This patch
+  may not be required, because it is solved by enabling USB
+  from EE instead of IOP side. So the patch is by default disabled.
 - Read DVD region from NVM. This should work at least with
-  SCPH-77004. eromdrvloader.irx error should be fixed (untested).
+  SCPH-77004. eromdrvloader.irx error should be fixed (I can't
+  test this).
 - Moved USB initialisation from EE to IOP CPU. This makes USB more
   stable on slim PSTwo.
 - Fixed bug in SBIOS code for MC. The bug caused system to hang
   if the XMCMAN and XMCSERV modules are used or on heavy USB usage
   on slim PSTwo.
-- The SBIOS code causes system hang if XPADMAN is used or on heavy
-  USB usage. PADMAN is disabled by default on a slim PSTwo.
-  Disabling means that the PS2 game pad can't be used in Linux.
+- Fixed bug in SBIOS code for PAD. The bug caused system to hang
+  suddenly (mostly at startup) if XPADMAN is used.
 - By default the new modules are used on slim PSTwo. This makes USB
   more stable. Sometimes there are wrong data written to USB memory
   devices on slim PSTwo.
