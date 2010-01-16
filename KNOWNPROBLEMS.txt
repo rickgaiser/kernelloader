@@ -29,15 +29,17 @@ Problem is based on old ps2link version.
 -
 Update: poweroff.irx is now loaded by kernelloader. Power off is working.
 
-PR#4
+PR#4 - Solved
 Memory card is not working when new modules are loaded from ROM.
+-
+Update: Fixed.
 
-PR#5
+PR#5 - Solved by workaround
 CDVD driver version is not detected by TGE SBIOS.
 -
 You need to choose SBIOS version in kernelloader menu.
 
-PR#6
+PR#6 - Solved by workaround
 PAD driver version is not detected by TGE SBIOS.
 -
 You need to choose SBIOS version in kernelloader menu.
@@ -89,6 +91,8 @@ IOP heap bug fixed solved some problems, but it is not yet working.
 -
 Only working if XMCMAN.IRX, XMCSERV.IRX and XPADMAN.IRX is not loaded.
 At least padman.irx from RTE is working.
+-
+Update: Only XPADMAN.IRX should not be loaded.
 
 PR#12 - Workaround
 USB is not working with V12 and higher slim PSTwo console. This was
@@ -97,7 +101,7 @@ reported in ps2dev forums. I don't have a slim PS2, so I can't test it.
 Go to "File Menu" and select "Restore defaults".
 Then a Linux kernel with a patch is required (linux-2.4.17_ps2-rpc-irq.patch).
 
-PR#13
+PR#13 - Solved
 Game controller (pad) is not working in linux.
 -
 You need to disable IOP debug output and eedebug.irx in kernelloader menu.
@@ -122,8 +126,10 @@ Linux is not starting when eedebug.irx is loaded.
 -
 You need also to activate IOP debug output or disable the module.
 
-PR#18
+PR#18 - Solved
 After mounting CD or DVD the shutdown is not working
+-
+This should work now.
 
 PR#19
 pad: sbcall_padinfomode and sbcall_padinfoact make RPC calls when old rom modules used.
@@ -132,7 +138,7 @@ This can lead to a failure and system can be blocked.
 PR#20
 Sometimes hard disc interrupts are lost (hard disc will do nothing for some seconds).
 
-PR#21
+PR#21 - Solved by workaround
 Only kernels upto 6 MB are supported, because zlib is used for loading. Kernel size is
 not known until everything is extracted. The progress bar shows the complete available
 memory, when loading the kernel.
@@ -149,22 +155,29 @@ Then go up and select "Module List". You need to enable:
 mc0:kloader/libsd.irx
 mc0:kloader/sdrdrv.irx
 
-PR#23
+PR#23 - Solved
 USB is not working if sound modules of RTE are loaded.
 -
 You need to enable the patch for libsd.
+-
+Update no patch is needed. It should work always.
 
 PR#24
 USB is unstable with slim PSTwo (v15 and higher).
 -
 There is somewhere a deadlock. This is diffcult to debug.
+-
+Update: System is not crashing when using new modules, but wrong
+data may be written to USB.
 
-PR#25
+PR#25 - Solved
 Region detection is not working. The result is that eromdrvloader.irx can't be
 loaded.
 -
 The workaround currently is to use a european slim PSTwo or a old fat PS2 or
 slim PSTwo (v12).
+-
+Added auto detection. This hasn't been tested, but should work.
 
 PR#26
 If loading of kernel fails, the configuration can't be saved. The file is destroyed.
@@ -175,10 +188,12 @@ DNS over UDP is not working.
 -
 Only DNS over TCP is working. You need to use different name server.
 
-PR#28
+PR#28 - Solved
 Downloading from webserver not working after changing the IP configuration (DNS, Gateway).
 -
 You need to reboot. The IP configuration becomes valid after reboot.
+-
+Added menu entry for reloading IRX modules, no reboot needed.
 
 PR#29
 Kernelloader is not starting or Linux is not starting if no DVD is inserted.
@@ -186,6 +201,6 @@ Kernelloader is not starting or Linux is not starting if no DVD is inserted.
 You need to insert a PS2 compatible disc and close the tray.
 
 PR#30
-Network is not working in kernelloader.
+Network is not working in kernelloader or system is hanging at startup.
 -
 You need to connect the network cable before starting kernelloader.
