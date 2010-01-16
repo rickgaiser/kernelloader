@@ -274,9 +274,9 @@ static const char *sbiosDescription[] = {
 int numberOfSbiosCalls = sizeof(sbiosDescription) / sizeof(const char *);
 
 /** Default Linux parameter for PAL mode. */
-const char commandline_pal[] = "crtmode=pal ramdisk_size=16384";
+const char commandline_pal[] = "crtmode=pal xmode=PAL ramdisk_size=16384";
 /** Default Linux parameter for NTSC mode. */
-const char commandline_ntsc[] = "crtmode=ntsc ramdisk_size=16384";
+const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC ramdisk_size=16384";
 
 char kernelParameter[MAX_INPUT_LEN];
 
