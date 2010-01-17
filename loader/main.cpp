@@ -54,6 +54,8 @@ int main(int argc, char **argv)
 	/* Show disc symbol while start up. */
 	setEnableDisc(true);
 
+	checkROMVersion();
+
 	initMenu(menu);
 
 	loadLoaderModules();

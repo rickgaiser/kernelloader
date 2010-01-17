@@ -228,7 +228,7 @@ static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )
 
 static char version[256];
 
-static int romver;
+static int romver = 0;
 
 static int eromdrvSupport;
 
@@ -246,14 +246,26 @@ int isDVDVSupported(void)
 	return eromdrvSupport;
 }
 
+void checkROMVersion(void)
+{
+	int fd;
+	int ret;
+
+	fd = open("rom0:ROMVER", O_RDONLY);
+	if (fd >= 0) {
+		ret = read(fd, version, sizeof(version));
+		close(fd);
+		version[4] = 0;
+		romver = strtoul(version, NULL, 16);
+	}
+}
+
 int loadLoaderModules(void)
 {
 	static int load_dvd_config = -1;
 	int i;
 	int rv;
 	int lrv = -1;
-	int ret;
-	int fd;
 
 #ifdef RESET_IOP
 	graphic_setStatusMessage("Reseting IOP");
@@ -281,15 +293,6 @@ int loadLoaderModules(void)
 
 	graphic_setStatusMessage("Add eedebug handler");
 	addEEDebugHandler();
-
-	graphic_setStatusMessage("Checking ROM Version");
-	fd = open("rom0:ROMVER", O_RDONLY);
-	if (fd >= 0) {
-		ret = read(fd, version, sizeof(version));
-		close(fd);
-		version[4] = 0;
-		romver = strtoul(version, NULL, 16);
-	}
 
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {
