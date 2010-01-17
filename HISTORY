@@ -27,6 +27,8 @@
 - Add SBIOS call for reading burned DVD video discs. This allows to
   run live Linux DVDs. A patched Linux kernel is required to use the
   new SBIOS call (vmlinux_fat_and_slim_v4.gz).
+- Fixed detection of wrong console type at startup if no configuration
+  was loaded from memory card.
 
 2.0
 - Updated to PS2SDK SVN Revision 1601.
