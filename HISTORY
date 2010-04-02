@@ -1,3 +1,7 @@
+2.2
+- Screen position can be changed with the left analog stick
+  within kernelloader. Don't expect any effect in Linux.
+
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.
 - Added DNS client which supports TCP connections only.

@@ -44,6 +44,7 @@ extern "C" {
 	void setInputBuffer(char *buffer);
 	char *getInputBuffer(void);
 	void graphic_screenshot(void);
+	void moveScreen(int dx, int dy);
 #ifdef __cplusplus
 }
 #endif
