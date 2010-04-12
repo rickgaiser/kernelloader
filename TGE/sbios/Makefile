@@ -14,7 +14,7 @@ EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=
 
 EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap cache \
 	strlen strncpy memcpy pad memset strcpy cdvd ncmd scmd smod iopmem \
-	memcmp mc mutex sound
+	memcmp mc mutex sound dve_reg
 EE_OBJS = $(addsuffix _$(ROM_MODULE_VERSION).o, $(EE_FILES))
 ifeq ($(FILEIO_DEBUG),yes)
 EE_CFLAGS += -DFILEIO_DEBUG

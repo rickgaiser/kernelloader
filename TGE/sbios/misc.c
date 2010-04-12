@@ -21,6 +21,7 @@
 #include "core.h"
 #include "cdvd.h"
 #include "stdio.h"
+#include "dve_reg.h"
 
 int sbcall_getver()
 {
@@ -91,8 +92,47 @@ int sbcall_halt(tge_sbcall_halt_arg_t *arg)
 
 int sbcall_setdve(tge_sbcall_setdve_arg_t *arg)
 {
-	arg = arg;
-	return -1;
+	printf("set DVE mode %d\n", arg->mode);
+
+	dve_prepare_bus();
+
+	switch(arg->mode) {
+		case 0: /* NTSC */
+			break;
+
+		case 1: /* PAL */
+			break;
+
+		case 2: /* VESA */
+			dve_set_reg(0x77, 0x11);
+			dve_set_reg(0x93, 0x01);
+			dve_set_reg(0x91, 0x01);
+			break;
+
+		case 3: /* DTV 480P */
+			dve_set_reg(0x77, 0x11);
+			dve_set_reg(0x93, 0x01);
+			dve_set_reg(0x91, 0x02);
+			break;
+
+		case 4: /* DTV 1080I */
+			dve_set_reg(0x77, 0x11);
+			dve_set_reg(0x93, 0x01);
+			dve_set_reg(0x90, 0x04);
+			dve_set_reg(0x91, 0x03);
+			break;
+
+		case 5: /* DTV 720P */
+			dve_set_reg(0x77, 0x11);
+			dve_set_reg(0x93, 0x01);
+			dve_set_reg(0x90, 0x06);
+			dve_set_reg(0x91, 0x03);
+			break;
+
+		default:
+			break;
+	}
+	return 0;
 }
 
 int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
