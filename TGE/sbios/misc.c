@@ -23,6 +23,102 @@
 #include "stdio.h"
 #include "dve_reg.h"
 
+/**
+ * roment_t - ROMDIR entry
+ * @name: entry name
+ * @xi_size: size of information in "EXTINFO" for this entry
+ * @size: entry size
+ *
+ * This data structure represents one entry in the ROMDIR entry table.  The
+ * first entry is always "RESET", followed by "ROMDIR" and "EXTINFO".
+ */
+typedef struct {
+	char		name[10];
+	uint16_t	xi_size;
+	uint32_t	size;
+} __attribute__((packed)) romentry_t;
+
+typedef struct {
+	int	interlace;
+	int	output_mode;
+	int	field_frame_mode;
+} crtmode_t;
+
+typedef struct {
+	int	output_mode;
+	int	*dx1;
+	int *dy1;
+	int *dx2;
+	int *dy2;
+} crtoffsets_t;
+
+typedef struct {
+	const char filename[12];
+	void (*setcrtmode)(crtmode_t *mode);
+	void (*getcrtoffsets)(crtoffsets_t *offsets);
+} __attribute__((packed)) romgscrt_t;
+
+int strncmp(const char *str1, const char *str2, unsigned int len)
+{
+	unsigned int n;
+
+	n = 0;
+	while((*str1 != 0) && (*str2 != 0) && (n < len)) {
+		if (*str1 != *str2) {
+			break;
+		}
+		str1++;
+		str2++;
+		n++;
+	}
+	return *str2 - *str1;
+}
+
+romentry_t *get_romdir(unsigned int rom_addr)
+{
+	unsigned int offset;
+	romentry_t *romdir = (void *) rom_addr;
+
+	offset = 0;
+	while (offset < 0x10000) {
+		if (strncmp(romdir->name, "RESET", 6) == 0) {
+			if (((romdir->size + sizeof(*romdir) - 1) & ~(sizeof(*romdir) - 1)) == offset) {
+				return romdir;
+			} else {
+				printf("Size of RESET is wrong.\n");
+			}
+		}
+		romdir++;
+		offset += sizeof(*romdir);
+	}
+	return NULL;
+}
+
+romgscrt_t *get_romgscrt(void)
+{
+	romentry_t *romdir;
+	unsigned int addr;
+
+	addr = 0xBFC00000;
+
+	/* Get ROMDIR of first ROM. */
+	romdir = get_romdir(addr);
+	printf("romdir 0x%x\n", (unsigned int) romdir);
+
+	if (romdir != NULL) {
+		while (romdir->name[0] != 0) {
+			if (strncmp(romdir->name, "ROMGSCRT", 9) == 0) {
+				return (romgscrt_t *) addr;
+			}
+			/* Calculate address of next file in memory. */
+			addr += (romdir->size + sizeof(*romdir) - 1) & ~(sizeof(*romdir) - 1);
+			romdir++;
+		}
+	}
+	return NULL;
+}
+
+
 int sbcall_getver()
 {
 	return TGE_SBIOS_VERSION;
@@ -137,8 +233,29 @@ int sbcall_setdve(tge_sbcall_setdve_arg_t *arg)
 
 int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
 {
-	arg = arg;
-	return -1;
+	romgscrt_t *romgscrt;
+	crtmode_t crtmode;
+	crtoffsets_t crtoffsets;
+
+	romgscrt = get_romgscrt();
+	printf("ROMGSCRT at 0x%x\n", (unsigned int) romgscrt);
+	if (romgscrt != NULL) {
+		crtmode.interlace = arg->interlace;
+		crtmode.output_mode = arg->output_mode;
+		crtmode.field_frame_mode = arg->field_frame_mode;
+		romgscrt->setcrtmode(&crtmode);
+
+		crtoffsets.output_mode = arg->output_mode;
+		crtoffsets.dx1 = arg->dx1;
+		crtoffsets.dy1 = arg->dy1;
+		crtoffsets.dx2 = arg->dx2;
+		crtoffsets.dy2 = arg->dy2;
+		romgscrt->getcrtoffsets(&crtoffsets);
+
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 int sbcall_setrgbyc(tge_sbcall_setrgbyc_arg_t *arg)
