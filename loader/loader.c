@@ -32,7 +32,6 @@
 #include "pad.h"
 #include "rom.h"
 #include "eedebug.h"
-#include "kernelgraphic.h"
 #include "zlib.h"
 #include "configuration.h"
 #include "ps2dev9.h"
@@ -1756,14 +1755,6 @@ int real_loader(void)
 			| (1<<29) /* Activate COP1: FPU -> used by compiler and functions like printf. */
 			| (1<<28) /* Activate COP0: EE Core system control processor. */
 			| (1<<16) /* eie */));
-
-		gmode = getGraphicMode();
-		if (gmode[0] != 0) {
-			int mode = atoi(gmode);
-
-			iop_printf("Setting graphic mode %d.\n", mode);
-			setGraphicMode(mode);
-		}
 
 		/* Disable performance counters. */
 		SET_PCCR(0);

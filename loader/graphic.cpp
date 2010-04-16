@@ -506,6 +506,7 @@ Menu *graphic_main(void)
 	int numberOfMenuItems;
 
 	gsGlobal = gsKit_init_global();
+
 	if (isNTSCMode()) {
 		numberOfMenuItems = 7;
 	} else {

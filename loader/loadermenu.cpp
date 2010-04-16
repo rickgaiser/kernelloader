@@ -287,7 +287,6 @@ static char myIP[MAX_INPUT_LEN];
 static char netmask[MAX_INPUT_LEN];
 static char gatewayIP[MAX_INPUT_LEN];
 static char dnsIP[MAX_INPUT_LEN];
-static char kernelGraphicMode[MAX_INPUT_LEN];
 
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
@@ -708,7 +707,6 @@ int setDefaultConfiguration(void *arg)
 	strcpy(gatewayIP, "192.168.0.1");
 	strcpy(dnsIP, "192.168.0.1");
 	strcpy(pcicType, "");
-	strcpy(kernelGraphicMode, "");
 	strcpy(configfile, CONFIG_FILE);
 
 	loaderConfig.enableSBIOSTGE = 1;
@@ -793,7 +791,6 @@ void initMenu(Menu *menu)
 	addConfigTextItem("ps2linkNetmask", netmask, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkGatewayIP", gatewayIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2DNSIP", dnsIP, MAX_INPUT_LEN);
-	addConfigTextItem("ps2graphicMode", kernelGraphicMode, MAX_INPUT_LEN);
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, NULL);
@@ -1053,8 +1050,6 @@ void initMenu(Menu *menu)
 	netMenu->addItem("Set DNS IP address", editString, dnsIP);
 	netMenu->addItem("Reload modules", reloadModules, NULL);
 
-	configMenu->addItem("Set Graphic Mode", editString, kernelGraphicMode);
-
 	Menu *rteMenu = configMenu->addSubMenu("RTE Copy Menu");
 	rteMenu->addItem(configMenu->getTitle(), setCurrentMenu, configMenu,
 		getTexBack());
@@ -1140,10 +1135,6 @@ extern "C" {
 	const char *getPS2DNS(int *len) {
 		*len = strlen(dnsIP) + 1;
 		return dnsIP;
-	}
-
-	const char *getGraphicMode(void) {
-		return kernelGraphicMode;
 	}
 
 	const char *getPcicType(void)

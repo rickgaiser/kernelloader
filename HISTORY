@@ -1,6 +1,9 @@
 2.2
 - Screen position can be changed with the left analog stick
-  within kernelloader. Don't expect any effect in Linux.
+  within kernelloader. Don't expect any effect in Linux. In
+  Linux you need to use the new setcrtmode from CVS.
+- Fixed pink screen problem with component signal (YCbCr)
+- Fixed problems with VGA signal.
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.
