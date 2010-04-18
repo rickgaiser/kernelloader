@@ -10,7 +10,7 @@
 
 #include "dmarelay.h"
 
-static int tx_thid, tx_end_thid, rx_thid, rx_end_thid;
+static int smap_write_tid, tx_end_thid, smap_read_tid, rx_end_thid;
 static SifRpcDataQueue_t tx_qd, tx_end_qd, rx_qd, rx_end_qd;
 static SifRpcServerData_t tx_sd, tx_end_sd, rx_sd, rx_end_sd;
 
@@ -101,7 +101,7 @@ static void *tx_rpc_func(int fid, void *data, int size)
 	return res;
 }
 
-static void tx_rpc_thread(void *arg)
+static void smap_tx_rpc_thread(void *arg)
 {
 	sceSifSetRpcQueue(&tx_qd, GetThreadId());
 
@@ -114,12 +114,12 @@ static void tx_rpc_thread(void *arg)
 static void *tx_rpc_end_func(int fid, void *data, int size)
 {
 	SetEventFlag(smap_args->evflg, 4);
-	ReleaseWaitThread(tx_thid);
+	ReleaseWaitThread(smap_write_tid);
 
 	return NULL;
 }
 
-static void tx_rpc_end_thread(void *arg)
+static void smap_tx_rpc_end_thread(void *arg)
 {
 	sceSifSetRpcQueue(&tx_end_qd, GetThreadId());
 
@@ -219,7 +219,7 @@ static void *rx_rpc_func(int fid, void *data, int size)
 	return res;
 }
 
-static void rx_rpc_thread(void *arg)
+static void smap_rx_rpc_thread(void *arg)
 {
 	sceSifSetRpcQueue(&rx_qd, GetThreadId());
 
@@ -232,12 +232,12 @@ static void rx_rpc_thread(void *arg)
 static void *rx_rpc_end_func(int fid, void *data, int size)
 {
 	SetEventFlag(smap_args->evflg, 4);
-	ReleaseWaitThread(rx_thid);
+	ReleaseWaitThread(smap_read_tid);
 
 	return NULL;
 }
 
-static void rx_rpc_end_thread(void *arg)
+static void smap_rx_rpc_end_thread(void *arg)
 {
 	sceSifSetRpcQueue(&rx_end_qd, GetThreadId());
 
@@ -254,44 +254,52 @@ int smap_engine_init(struct eng_args *args)
 	smap_args = args;
 
 	thread.attr = TH_C;
-	thread.thread = tx_rpc_thread;
+	thread.thread = smap_tx_rpc_thread;
 	thread.stacksize = 4096;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((tx_thid = CreateThread(&thread)) < 0)
-		return tx_thid;
+	smap_write_tid = CreateThread(&thread);
+	if (smap_write_tid <= 0) {
+		return smap_write_tid;
+	}
 
-	StartThread(tx_thid, args);
+	StartThread(smap_write_tid, args); // XXX: a1 = NULL
 
 	thread.attr = TH_C;
-	thread.thread = tx_rpc_end_thread;
+	thread.thread = smap_tx_rpc_end_thread;
 	thread.stacksize = 1024;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((tx_end_thid = CreateThread(&thread)) < 0)
+	tx_end_thid = CreateThread(&thread);
+	if (tx_end_thid <= 0) {
 		return tx_end_thid;
+	}
 
-	StartThread(tx_end_thid, args);
+	StartThread(tx_end_thid, args); // XXX: a1 = NULL
 
 	thread.attr = TH_C;
-	thread.thread = rx_rpc_thread;
+	thread.thread = smap_rx_rpc_thread;
 	thread.stacksize = 4096;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((rx_thid = CreateThread(&thread)) < 0)
-		return rx_thid;
+	smap_read_tid = CreateThread(&thread);
+	if (smap_read_tid <= 0) {
+		return smap_read_tid;
+	}
 
-	StartThread(rx_thid, args);
+	StartThread(smap_read_tid, args); // XXX: a1 = NULL
 
 	thread.attr = TH_C;
-	thread.thread = rx_rpc_end_thread;
+	thread.thread = smap_rx_rpc_end_thread;
 	thread.stacksize = 1024;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((rx_end_thid = CreateThread(&thread)) < 0)
+	rx_end_thid = CreateThread(&thread);
+	if (rx_end_thid <= 0) {
 		return rx_end_thid;
+	}
 
-	StartThread(rx_end_thid, args);
+	StartThread(rx_end_thid, args); // XXX: a1 = NULL
 
-	return 0;
+	return 1;
 }

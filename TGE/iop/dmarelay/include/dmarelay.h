@@ -56,7 +56,7 @@ struct eng_args {
 	int evflg;
 };
 
-extern struct eng_args eng_args;
+extern struct eng_args dma_struct;
 
 /* RPC server ID's and function ID's.  */
 #define RPCS_ATA_DMA_BEGIN	0x2000

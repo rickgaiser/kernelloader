@@ -60,7 +60,7 @@ static void dma_stop(int val)
 	/*M_PRINTF("ATA DMA force break\n"); */
 }
 
-static void read_thread(void *arg)
+static void ata_dma_read_thread(void *arg)
 {
 	USE_SPD_REGS;
 	volatile iop_dmac_chan_t *dev9_chan =
@@ -156,7 +156,7 @@ static void read_thread(void *arg)
 	}
 }
 
-static void write_thread(void *arg)
+static void ata_dma_write_thread(void *arg)
 {
 	USE_SPD_REGS;
 	volatile iop_dmac_chan_t *dev9_chan =
@@ -232,7 +232,7 @@ static void *rpc_func(int fid, void *buf, int bufsize)
 	return res;
 }
 
-static void rpc_thread(void *unused)
+static void ata_rpc_thread(void *unused)
 {
 	sceSifSetRpcQueue(&qd, GetThreadId());
 
@@ -244,13 +244,13 @@ static void rpc_thread(void *unused)
 
 static void *rpc_end_func(int fid, void *buf, int bufsize)
 {
-	SetEventFlag(eng_args.evflg, EF_ATA_DONE);
+	SetEventFlag(dma_struct.evflg, EF_ATA_DONE);
 
 	ReleaseWaitThread(cur_thid);
 	return NULL;
 }
 
-static void rpc_end_thread(void *unused)
+static void ata_rpc_end_thread(void *unused)
 {
 	sceSifSetRpcQueue(&end_qd, GetThreadId());
 
@@ -267,50 +267,58 @@ int ata_engine_init(struct eng_args *args)
 
 	/* DMA read thread.  */
 	thread.attr = TH_C;
-	thread.thread = read_thread;
+	thread.thread = ata_dma_read_thread;
 	thread.stacksize = 4096;
 	thread.priority = 21;
 	thread.option = 0;
-	if ((read_thid = CreateThread(&thread)) < 0)
+	read_thid = CreateThread(&thread);
+	if (read_thid <= 0) {
 		return read_thid;
+	}
 
-	StartThread(read_thid, args);
+	StartThread(read_thid, args); // XXX: a1 = NULL
 
 	/* DMA write thread.  */
 	thread.attr = TH_C;
-	thread.thread = write_thread;
+	thread.thread = ata_dma_write_thread;
 	thread.stacksize = 4096;
 	thread.priority = 21;
 	thread.option = 0;
-	if ((write_thid = CreateThread(&thread)) < 0)
+	write_thid = CreateThread(&thread);
+	if (write_thid <= 0) {
 		return write_thid;
+	}
 
-	StartThread(write_thid, args);
+	StartThread(write_thid, args); // XXX: a1 = NULL
 
 	/* RPC thread.  */
 	thread.attr = TH_C;
-	thread.thread = rpc_thread;
+	thread.thread = ata_rpc_thread;
 	thread.stacksize = 4096;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((thid = CreateThread(&thread)) < 0)
+	thid = CreateThread(&thread);
+	if (thid <= 0) {
 		return thid;
+	}
 
-	StartThread(thid, NULL);
+	StartThread(thid, NULL); // XXX: a1 = NULL
 
 	/* RPC end thread.  */
 	thread.attr = TH_C;
-	thread.thread = rpc_end_thread;
+	thread.thread = ata_rpc_end_thread;
 	thread.stacksize = 1024;
 	thread.priority = 20;
 	thread.option = 0;
-	if ((thid = CreateThread(&thread)) < 0)
+	thid = CreateThread(&thread);
+	if (thid <= 0) {
 		return thid;
+	}
 
-	StartThread(thid, NULL);
+	StartThread(thid, NULL); //XXX: a1 = NULL
 
 	if (!(dma_buffer = AllocSysMemory(0, ATA_BUFFER_SIZE, NULL)))
 		return -12;
 
-	return 0;
+	return 1;
 }
