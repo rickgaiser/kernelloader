@@ -3,26 +3,19 @@ patched jump must be also a nop.
 
 Error in ps2sdk: In function sbcall_cdvdgettoc() the return value of cdCheckNCmd() is not correctly checked.
 
-Check if ps2link modules need not to be loaded before.
-
 EXT2/EXT3 file system support in kernelloader for USB and harddisc.
 
 FTP support in kernelloader.
-
-DVD video support in Linux kernel.
 
 Boot from burned DVD video (installer).
 
 Linux installer program.
 
-DVD Video support in Linux.
-
 Audio support in Linux.
 
 DNS support for UDP instead of TCP.
 
-Patch for freesd.irx on slim PSTwo (v15).
-
 Display of long file names not working when loading kernel or initrd.
 
-Reload IOP modules if IP configuration has been changed.
+Describe menu entries, especially what "TGE for new modules mean" -> only for XPADMAN. Other stuff is
+autodetected except XCDVDMAN which may only cause shutdown to fail and other unimportant stuff.
