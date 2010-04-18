@@ -84,8 +84,6 @@ romentry_t *get_romdir(unsigned int rom_addr)
 		if (strncmp(romdir->name, "RESET", 6) == 0) {
 			if (((romdir->size + sizeof(*romdir) - 1) & ~(sizeof(*romdir) - 1)) == offset) {
 				return romdir;
-			} else {
-				printf("Size of RESET is wrong.\n");
 			}
 		}
 		romdir++;
@@ -103,7 +101,6 @@ romgscrt_t *get_romgscrt(void)
 
 	/* Get ROMDIR of first ROM. */
 	romdir = get_romdir(addr);
-	printf("romdir 0x%x\n", (unsigned int) romdir);
 
 	if (romdir != NULL) {
 		while (romdir->name[0] != 0) {
@@ -188,7 +185,19 @@ int sbcall_halt(tge_sbcall_halt_arg_t *arg)
 
 int sbcall_setdve(tge_sbcall_setdve_arg_t *arg)
 {
+	romgscrt_t *romgscrt;
+
 	printf("set DVE mode %d\n", arg->mode);
+
+	/* The following is a workaround to get BSD working on newer consoles. */
+	/* VGA should be selected in kernelloader to get it working with BSD. */
+	romgscrt = get_romgscrt();
+	if (romgscrt != NULL) {
+		/* sbcall_setgscrt() should be used. */
+		/* BSD uses sbcall_setdve(), I think this only works on the first PS2. */
+		printf("Err: Cancel setting DVE mode.\n");
+		return -1;
+	}
 
 	dve_prepare_bus();
 
@@ -238,7 +247,6 @@ int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
 	crtoffsets_t crtoffsets;
 
 	romgscrt = get_romgscrt();
-	printf("ROMGSCRT at 0x%x\n", (unsigned int) romgscrt);
 	if (romgscrt != NULL) {
 		crtmode.interlace = arg->interlace;
 		crtmode.output_mode = arg->output_mode;
@@ -254,6 +262,8 @@ int sbcall_setgscrt(tge_sbcall_setgscrt_arg_t *arg)
 
 		return 0;
 	} else {
+		/* sbcall_setdve() should be used instead. */
+		printf("Err: ROMGSCRT is not available.\n");
 		return -1;
 	}
 }
@@ -277,7 +287,7 @@ void FlushCache(int operation)
 			break;
 		case 1:
 			/* Invalidate DCache. */
-			printf("Invalidate DCache not supported (1).\n");
+			printf("Inval DCache not supp1.\n");
 			break;
 		case 2:
 			/* Invalidate ICache. */
@@ -286,7 +296,7 @@ void FlushCache(int operation)
 		case 3:
 			/* Invalidate Cache. */
 			invalidateICacheAll();
-			printf("Invalidate DCache not supported (3).\n");
+			printf("Inval DCache not supp3.\n");
 			break;
 	}
 	core_restore(status);

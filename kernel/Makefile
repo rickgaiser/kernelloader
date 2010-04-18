@@ -10,16 +10,17 @@ INSTALLFILE = ../loader/kernel.elf
 OBJ_DIR = obj
 
 # We specify -G0 to get rid of gp register problems.
-CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G0 -O0 -mips3 -nostdlib -DPS2_EE
+CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G0 -O0 \
+	-mips3 -nostdlib -DPS2_EE -I../include
 
 SRC = start $(PROGRAM) rtesif strlen strncpy \
 	cache timers irq interrupts panic mmu demo loader syscall \
 	entry graphic time string exception memory thread intc dmac \
-	ledflash
+	ledflash memcmp
 
 ifeq ($(SHARED_MEM_DEBUG),yes)
 CFLAGS += -DSHARED_MEM_DEBUG
-SRC += iopmem printf snprintf
+SRC += iopmem printf snprintf smod
 endif
 
 

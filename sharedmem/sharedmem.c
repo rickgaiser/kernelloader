@@ -7,13 +7,24 @@
 #include <cdvdman.h>
 #include <sysclib.h>
 
-#define MODNAME "sharedmem"
+#include "sharedmem.h"
+
+#define MODNAME SHAREDMEM_MODULE_NAME
 IRX_ID(MODNAME, 1, 1);
 
 static void ioThread(void *param);
 
-/** IOP memory address used as shared memory. */
-volatile unsigned char *sharedMem = (unsigned char *) 0x001ff000;
+/** The EE side searches for this structure in the data and BSS segement. */
+volatile sharedmem_dbg_t dbg __attribute__((aligned(16))) =
+{
+	.magic = SHAREDMEM_MAGIC,
+	.shared = {
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+	}
+};
 
 /** IOP Module entry point, install i/o thread listening on shared memory address. */
 int _start(int argc, char **argv)
@@ -21,8 +32,9 @@ int _start(int argc, char **argv)
 	iop_thread_t param;
 	int th;
 
-	printf("sharedMem = 0x%02x\n", *sharedMem);
-	sharedMem[0] = 0;
+	printf("Started module " MODNAME ", magic at 0x%08x\n", &dbg);
+	printf("sharedMem[0] = 0x%02x\n", dbg.shared[0]);
+	dbg.shared[0] = 0;
 
 	param.attr = TH_C;
 	param.thread = ioThread;
@@ -41,26 +53,14 @@ int _start(int argc, char **argv)
 
 static void ioThread(void *param)
 {
-#if 0
-	int c;
-
-	c = 0;
-#endif
 	printf("Started io thread\n");
 	while(1) {
 		/* Wait until something has been received. */
-		while(sharedMem[0] == 0) {
-#if 0
-			c++;
-			if (c == 500) {
-				c = 0;
-				printf("sharedmem SifReg 31 %d\n", sceSifGetSreg(31));
-			}
-#endif
+		while(dbg.shared[0] == 0) {
 			DelayThread(1000);
 		}
 		/* Print received character. */
-		printf("%c", sharedMem[1]);
-		sharedMem[0] = 0;
+		printf("%c", dbg.shared[1]);
+		dbg.shared[0] = 0;
 	}
 }

@@ -87,10 +87,6 @@ static void cdvdreadrtcStage2(void *rarg)
 
 	memcpy(arg, UNCACHED_SEG(sCmdRecvBuff + 4), 8);
 
-	if (cdDebug > 0) {
-		printf("Libcdvd call Clock read 2\n");
-	}
-
 	CDVD_UNLOCKS();
 	carg->result = *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
 	carg->endfunc(carg->efarg, carg->result);
@@ -106,10 +102,6 @@ int sbcall_cdvdreadrtc(tge_sbcall_rpc_arg_t *carg)
 	//tge_sbcall_cdvdwritertc_arg_t *arg = carg->sbarg;
 	if (CD_CHECK_SCMD(CD_SCMD_READCLOCK) == 0)
 		return -1;
-
-	if (cdDebug > 0) {
-		printf("Libcdvd call Clock read 1\n");
-	}
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_READCLOCK, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 16, cdvdreadrtcStage2, carg) < 0) {
 		CDVD_UNLOCKS();
@@ -453,13 +445,13 @@ int cdvdLockS(const char *file, int line)
 	core_save_disable(&status);
 	core_restore(status);
 	if (sbios_tryLock(&cdvdMutexS)) {
-		printf("cdvdLockS %s:%d failed 1\n", file, line);
+		printf("cdvdLockS %s:%d fail 1\n", file, line);
 		return 1;
 	}
 	// check status and return
 	if (SifCheckStatRpc(&clientSCmd)) {
 		sbios_unlock(&cdvdMutexS);
-		printf("cdvdLockS %s:%d failed 2\n", file, line);
+		printf("cdvdLockS %s:%d fail 2\n", file, line);
 		return 1;
 	}
 #if 0

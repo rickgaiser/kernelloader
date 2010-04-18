@@ -10,6 +10,8 @@
 /** iopmem module need to be informed when in kernel mode, to handle it correctly. */
 void iop_kmode_enter(void);
 #endif
+/** Initialize shared memory debug. */
+void iop_init_shared(void);
 /** Read iop memory. */
 u32 iop_read(void *addr, void *buf, u32 size);
 /** Write to iop memory. */
@@ -23,6 +25,8 @@ int iop_printf(const char *format, ...);
 /** Print 32-bit value as hexadecimal. */
 void iop_printx(uint32_t val);
 #else
+/** Do nothing. */
+#define iop_init_shared()
 /** Do nothing. */
 #define iop_putc(c)
 /** Do nothing. */

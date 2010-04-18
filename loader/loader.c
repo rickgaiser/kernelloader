@@ -382,7 +382,6 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 	},
 #endif
-#if 0 /* Debug module is unstable. */
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,
@@ -394,7 +393,6 @@ moduleEntry_t modules[] = {
 		.load = 0,
 #endif
 	},
-#endif
 	{
 #ifdef RTE
 		.path = "host:RTE/iopintr.irx",
@@ -1722,6 +1720,12 @@ int real_loader(void)
 		startModules(bootinfo);
 
 		graphic_setStatusMessage("Started all modules");
+
+		iop_init_shared();
+
+#ifdef USER_SPACE_SUPPORT
+		iop_prints("User mode sharedmem test\n");
+#endif
 
 		//printf("Started modules\n");
 

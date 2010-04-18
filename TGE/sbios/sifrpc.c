@@ -197,7 +197,7 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 
 	if ((((u32) recvbuf) & 0x0f) != 0) {
 		/* This is fatal and will lead to write accesses on wrong memory addresses. */
-		printf("SifCallRpc recvbuf 0x%x is not aligned (fid 0x%x rpc number 0x%x).\n", (uint32_t) recvbuf, (cd->server != NULL) ? cd->server->sid : 0, rpc_number);
+		printf("SifCallRpc 0x%x is not aligned (fid 0x%x rpc nr 0x%x).\n", (uint32_t) recvbuf, (cd->server != NULL) ? cd->server->sid : 0, rpc_number);
 	}
 
 	if (!(mode & SIF_RPC_M_NOWBDC)) {
@@ -318,13 +318,13 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	data = data;
 
 	pkt_addr = client->hdr.pkt_addr;
-#ifdef SBIOS_DEBUG
+#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
 	printf("cid 0x%x pkt_addr 0x%x\n", (uint32_t) request->cid, (uint32_t) pkt_addr);
 #endif
 	if (request->cid == 0x8000000a) {
 		/* Response to RPC call. */
 		if (client->end_function) {
-#ifdef SBIOS_DEBUG
+#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
 			printf("Calling 0x%x\n", (uint32_t) client->end_function);
 #endif
 			client->end_function(client->end_param);
@@ -336,7 +336,7 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 		client->cbuff  = request->cbuff;
 		/* Callback is not part of PS2SDK, but is required for linux. */
 		if (client->end_function) {
-#ifdef SBIOS_DEBUG
+#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
 			printf("Calling 0x%x\n", (uint32_t) client->end_function);
 #endif
 			client->end_function(client->end_param);

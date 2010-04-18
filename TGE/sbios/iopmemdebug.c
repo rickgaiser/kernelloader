@@ -1,10 +1,71 @@
 #include "iopmemdebug.h"
 #include "iopmem.h"
 #include "core.h"
+#include "tge_defs.h"
+#include "sharedmem.h"
+#include "smod.h"
+#include "string.h"
 
 #define SBIOS_DEBUG 1
 
-static unsigned char *sharedMem = (unsigned char *) 0x001ff000;
+static unsigned char *sharedMem = (unsigned char *) NULL;
+
+static int initialized = 0;
+
+/** Search for module by name. */
+int find_module(smod_mod_info_t *module, const char *searchtext)
+{
+	smod_mod_info_t *current;
+	char name[32];
+	int i;
+	int len;
+
+	len = strlen(searchtext);
+	current = NULL;
+	i = 0;
+	while (smod_get_next_mod(current, module) != 0)
+	{
+		iop_read(module->name, name, sizeof(name));
+		name[sizeof(name) - 1] = 0;
+
+		if (memcmp(name, searchtext, len) == 0) {
+			return 0;
+		}
+		current = module;
+		i++;
+	}
+	return -1;
+}
+
+
+/** Initialize shared memory pointer. */
+void iop_init_shared(void)
+{
+	smod_mod_info_t module;
+	char magic[32];
+
+	if (find_module(&module, SHAREDMEM_MODULE_NAME) == 0) {
+		u32 addr;
+		u32 end;
+
+		addr = module.text_start + module.text_size;
+		end = addr + module.data_size + module.bss_size;
+
+		addr = (addr + 16 - 1) & ~(16 - 1);
+
+		while(addr < end) {
+			iop_read((void *) addr, magic, sizeof(magic));
+			if (memcmp(magic, SHAREDMEM_MAGIC, sizeof(SHAREDMEM_MODULE_NAME)) == 0) {
+				sharedmem_dbg_t *dbg = (void *) addr;
+				sharedMem = &dbg->shared[0];
+				initialized = 2;
+				return;
+			}
+			addr += 16;
+		}
+	}
+	initialized = 1;
+}
 
 /** Print one character. */
 static void iop_putc(unsigned char c)
@@ -12,6 +73,13 @@ static void iop_putc(unsigned char c)
 #ifdef SBIOS_DEBUG
 	char buf[2];
 	uint32_t status;
+
+	if (initialized == 0) {
+		iop_init_shared();
+	}
+	if (initialized == 1) {
+		return;
+	}
 
 	core_save_disable(&status);
 	do {
@@ -33,6 +101,13 @@ void iop_printx(uint32_t val)
 {
 	int i;
 
+	if (initialized == 0) {
+		iop_init_shared();
+	}
+	if (initialized == 1) {
+		return;
+	}
+
 	for (i = 0; i < 8; i++) {
 		char v;
 
@@ -48,6 +123,12 @@ void iop_printx(uint32_t val)
 /** Print one string. */
 void iop_prints(const char *text)
 {
+	if (initialized == 0) {
+		iop_init_shared();
+	}
+	if (initialized == 1) {
+		return;
+	}
 	while(*text != 0) {
 		iop_putc(*text);
 		text++;
@@ -56,6 +137,12 @@ void iop_prints(const char *text)
 
 int puts(const char *s)
 {
+	if (initialized == 0) {
+		iop_init_shared();
+	}
+	if (initialized == 1) {
+		return 0;
+	}
 	while(*s != 0) {
 		iop_putc(*s);
 		s++;

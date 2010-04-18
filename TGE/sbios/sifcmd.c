@@ -90,7 +90,7 @@ static u32 sifCmdInitPkt[5] __attribute__((aligned(64))); /* 0x80009540 */
 cmd_data_t _sif_cmd_data; /* 0x80009554 */
 static sifCmdHandler_t sifCmdSysBuffer[CMD_HANDLER_MAX]; /* 0x80009578 */
 static u32 sregs[32]; /* 0x80009678 - 0x800096f4 */
-sr_pkt_t testSr __attribute__((aligned(64)));
+//sr_pkt_t testSr __attribute__((aligned(64)));
 
 void dmac5_debug(void)
 {
@@ -189,7 +189,7 @@ static void sif_cmd_interrupt()
 	header = (tge_sifcmd_header_t *)packet;
 	/* Get the command handler id and determine which handler list to
 	   dispatch from.  */
-#ifdef SBIOS_DEBUG
+#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
 	printf("fid 0x%x\n", header->fid);
 #endif
 	id = header->fid & ~SYSTEM_CMD;
@@ -205,7 +205,7 @@ static void sif_cmd_interrupt()
 	}
 
 	if ((cmd_handlers != NULL) && (cmd_handlers[id].handler != NULL)) {
-#ifdef SBIOS_DEBUG
+#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
 		printf("Callback 0x%x\n", (uint32_t) cmd_handlers[id].handler);
 #endif
 		cmd_handlers[id].handler(packet, cmd_handlers[id].harg);
@@ -336,7 +336,7 @@ void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 			_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].handler = handler;
 			_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].harg = harg;
 		} else {
-			printf("Error: SifAddCmdHandler() sys_cmd_handlers not setup.\n");
+			printf("Err: sys_cmd_handlers not set.\n");
 		}
 	}
 	else
@@ -345,7 +345,7 @@ void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 			_sif_cmd_data.usr_cmd_handlers[(u32) fid].handler = handler;
 			_sif_cmd_data.usr_cmd_handlers[(u32) fid].harg = harg;
 		} else {
-			printf("Error: SifAddCmdHandler() usr_cmd_handlers not setup.\n");
+			printf("Err: usr_cmd_handlers not set.\n");
 		}
 	}
 }

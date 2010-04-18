@@ -17,7 +17,7 @@ int sbios_tryLock(sbios_mutex_t *mutex) {
 	u32 status;
 
 	if (mutex == NULL) {
-		printf("Error: mutex is invalid.\n");
+		printf("mutex inval\n");
 		return -1;
 	}
 	core_save_disable(&status);
@@ -39,7 +39,7 @@ void sbios_unlock(sbios_mutex_t *mutex) {
 	u32 status;
 
 	if (mutex == NULL) {
-		printf("Error: mutex is invalid.\n");
+		printf("mutex inval\n");
 		return;
 	}
 
@@ -49,7 +49,7 @@ void sbios_unlock(sbios_mutex_t *mutex) {
 		core_restore(status);
 	} else {
 		core_restore(status);
-		printf("Error: mutex unlock error.\n");
+		printf("mutex err\n");
 	}
 }
 

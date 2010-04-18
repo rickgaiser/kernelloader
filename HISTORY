@@ -4,6 +4,8 @@
   Linux you need to use the new setcrtmode from CVS.
 - Fixed pink screen problem with component signal (YCbCr)
 - Fixed problems with VGA signal.
+- Added better BSD Support (still not fully working).
+- Reworked code (mainly debug code, sharedmem.irx).
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.

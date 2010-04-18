@@ -135,7 +135,7 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	// Working with RTE until here:
 
 #if 0
-	/* Not wroking with RTE disc, but working with kernelloader. */
+	/* Not working with RTE disc, but working with kernelloader. */
 	bootinfo = (struct ps2_bootinfo *) envp;
 
 	sbios = *((sbios_t **) bootinfo->sbios_base);

@@ -6,8 +6,21 @@ EE_OBJCOPY = $(EE_PREFIX)objcopy
 # Default value, overwritten by calling makefile.
 ROM_MODULE_VERSION=old
 
-EE_INCS = -I. -I../include
-EE_CFLAGS = -D_EE -O2 -G0 -Wall -g $(EE_INCS) -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -fno-builtin-memcpy -fno-builtin-memset -Werror
+EE_INCS = -I. -I../include -I../../include
+EE_CFLAGS = -D_EE
+EE_CFLAGS += -G0 -Wall -g
+ifeq ($(SBIOS_DEBUG),yes)
+# Debug code need more memory, so optimize for size.
+EE_CFLAGS += -Os
+# Optimize for speed.
+else
+EE_CFLAGS += -O2
+endif
+EE_CFLAGS += $(EE_INCS)
+EE_CFLAGS += -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -Werror
+EE_CFLAGS += -fno-builtin-memcpy -fno-builtin-memset
+# BSD doesn't enable floating point registers. Only printf() saves them as precaution.
+EE_CFLAGS += -msoft-float
 
 SBIOS_ADDR = 0x80001000
 EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)

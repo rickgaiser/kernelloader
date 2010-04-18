@@ -18,7 +18,7 @@ EE_LIBS += -lm -ldebug
 EE_FLAGS = -g -I$(PS2DEV)/gsKit/include -I../include
 EE_FLAGS += -Wall -W
 ifeq ($(SHARED_MEM_DEBUG),yes)
-EE_FLAGS += -DSHARED_MEM_DEBUG
+EE_FLAGS += -DSHARED_MEM_DEBUG -DUSER_SPACE_SUPPORT=1
 EE_OBJS += iopmem.o
 endif
 ifeq ($(LOAD_PS2LINK),yes)

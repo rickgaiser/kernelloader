@@ -4,11 +4,9 @@ EXAMPLE_ELF = ../ps2tut_01/demo1.elf
 #EXAMPLE_ELF = ../hello/hello.elf
 
 # Debug output using shared memory (working without RPC).
-# This is not working in newer versions, because shared memory
-# address is bad and seems to be used by modules on IOP side.
 SHARED_MEM_DEBUG = no
 
-# Reset IOP at start
+# Reset IOP at start (only working when enabled)
 RESET_IOP = yes
 
 # Activate ps2link debug modules in kernelloader (has only effect when IOP
@@ -28,7 +26,7 @@ NEW_ROM_MODULES = no
 # Press button "R1" to get a screenshot on "host:" or "mass0:".
 SCREENSHOT = yes
 
-# Activate debug for SBIOS.
+# Activate debug for SBIOS (has only effect with shared memory debug).
 SBIOS_DEBUG = no
 
 # Activate printf callback in SBIOS

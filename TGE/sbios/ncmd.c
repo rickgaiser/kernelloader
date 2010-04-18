@@ -72,19 +72,19 @@ SifRpcClientData_t clientNCmd __attribute__ ((aligned(64)));	// for n-cmds
 
 s32 nCmdNum = 0;
 
-u32 readStreamData[5] __attribute__ ((aligned(64)));
+//u32 readStreamData[5] __attribute__ ((aligned(64)));
 u32 readData[6] __attribute__ ((aligned(64)));
-CdvdChain_t readChainData[66] __attribute__ ((aligned(64)));
+//CdvdChain_t readChainData[66] __attribute__ ((aligned(64)));
 u32 getTocSendBuff[3] __attribute__ ((aligned(64)));	// get toc
 u32 _rd_intr_data[64] __attribute__ ((aligned(64)));
 u32 curReadPos __attribute__ ((aligned(64)));
 u8 tocBuff[3072] __attribute__ ((aligned(64)));	// toc buffer (for cdGetToc())
 u8 nCmdRecvBuff[64] __attribute__ ((aligned(64)));
-u8 nCmdSendBuff[64] __attribute__ ((aligned(64)));
-s32 streamStatus = 0;
-CdvdReadMode_t dummyMode;
-u32 seekSector __attribute__ ((aligned(64)));
-u8 cdda_st_buf[64] ALIGNED(64);
+//u8 nCmdSendBuff[64] __attribute__ ((aligned(64)));
+//s32 streamStatus = 0;
+//CdvdReadMode_t dummyMode;
+//u32 seekSector __attribute__ ((aligned(64)));
+//u8 cdda_st_buf[64] ALIGNED(64);
 
 /** Mutex to protect RPC calls. */
 static sbios_mutex_t cdvdMutexN = SBIOS_MUTEX_INIT;
