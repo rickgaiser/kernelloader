@@ -88,3 +88,9 @@ int MenuEntry::execute(void)
 	}
 	return 0;
 }
+
+void MenuEntry::reset(GSGLOBAL *gsGlobal, GSFONTM *gsFont)
+{
+	this->gsGlobal = gsGlobal;
+	this->gsFont = gsFont;
+}

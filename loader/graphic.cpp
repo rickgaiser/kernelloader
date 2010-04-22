@@ -10,6 +10,7 @@
 #include "rom.h"
 #include "graphic.h"
 #include "loader.h"
+#include "configuration.h"
 #include <screenshot.h>
 
 
@@ -28,10 +29,15 @@
 /** Size of small textures (will be uploaded). */
 #define SMALL_TEXT_SIZE 0x4000
 
+/** GS_MODE_VGA_1280_75 is not used, use it as special value for autodetect. */
+#define GS_AUTO_DETECT GS_MODE_VGA_1280_75
+
 /** True, if graphic is initialized. */
 static bool graphicInitialized = false;
 
 static Menu *menu = NULL;
+
+static Menu *mainMenu = NULL;
 
 static bool enableDisc = 0;
 
@@ -109,6 +115,41 @@ int scrollPos = 0;
 int inputScrollPos = 0;
 
 u32 globalVram;
+
+u32 modeList[] = {
+	GS_AUTO_DETECT,
+	GS_MODE_VGA_640_60,
+	GS_MODE_VGA_640_72,
+	GS_MODE_VGA_640_75,
+	GS_MODE_VGA_640_85,
+	GS_MODE_DTV_480P,
+	GS_MODE_NTSC,
+	GS_MODE_PAL,
+};
+int currentMode = 0;
+int lastMode = 0;
+
+int frequenzy[] = {
+	0,
+	60,
+	72,
+	75,
+	85,
+	60,
+	60,
+	50,
+};
+
+const char *modeDescription[] = {
+	"Auto",
+	"640x480 60Hz",
+	"640x480 72Hz",
+	"640x480 75Hz",
+	"640x480 85Hz",
+	"480P",
+	"NTSC",
+	"PAL",
+};
 
 static void gsKit_texture_upload_inline(GSGLOBAL *gsGlobal, GSTEXTURE *Texture)
 {
@@ -287,7 +328,7 @@ void graphic_common(void)
 	paintTexture(texPenguin, 5, 10, 1);
 
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
-		"Loader for Linux " LOADER_VERSION
+		"kernelloader " LOADER_VERSION
 #ifdef RESET_IOP
 		"R"
 #endif
@@ -310,6 +351,8 @@ void graphic_common(void)
 		"S"
 #endif
 	);
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY - 15, 3, 0.5, TexBlack,
+		modeDescription[currentMode]);
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
@@ -492,9 +535,30 @@ GSTEXTURE *getTexture(const char *filename)
 	return tex;
 }
 
+void reallocTexture(GSTEXTURE *tex)
+{
+	u32 size;
+
+	size = gsKit_texture_size_ee(tex->Width, tex->Height, tex->PSM);
+	if (size <= SMALL_TEXT_SIZE) {
+		tex->Vram = gsKit_vram_alloc(gsGlobal, gsKit_texture_size(tex->Width, tex->Height, tex->PSM), GSKIT_ALLOC_USERBUFFER);
+		if (tex->Vram != GSKIT_ALLOC_ERROR) {
+			gsKit_texture_upload(gsGlobal, tex);
+		} else {
+			printf("Out of VRAM.\n");
+			error_printf("Out of VRAM while realloc texture.");
+		}
+	}
+}
+
 bool isNTSCMode(void)
 {
 	return (gsGlobal->Mode != GS_MODE_PAL);
+}
+
+int getCurrentMode(void)
+{
+	return gsGlobal->Mode;
 }
 
 /**
@@ -505,7 +569,25 @@ Menu *graphic_main(void)
 	int i;
 	int numberOfMenuItems;
 
+	addConfigCheckItem("videomode", &currentMode);
+
 	gsGlobal = gsKit_init_global();
+
+	if (isNTSCMode()) {
+		frequenzy[0] = 60;
+	} else {
+		frequenzy[0] = 50;
+	}
+
+	printf("Switching to %s\n", modeDescription[currentMode]);
+
+	lastMode = currentMode;
+
+	if (currentMode == 0) { 
+		gsGlobal->Mode = gsKit_detect_signal();
+	} else {
+		gsGlobal->Mode = modeList[currentMode];
+	}
 
 	if (isNTSCMode()) {
 		numberOfMenuItems = 7;
@@ -557,7 +639,7 @@ Menu *graphic_main(void)
 	texDisc = getTexture("disc.rgb");
 	texCloud = getTexture("cloud.rgb");
 
-	menu = new Menu(gsGlobal, gsFont, numberOfMenuItems);
+	mainMenu = menu = new Menu(gsGlobal, gsFont, numberOfMenuItems);
 	menu->setPosition(50, 120);
 
 	gsKit_mode_switch(gsGlobal, GS_ONESHOT);
@@ -569,6 +651,27 @@ Menu *graphic_main(void)
 		graphic_paint();
 	}
 	return menu;
+}
+
+void incrementMode(void)
+{
+	currentMode++;
+	if (currentMode >= (sizeof(modeList)/sizeof(modeList[0]))) {
+		currentMode = 0;
+	}
+}
+
+void decrementMode(void)
+{
+	currentMode--;
+	if (currentMode < 0) {
+		currentMode = (sizeof(modeList)/sizeof(modeList[0])) - 1;
+	}
+}
+
+int getModeFrequenzy(void)
+{
+	return frequenzy[currentMode];
 }
 
 int setCurrentMenu(void *arg)
@@ -841,6 +944,104 @@ extern "C" {
 				gsGlobal->DW - 1,	// Display area width
 				gsGlobal->DH - 1);		// Display area height
 	}
+
+	void changeMode(void)
+	{
+		int i;
+		int numberOfMenuItems;
+
+		/* Range check by decrement and increment. */
+		decrementMode();
+		incrementMode();
+
+		printf("Switching to %s\n", modeDescription[currentMode]);
+		if (lastMode == currentMode) {
+			/* Nothing to do. */
+			return;
+		}
+
+		lastMode = currentMode;
+
+		gsKit_deinit_global(gsGlobal);
+
+		/* XXX: gsKit has no function to free allocated memory for fonts. */	
+		if (gsFont->Header.offset_table != NULL) {
+			free(gsFont->Header.offset_table);
+			gsFont->Header.offset_table = NULL;
+		}
+		if (gsFont->TexBase != NULL) {
+			free(gsFont->TexBase);
+			gsFont->TexBase = NULL;
+		}
+		if (gsFont->Texture->Clut != NULL) {
+			free(gsFont->Texture->Clut);
+			gsFont->Texture->Clut = NULL;
+		}
+
+		gsGlobal = gsKit_init_global();
+
+	
+		if (currentMode == 0) { 
+			gsGlobal->Mode = gsKit_detect_signal();
+		} else {
+			gsGlobal->Mode = modeList[currentMode];
+		}
+	
+		if (isNTSCMode()) {
+			numberOfMenuItems = 7;
+		} else {
+			numberOfMenuItems = 8;
+		}
+	
+		dmaKit_init(D_CTRL_RELE_OFF, D_CTRL_MFD_OFF, D_CTRL_STS_UNSPEC,
+			D_CTRL_STD_OFF, D_CTRL_RCYC_8, 1 << DMA_CHANNEL_GIF);
+	
+		// Initialize the DMAC
+		dmaKit_chan_init(DMA_CHANNEL_GIF);
+		dmaKit_chan_init(DMA_CHANNEL_FROMSPR);
+		dmaKit_chan_init(DMA_CHANNEL_TOSPR);
+	
+		gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+		gsGlobal->ZBuffering = GS_SETTING_OFF;
+	
+		gsKit_init_screen(gsGlobal);
+	
+		if (gsKit_fontm_upload(gsGlobal, gsFont) != 0) {
+			printf("Can't find any font to use\n");
+			SleepThread();
+		}
+	
+		globalVram = gsKit_vram_alloc(gsGlobal, MAX_TEX_SIZE, GSKIT_ALLOC_USERBUFFER);
+		if (globalVram == GSKIT_ALLOC_ERROR) {
+			printf("Failed to allocate texture buffer.\n");
+			error_printf("Failed to allocate texture buffer.\n");
+		}
+	
+		gsFont->Spacing = 0.8f;
+		reallocTexture(texFolder);
+		reallocTexture(texUp);
+		reallocTexture(texBack);
+		reallocTexture(texSelected);
+		reallocTexture(texUnselected);
+		reallocTexture(texPenguin);
+		reallocTexture(texDisc);
+		reallocTexture(texCloud);
+
+		if (mainMenu != NULL) {	
+			mainMenu->reset(gsGlobal, gsFont, numberOfMenuItems);
+			mainMenu->setPosition(50, 120);
+		}
+	
+		gsKit_mode_switch(gsGlobal, GS_ONESHOT);
+	
+		/* Activate graphic routines. */
+		graphicInitialized = true;
+	
+		for (i = 0; i < 2; i++) {
+			graphic_paint();
+		}
+	}
+
 
 }
 

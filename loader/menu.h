@@ -24,6 +24,7 @@ class Menu {
 	const char *title;
 	/** Maximum number of menu items on one page (display). */
 	int numberOfMenuItems;
+	vector<Menu *> subMenuVector;
 
 	public:
 	Menu(GSGLOBAL *gsGlobal, GSFONTM *gsFont, int numberOfMenuItems) :
@@ -42,6 +43,7 @@ class Menu {
 	{
 	}
 
+	void reset(GSGLOBAL *gsGlobal, GSFONTM *gsFont, int numberOfMenuItems);
 	void paint(void);
 
 	void addItem(const char *name, executeMenuFn_t *executeFn, void *executeArg, GSTEXTURE *tex = NULL);

@@ -40,12 +40,6 @@ int main(int argc, char **argv)
 	/* Setup graphic screen. */
 	menu = graphic_main();
 
-	if (isNTSCMode()) {
-		refreshesPerSecond = 60;
-	} else {
-		refreshesPerSecond = 50;
-	}
-
 	lastValidMenu = menu;
 
 	/* Disable menu until start up. */
@@ -70,6 +64,8 @@ int main(int argc, char **argv)
 
 	enablePad(true);
 	old_pad = 0;
+
+	refreshesPerSecond = getModeFrequenzy();
 
 	if (loaderConfig.autoBootTime > 0) {
 		int refreshCounter = 0;
@@ -161,6 +157,15 @@ int main(int argc, char **argv)
 			graphic_screenshot();
 		}
 #endif
+		if (new_pad & PAD_R2) {
+			incrementMode();
+			changeMode();
+			refreshesPerSecond = getModeFrequenzy();
+		} else if (new_pad & PAD_L2) {
+			decrementMode();
+			changeMode();
+			refreshesPerSecond = getModeFrequenzy();
+		}
 
 		menu = getCurrentMenu();
 		errorMessage = getErrorMessage();

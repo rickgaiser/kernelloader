@@ -6,6 +6,10 @@
 - Fixed problems with VGA signal.
 - Added better BSD Support (still not fully working).
 - Reworked code (mainly debug code, sharedmem.irx).
+- Buttons L2 and R2 select the screen mode within
+  kernelloader (VESA, 480P, NTSC or PAL). 480P may
+  have problems on the right side of the screen, I can't
+  test this.
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.

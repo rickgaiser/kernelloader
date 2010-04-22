@@ -9,6 +9,9 @@
 #include "config.h"
 
 Menu *graphic_main(void);
+void incrementMode(void);
+void decrementMode(void);
+int getModeFrequenzy(void);
 void graphic_paint(void);
 void graphic_auto_boot_paint(int time);
 int setCurrentMenu(void *arg);
@@ -19,6 +22,7 @@ GSTEXTURE *getTexBack(void);
 GSTEXTURE *getTexSelected(void);
 GSTEXTURE *getTexUnselected(void);
 bool isNTSCMode(void);
+int getCurrentMode(void);
 #endif
 
 #ifdef __cplusplus
@@ -45,6 +49,7 @@ extern "C" {
 	char *getInputBuffer(void);
 	void graphic_screenshot(void);
 	void moveScreen(int dx, int dy);
+	void changeMode(void);
 #ifdef __cplusplus
 }
 #endif

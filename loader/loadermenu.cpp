@@ -277,6 +277,13 @@ int numberOfSbiosCalls = sizeof(sbiosDescription) / sizeof(const char *);
 const char commandline_pal[] = "crtmode=pal xmode=PAL ramdisk_size=16384";
 /** Default Linux parameter for NTSC mode. */
 const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC ramdisk_size=16384";
+/** Default Linux parameter for VGA mode. */
+const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 ramdisk_size=16384";
+const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 ramdisk_size=16384";
+const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 ramdisk_size=16384";
+const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 ramdisk_size=16384";
+/** Default Linux parameter for HDTV mode. */
+const char commandline_dtv[] = "crtmode=dtv0 xmode=dtv,480p ramdisk_size=16384";
 
 char kernelParameter[MAX_INPUT_LEN];
 
@@ -676,11 +683,38 @@ int editString(void *arg)
 
 void setDefaultKernelParameter(char *text)
 {
-	/* Set commandline for correct video mode. */
-	if(isNTSCMode()) {
+	switch(getCurrentMode()) {
+	case GS_MODE_VGA_640_60:
+		strcpy(text, commandline_vga60);
+		break;
+
+	case GS_MODE_VGA_640_72:
+		strcpy(text, commandline_vga72);
+		break;
+
+	case GS_MODE_VGA_640_75:
+		strcpy(text, commandline_vga75);
+		break;
+
+	case GS_MODE_VGA_640_85:
+		strcpy(text, commandline_vga85);
+		break;
+
+	case GS_MODE_DTV_480P:
+		strcpy(text, commandline_dtv);
+		break;
+
+	case GS_MODE_NTSC:
 		strcpy(text, commandline_ntsc);
-	} else {
+		break;
+
+	case GS_MODE_PAL:
 		strcpy(text, commandline_pal);
+		break;
+
+	default:
+		strcpy(text, commandline_pal);
+		break;
 	}
 }
 

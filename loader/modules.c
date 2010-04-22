@@ -17,6 +17,7 @@
 #include "fileXio_rpc.h"
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
+#include "graphic.h"
 
 #ifdef NEW_ROM_MODULES
 #define MODPREFIX "X"
@@ -301,6 +302,9 @@ int loadLoaderModules(void)
 		/* Load configuration when necessary modules are loaded. */
 		if (moduleList[i].loadCfg) {
 			lrv = loadConfiguration(CONFIG_FILE);
+
+			changeMode();
+
 			/* Load configuration on startup and not on IOP reset. */
 			moduleList[i].loadCfg = 0;
 		}
@@ -373,6 +377,8 @@ int loadLoaderModules(void)
 			}
 
 			lrv = loadConfiguration(DVD_CONFIG_FILE);
+
+			changeMode();
 #if 0
 			if (lrv != 0) {
 				error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);

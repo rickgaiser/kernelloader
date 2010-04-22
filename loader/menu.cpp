@@ -119,6 +119,8 @@ Menu *Menu::addSubMenu(const char *name)
 
 	addItem(name, setCurrentMenu, subMenu);
 
+	subMenuVector.push_back(subMenu);
+
 	return subMenu;
 }
 
@@ -130,5 +132,22 @@ Menu *Menu::getSubMenu(const char *name)
 	subMenu->setTitle(name);
 	subMenu->setPosition(positionX, positionY);
 
+	subMenuVector.push_back(subMenu);
+
 	return subMenu;
+}
+void Menu::reset(GSGLOBAL *gsGlobal, GSFONTM *gsFont, int numberOfMenuItems)
+{
+	vector<MenuEntry>::iterator i;
+	vector<Menu *>::iterator n;
+
+	this->gsGlobal = gsGlobal;
+	this->gsFont = gsFont;
+	this->numberOfMenuItems = numberOfMenuItems;
+	for (i = menuVector.begin(); i != menuVector.end(); i++) {
+		i->reset(gsGlobal, gsFont);
+	}
+	for (n = subMenuVector.begin(); n != subMenuVector.end(); n++) {
+		(*n)->reset(gsGlobal, gsFont, numberOfMenuItems);
+	}
 }

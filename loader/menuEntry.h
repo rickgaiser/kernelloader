@@ -82,6 +82,8 @@ class MenuEntry {
 	{
 	}
 
+	void reset(GSGLOBAL *gsGlobal, GSFONTM *gsFont);
+
 	const char *getName(void)
 	{
 		return name;
