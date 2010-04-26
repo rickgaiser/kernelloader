@@ -10,6 +10,12 @@
   kernelloader (VESA, 480P, NTSC or PAL). 480P may
   have problems on the right side of the screen, I can't
   test this.
+- The keys "+" and "-" on a connected USB keyboard switch the
+  screen mode. On the US layout the keys are left to the
+  delete key (sign < X |). For "+" you need to press the SHIFT
+  key at the same time. If you don't have an US keyboard, the
+  keys may have differnt signs on it.
+  For details see http://en.wikipedia.org/wiki/Keyboard_layout
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.

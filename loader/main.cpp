@@ -145,6 +145,12 @@ int main(int argc, char **argv)
 				case 10:
 					new_pad |= PAD_CROSS;
 					break;
+				case '+':
+					new_pad |= PAD_R2;
+					break;
+				case '-':
+					new_pad |= PAD_L2;
+					break;
 				default:
 					//info_printf("Key %d \"%c\"\n", key, key);
 					break;
