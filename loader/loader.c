@@ -435,7 +435,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.defaultmod = 1,
 		.slim = 1
-		/* Only hard disc and USB is working. */
+		/* Only hard disc and USB is working. Network not working from EE side (use smaprpc.irx). */
 	},
 	{
 #ifdef RTE
