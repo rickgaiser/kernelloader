@@ -60,7 +60,7 @@ static u64 TexBlack;
 static GSFONTM *gsFont;
 
 /** File name that is printed on screen. */
-static const char *loadName = NULL;
+static char loadName[26];
 
 static const char *statusMessage = NULL;
 
@@ -398,7 +398,7 @@ void graphic_paint(void)
 	if (statusMessage != NULL) {
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
 			statusMessage);
-	} else if (loadName != NULL) {
+	} else if (loadName[0] != 0) {
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
 			loadName);
 		gsKit_prim_sprite(gsGlobal, 50, 120, 50 + 520, 140, 2, White);
@@ -478,7 +478,30 @@ extern "C" {
 		}
 		loadPercentage = percentage;
 
-		loadName = name;
+		if (name != NULL) {
+			unsigned int len;
+
+			len = strlen(name);
+			if (len < sizeof(loadName)) {
+				strcpy(loadName, name);
+			} else {
+				int r;
+				int n;
+				const char ellipse[] = "...";
+
+				/* Name too long, show only start and end of string. */
+				r = sizeof(loadName) - 1;
+				n = (r - (sizeof(ellipse) - 1)) / 2;
+				memcpy(loadName, name, n);
+				r -= n;
+				strcpy(&loadName[n], ellipse);
+				r -= sizeof(ellipse) - 1;
+				memcpy(&loadName[n + sizeof(ellipse) - 1], &name[len - r], r);
+				loadName[sizeof(loadName) - 1] = 0;
+			}
+		} else {
+			loadName[0] = 0;
+		}
 		graphic_paint();
 	}
 
