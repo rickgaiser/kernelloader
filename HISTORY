@@ -16,6 +16,9 @@
   key at the same time. If you don't have an US keyboard, the
   keys may have differnt signs on it.
   For details see http://en.wikipedia.org/wiki/Keyboard_layout
+- Add auto detection of sound modules from rom1.
+- Add menu for showing versions of PS2 ROM, rom1:LIBSD and
+  kernelloader.
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.
