@@ -275,6 +275,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.libsd = -1,
+		.sound = 1,
 	},
 	{
 		.path = "host:freesd.irx",
@@ -304,6 +305,7 @@ moduleEntry_t modules[] = {
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.sound = 1,
 	},
 	{
 		.path = "host:audsrv.irx",

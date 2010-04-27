@@ -201,19 +201,21 @@ int main(int argc, char **argv)
 						scrollDownFast();
 					}
 					if (new_pad & PAD_CROSS) {
-						setInputBuffer(NULL);
+						setInputBuffer(NULL, 0);
 					} else {
-						int pos;
-						pos = strlen(buffer);
-						if (key == 7) {
-							pos--;
-							if (pos >= 0) {
-								buffer[pos] = 0;
-							}
-						} else if (key != 0) {
-							if (pos < (MAX_INPUT_LEN - 1)) {
-								buffer[pos] = key;
-								buffer[pos + 1] = 0;
+						if (isWriteable()) {
+							int pos;
+							pos = strlen(buffer);
+							if (key == 7) {
+								pos--;
+								if (pos >= 0) {
+									buffer[pos] = 0;
+								}
+							} else if (key != 0) {
+								if (pos < (MAX_INPUT_LEN - 1)) {
+									buffer[pos] = key;
+									buffer[pos + 1] = 0;
+								}
 							}
 						}
 					}

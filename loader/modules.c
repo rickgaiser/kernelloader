@@ -18,6 +18,7 @@
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
 #include "graphic.h"
+#include "loadermenu.h"
 
 #ifdef NEW_ROM_MODULES
 #define MODPREFIX "X"
@@ -26,6 +27,8 @@
 #ifdef OLD_ROM_MODULES
 #define MODPREFIX ""
 #endif
+
+#define IRX_MAGIC_EXPORT 0x41c00000
 
 /** Structure describing module that should be loaded. */
 typedef struct
@@ -227,11 +230,14 @@ static int moduleLoaderNumberOfModules = sizeof(moduleList) / sizeof(moduleLoade
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
 
+char ps2_rom_version[256] = "unknown";
 static char version[256];
 
 static int romver = 0;
 
 static int eromdrvSupport;
+
+static int libsd_version = 0x7FFFFFFF;
 
 int isSlimPSTwo(void)
 {
@@ -256,8 +262,60 @@ void checkROMVersion(void)
 	if (fd >= 0) {
 		ret = read(fd, version, sizeof(version));
 		close(fd);
+		if (ret > 0) {
+			memcpy(ps2_rom_version, version, ret);
+			ps2_rom_version[ret - 1] = 0;
+		}
 		version[4] = 0;
 		romver = strtoul(version, NULL, 16);
+	}
+}
+
+void checkLibsdExport(FILE *fin)
+{
+	int dummy;
+	char modulename[9];
+
+	// unused:
+	if (fread(&dummy, sizeof(int), 1, fin) != 1)
+		return;
+
+	// Read version number
+	if (fread(&libsd_version, sizeof(int), 1, fin) != 1)
+		return;
+
+	// Read version number
+	if (fread(modulename, 8, 1, fin) != 1)
+		return;
+
+	modulename[8] = 0;
+
+	if (strcmp(modulename, "libsd") != 0) {
+		/* Found module description. */
+		libsd_version = 0x7FFFFFFF;
+	}
+}
+
+int get_libsd_version(void)
+{
+	return libsd_version;
+}
+
+void checkForMusicSupport(void)
+{
+	FILE *fin;
+
+	fin = fopen("rom1:LIBSD", "rb");
+	if (fin != NULL) {
+		int magic;
+
+		while(fread(&magic, sizeof(int), 1, fin) == 1) {
+			if (magic == IRX_MAGIC_EXPORT)
+				checkLibsdExport(fin);
+		}
+		fclose(fin);
+	} else {
+		printf("Failed to open rom1:LIBSD.\n");
 	}
 }
 
@@ -301,6 +359,10 @@ int loadLoaderModules(void)
 
 		/* Load configuration when necessary modules are loaded. */
 		if (moduleList[i].loadCfg) {
+			checkForMusicSupport();
+
+			setDefaultConfiguration(NULL);
+
 			lrv = loadConfiguration(CONFIG_FILE);
 
 			changeMode();

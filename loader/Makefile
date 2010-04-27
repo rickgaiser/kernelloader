@@ -41,6 +41,15 @@ else
 EE_FLAGS += -DOLD_ROM_MODULES
 EE_LIBS += -lpad
 endif
+ifeq ($(FILEIO_DEBUG),yes)
+EE_CFLAGS += -DFILEIO_DEBUG
+endif
+ifeq ($(CALLBACK_DEBUG),yes)
+EE_CFLAGS += -DCALLBACK_DEBUG
+endif
+ifeq ($(SBIOS_DEBUG),yes)
+EE_CFLAGS += -DSBIOS_DEBUG
+endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
 EE_LIBS += -lz
 

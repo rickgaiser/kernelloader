@@ -45,8 +45,9 @@ extern "C" {
 	int isInfoBufferEmpty(void);
 	void clearInfoBuffer(void);
 	void enablePad(int val);
-	void setInputBuffer(char *buffer);
+	void setInputBuffer(char *buffer, int writeable);
 	char *getInputBuffer(void);
+	int isWriteable(void);
 	void graphic_screenshot(void);
 	void moveScreen(int dx, int dy);
 	void changeMode(void);

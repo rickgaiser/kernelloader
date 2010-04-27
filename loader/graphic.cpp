@@ -245,6 +245,7 @@ static char infoBuffer[MAX_INFO_BUFFER];
 static int infoBufferPos = 0;
 
 static char *inputBuffer = NULL;
+static int writeable = 0;
 
 int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const char *msg, int scrollPos)
 {
@@ -328,7 +329,7 @@ void graphic_common(void)
 	paintTexture(texPenguin, 5, 10, 1);
 
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
-		"kernelloader " LOADER_VERSION
+		"Kernelloader " LOADER_VERSION
 #ifdef RESET_IOP
 		"R"
 #endif
@@ -442,8 +443,10 @@ void graphic_paint(void)
 				}
 			} else {
 				if (inputBuffer != NULL) {
-					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
-						"Please use USB keyboard.");
+					if (writeable) {
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+							"Please use USB keyboard.");
+					}
 					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 						"Press CROSS to quit.");
 				} else if (menu != NULL) {
@@ -918,14 +921,20 @@ extern "C" {
 		usePad = val;
 	}
 
-	void setInputBuffer(char *buffer)
+	void setInputBuffer(char *buffer, int w)
 	{
 		inputBuffer = buffer;
+		writeable = w;
 	}
 
 	char *getInputBuffer(void)
 	{
 		return inputBuffer;
+	}
+
+	int isWriteable(void)
+	{
+		return writeable;
 	}
 
 	void graphic_screenshot(void)

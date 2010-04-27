@@ -39,6 +39,8 @@ extern "C" {
 		int defaultmod;
 		/** -1, if sdlib, 0 otherwise. */
 		int libsd;
+		/** 1, if ROM1 sound module, 0 otherwise. */
+		int sound;
 	} moduleEntry_t;
 
 	typedef struct {

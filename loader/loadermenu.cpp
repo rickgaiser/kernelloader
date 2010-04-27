@@ -1,4 +1,4 @@
-/* Copyright (c) 2007 Mega Man */
+/* Copyright (c) 2007-2010 Mega Man */
 #include <gsKit.h>
 #include <loadfile.h>
 #include <kernel.h>
@@ -312,6 +312,9 @@ const char *autoBootText[] = {
 	"Auto Boot Time: 9 Seconds",
 	"Auto Boot Time: 10 Seconds",
 	NULL };
+
+static char libsd_version[16] = "none";
+
 
 static unsigned int getStatusReg() {
 	register unsigned int rv;
@@ -665,11 +668,15 @@ int setExampleKernel(void *arg)
 	return 0;
 }
 
-int showFilename(void *arg)
+int showText(void *arg)
 {
-	char *fileName = (char *) arg;
+	char *text = (char *) arg;
 
-	info_prints(fileName);
+#if 0
+	info_prints(text);
+#else
+	setInputBuffer(text, 0);
+#endif
 	return 0;
 }
 
@@ -677,7 +684,7 @@ int editString(void *arg)
 {
 	char *text = (char *) arg;
 
-	setInputBuffer(text);
+	setInputBuffer(text, -1);
 	return 0;
 }
 
@@ -728,10 +735,14 @@ int setDefaultKernelParameterMenu(void *arg)
 	return 0;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 int setDefaultConfiguration(void *arg)
 {
 	int slim;
 	int i;
+	int version;
 
 	(void) arg;
 
@@ -783,13 +794,39 @@ int setDefaultConfiguration(void *arg)
 		} else {
 			module->load = 0;
 		}
+		if (module->sound) {
+			if (get_libsd_version() <= 0x104) {
+				module->load = 1;
+			} else {
+				module->load = 0;
+			}
+		}
+	}
+
+	/* This not a default configuration, but the version is known at this point,
+	 * so it can be updated here
+	 */
+	version = get_libsd_version();
+	if (version < 0x10000) {
+		snprintf(libsd_version, sizeof(libsd_version),
+			"%u.%u%u", 
+			(version >> 8) & 0xf,
+			(version >> 4) & 0xf,
+			(version >> 0) & 0xf);
+	} else {
+		strcpy(libsd_version, "none");
 	}
 
 	return 0;
 }
+#ifdef __cplusplus
+}
+#endif
 
 int reloadModules(void *arg)
 {
+	(void) arg;
+
 	if (isDVDVSupported()) {
 		/* Always stop CD/DVD when an error happened. */
 		CDVD_Stop();
@@ -899,7 +936,7 @@ void initMenu(Menu *menu)
 
 	strcpy(kernelFilename, EXAMPLE_KERNEL);
 	addConfigTextItem("KernelFileName", kernelFilename, MAX_PATH_LEN);
-	//linuxMenu->addItem("Show Filename", showFilename, (void *) &kernelFilename);
+	//linuxMenu->addItem("Show Filename", showText, (void *) &kernelFilename);
 	linuxMenu->addItem("Edit Filename", editString, (void *) &kernelFilename);
 	linuxMenu->addItem("Example Kernel", setExampleKernel, (void *) &kernelFilename);
 
@@ -963,7 +1000,7 @@ void initMenu(Menu *menu)
 	initrdMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	initrdFilename[0] = 0;
 	addConfigTextItem("InitrdFileName", initrdFilename, MAX_PATH_LEN);
-	//initrdMenu->addItem("Show Filename", showFilename, (void *) &initrdFilename);
+	//initrdMenu->addItem("Show Filename", showText, (void *) &initrdFilename);
 	initrdMenu->addItem("Edit Filename", editString, (void *) &initrdFilename);
 	initrdMenu->addItem("Disable Initrd", unsetFilename, (void *) &initrdFilename);
 
@@ -1106,6 +1143,47 @@ void initMenu(Menu *menu)
 	rteMenu->addItem("Edit RTE CDVDFSV nr", editString, ExtractCDVDFSVParam.elfNumber);
 	rteMenu->addItem("Extract RTE CDVDMAN", copyRTEELF, &ExtractCDVDMANParam);
 	rteMenu->addItem("Extract RTE CDVDFSV", copyRTEELF, &ExtractCDVDFSVParam);
+
+	/* Module Menu */
+	Menu *versionMenu;
+	static char kloader_version[] = LOADER_VERSION
+#ifdef RESET_IOP
+		" RESET_IOP"
+#endif
+#ifdef PS2LINK
+		" PS2LINK"
+#endif
+#ifdef NAPLINK
+		" NAPLINK"
+#endif
+#ifdef SCREENSHOT
+		" SCREENSHOT"
+#endif
+#ifdef NEW_ROM_MODULES
+		" NEW_ROM_MODULES"
+#endif
+#ifdef OLD_ROM_MODULES
+		" OLD_ROM_MODULES"
+#endif
+#ifdef SHARED_MEM_DEBUG
+		" SHARED_MEM_DEBUG"
+#endif
+#ifdef FILEIO_DEBUG
+		" FILEIO_DEBUG"
+#endif
+#ifdef CALLBACK_DEBUG
+		" CALLBACK_DEBUG"
+#endif
+#ifdef SBIOS_DEBUG
+		" SBIOS_DEBUG"
+#endif
+	;
+
+	versionMenu = menu->addSubMenu("Versions");
+	versionMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	versionMenu->addItem("Kernelloader Version", showText, (void *) kloader_version);
+	versionMenu->addItem("PS2 ROM Version", showText, (void *) ps2_rom_version);
+	versionMenu->addItem("LIBSD Version", showText, (void *) libsd_version);
 }
 
 extern "C" {

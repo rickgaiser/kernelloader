@@ -7,6 +7,7 @@
 
 #include "gsKit.h"
 #include "dmaKit.h"
+
 #include "vector"
 
 class Menu {
@@ -116,5 +117,6 @@ class Menu {
 		}
 	}
 };
+
 
 #endif
