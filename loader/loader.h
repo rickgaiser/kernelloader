@@ -41,6 +41,8 @@ extern "C" {
 		int libsd;
 		/** 1, if ROM1 sound module, 0 otherwise. */
 		int sound;
+		/** -1, if module needs network, 0 otherwise. */
+		int network;
 	} moduleEntry_t;
 
 	typedef struct {

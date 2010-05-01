@@ -348,13 +348,15 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.network = -1,
 	},
 	{
 		.path = "host:ps2smap.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.ps2smap = 1
+		.ps2smap = 1,
+		.network = -1,
 	},
  	{
 		.path = "host:smaprpc.irx",
@@ -363,12 +365,14 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.defaultmod = 1,
 		.slim = 1,
+		.network = -1,
 	},
 	{
 		.path = "host:ps2link.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.network = -1,
 	},
 #ifdef NAPLINK
 	{
@@ -1041,6 +1045,12 @@ int loadModules(void)
 
 	for (i = 0; i < getNumberOfModules(); i++)
 	{
+		if (modules[i].network) {
+			if (!hasNetworkSupport()) {
+				/* Network not working. */
+				continue;
+			}
+		}
 		if ((modules[i].buffered) && (modules[i].load)) {
 			rom_entry_t *romfile = NULL;
 
@@ -1092,6 +1102,12 @@ void startModules(struct ps2_bootinfo *bootinfo)
 	for (i = 0; i < getNumberOfModules(); i++)
 	{
 		if (modules[i].load) {
+			if (modules[i].network) {
+				if (!hasNetworkSupport()) {
+					/* Network not working. */
+					continue;
+				}
+			}
 			if (modules[i].ps2smap) {
 				modules[i].args = getPS2MAPParameter(&modules[i].argLen);
 			}
@@ -1107,7 +1123,7 @@ void startModules(struct ps2_bootinfo *bootinfo)
 							/* Tell Linux that DEV9 is disabled. */
 							bootinfo->pccard_type = 0;
 						} else {
-							if (loaderConfig.enableDev9) {
+							if (loaderConfig.enableDev9 && hasNetworkSupport()) {
 								const char *pcicType;
 
 								/* Tell Linux that DEV9 is enabled. */
@@ -1500,7 +1516,6 @@ int real_loader(void)
 	uint32_t *initrd_header = NULL;
 	uint32_t initrd_start = 0;
 	uint32_t initrd_size = 0;
-	const char *gmode = NULL;
 
 	commandline = getKernelParameter();
 
@@ -1728,11 +1743,13 @@ int real_loader(void)
 #ifdef USER_SPACE_SUPPORT
 		iop_prints("User mode sharedmem test\n");
 #endif
-
-		//printf("Started modules\n");
-
 		printAllModules();
+
+		graphic_setStatusMessage("Setup iopaddr");
+
 		iopaddr = SifGetReg(0x80000000);
+
+		graphic_setStatusMessage("Buffer check");
 
 		if (!isInfoBufferEmpty() || (getErrorMessage() != NULL)) {
 			/* Print queued eedebug messages. (Anything printed by IOP). */
@@ -1788,7 +1805,7 @@ int real_loader(void)
 				bootinfo->pccard_type = 0x0200;
 			}
 		} else {
-			if (loaderConfig.enableDev9) {
+			if (loaderConfig.enableDev9 && hasNetworkSupport()) {
 				/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
 				if (ps2dev9_init() == 0) {
 					const char *pcicType;

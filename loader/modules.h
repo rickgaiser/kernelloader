@@ -11,6 +11,10 @@ int isDVDVSupported(void);
 void checkROMVersion(void);
 int get_libsd_version(void);
 extern char ps2_rom_version[];
+int getBiosVersion(void);
+int hasNetworkSupport(void);
+
+extern char hardware_information[];
 #ifdef __cplusplus
 }
 #endif

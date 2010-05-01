@@ -51,6 +51,8 @@ typedef struct
 	int sms_mod;
 	/** True, if module handles DNS. */
 	int dns;
+	/** True, if module needs network. */
+	int network;
 } moduleLoaderEntry_t;
 
 
@@ -160,14 +162,16 @@ static moduleLoaderEntry_t moduleList[] = {
 		.path = "ps2smap.irx",
 		.argLen = 0,
 		.args = NULL,
-		.ps2smap = 1
+		.ps2smap = 1,
+		.network = -1,
 	},
 #ifdef PS2LINK
 	{
 		.path = "ps2link.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.network = -1,
 	},
 #endif
 #endif
@@ -176,13 +180,15 @@ static moduleLoaderEntry_t moduleList[] = {
 		.argLen = 0,
 		.args = NULL,
 		.checkMc = -1,
-		.dns = -1
+		.dns = -1,
+		.network = -1,
 	},
 	{
 		.path = "ps2http.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.network = -1,
 	},
 #ifdef NAPLINK
 	{
@@ -239,6 +245,10 @@ static int eromdrvSupport;
 
 static int libsd_version = 0x7FFFFFFF;
 
+static int network_support = -1;
+
+char hardware_information[128] = "unknown";
+
 int isSlimPSTwo(void)
 {
 	if (romver > 0x0190) {
@@ -246,6 +256,11 @@ int isSlimPSTwo(void)
 	} else {
 		return 0;
 	}
+}
+
+int hasNetworkSupport(void)
+{
+	return network_support;
 }
 
 int isDVDVSupported(void)
@@ -269,6 +284,11 @@ void checkROMVersion(void)
 		version[4] = 0;
 		romver = strtoul(version, NULL, 16);
 	}
+}
+
+int getBiosVersion(void)
+{
+	return romver;
 }
 
 void checkLibsdExport(FILE *fin)
@@ -373,6 +393,12 @@ int loadLoaderModules(void)
 		graphic_setStatusMessage(moduleList[i].path);
 		printf("Loading module (%s)\n", moduleList[i].path);
 
+		if (!network_support) {
+			if (moduleList[i].network) {
+				continue;
+			}
+		}
+
 		if (moduleList[i].ps2smap) {
 			moduleList[i].args = getPS2MAPParameter(&moduleList[i].argLen);
 		}
@@ -403,7 +429,11 @@ int loadLoaderModules(void)
 				}
 				if (rv < 0) {
 					printf("Failed to load module \"%s\".", moduleList[i].path);
-					error_printf("Failed to load module \"%s\".", moduleList[i].path);
+					if (moduleList[i].ps2smap && !isSlimPSTwo()) {
+						network_support = 0;
+					} else {
+						error_printf("Failed to load module \"%s\".", moduleList[i].path);
+					}
 				} else {
 					if (moduleList[i].eromdrv != 0) {
 						eromdrvSupport = -1;
@@ -452,6 +482,13 @@ int loadLoaderModules(void)
 		}
 		graphic_setStatusMessage(NULL);
 	}
+
+	snprintf(hardware_information, sizeof(hardware_information),
+		"%s with DVD-R %s, %s sound support and %s network adapter",
+		isSlimPSTwo() ? "slim PSTwo" : "fat PS2",
+		isDVDVSupported() ? "support" : "problem",
+		(libsd_version <= 0x104) ? "direct" : "indirect",
+		network_support ? "with" : "without");
 
 	return 0;
 }

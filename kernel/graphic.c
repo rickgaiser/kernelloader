@@ -435,6 +435,8 @@ uint32_t syscallSetCrtc(int int_mode, int ntsc_pal, int field_mode)
 	int res;
 	int ffmd;
 
+	printf("SetCrtc mode %d\n", int_mode);
+
 	res = 0; /* Guessed!!! */
 	ffmd = (res >> 16) & 0x01;
 

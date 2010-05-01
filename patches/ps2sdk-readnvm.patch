@@ -1,0 +1,86 @@
+Index: ee/rpc/cdvd/include/libcdvd.h
+===================================================================
+--- ee/rpc/cdvd/include/libcdvd.h	(Revision 1679)
++++ ee/rpc/cdvd/include/libcdvd.h	(Arbeitskopie)
+@@ -529,7 +529,16 @@
+ // returns:	pointer to old function
+ CdCBFunc cdSetCallback(CdCBFunc func);
+ 
++// s-command read NVM
++//
++// args: addr address in NVM
++//
++// returns: 1 if successful
++//          0 if error
++//            stat is 0 on successful read
++s32 cdReadNVM(u32 addr, u16 *data, u8 *stat);
+ 
++
+ #ifdef __cplusplus
+ }
+ #endif
+Index: ee/rpc/cdvd/src/scmd.c
+===================================================================
+--- ee/rpc/cdvd/src/scmd.c	(Revision 1679)
++++ ee/rpc/cdvd/src/scmd.c	(Arbeitskopie)
+@@ -32,6 +32,7 @@
+ #define CD_SCMD_GETDISCTYPE		0x03
+ #define CD_SCMD_GETERROR		0x04
+ #define CD_SCMD_TRAYREQ			0x05
++#define CD_SCMD_READNVM			0x08
+ #define CD_SCMD_SCMD			0x0B
+ #define CD_SCMD_STATUS			0x0C
+ #define CD_SCMD_BREAK			0x16
+@@ -455,3 +456,39 @@
+ 	return SifCheckStatRpc(&clientSCmd);
+ }
+ #endif
++
++// s-command read NVM
++//
++// args: addr address in NVM
++//
++// returns:     1 if successful
++//                      0 if error
++//                      data read
++//                      stat is 0 on successful read
++#ifdef F_cdReadNVM
++s32 cdReadNVM(u32 addr, u16 *data, u8 *stat)
++{
++	if (cdCheckSCmd(CD_SCMD_READNVM) == 0)
++		return 0;
++
++	if (cdDebug > 0)
++		printf("Libcdvd call NVM read 1\n");
++
++	memcpy(sCmdSendBuff, &addr, 4);
++	SifWriteBackDCache(sCmdSendBuff, 4);
++
++	if (SifCallRpc(&clientSCmd, CD_SCMD_READNVM, 0, sCmdSendBuff, 4, sCmdRecvBuff, 16, 0, 0) < 0) {
++		SignalSema(sCmdSemaId);
++		return 0;
++	}
++
++	memcpy(data, UNCACHED_SEG(sCmdRecvBuff + 8), 2);
++	memcpy(stat, UNCACHED_SEG(sCmdRecvBuff + 10), 1);
++
++	if (cdDebug > 0)
++		printf("Libcdvd call NVM read 2\n");
++
++	SignalSema(sCmdSemaId);
++	return *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
++}
++#endif
+Index: ee/rpc/cdvd/Makefile
+===================================================================
+--- ee/rpc/cdvd/Makefile	(Revision 1679)
++++ ee/rpc/cdvd/Makefile	(Arbeitskopie)
+@@ -32,7 +32,7 @@
+ SCMD_OBJS = _scmd_internals.o cdReadClock.o cdWriteClock.o cdGetDiscType.o \
+     cdGetError.o cdTrayReq.o cdApplySCmd.o cdStatus.o cdBreak.o \
+     cdCancelPowerOff.o cdBlueLedCtrl.o cdPowerOff.o cdSetMediaMode.o \
+-    cdChangeThreadPriority.o cdCheckSCmd.o cdSyncS.o
++    cdChangeThreadPriority.o cdCheckSCmd.o cdSyncS.o cdReadNVM.o
+ SCMD_OBJS := $(SCMD_OBJS:%=$(EE_OBJS_DIR)%)
+ 
+ EE_LIB := $(EE_LIB:%=$(EE_LIB_DIR)%)

@@ -141,3 +141,17 @@ int32_t syscallEnableDmac(uint32_t channel)
 	dmac_enable_irq(irq_nr);
 	return 1;
 }
+
+int32_t syscallDisableDmac(uint32_t channel)
+{
+	int irq_nr;
+
+	DBG("syscallDisableDmac(%d)\n", channel);
+
+	irq_nr = channel + DMAC_CIS0;
+	if (saved_dmac_mask & (1 << irq_nr)) {
+		return 0;
+	}
+	dmac_disable_irq(irq_nr);
+	return 1;
+}

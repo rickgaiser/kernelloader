@@ -1,6 +1,7 @@
-/* Copyright (c) 2007 Mega Man */
+/* Copyright (c) 2007 - 2010 Mega Man */
 #include "stdio.h"
 #include "kernel.h"
+#include "intc.h"
 
 uint32_t unknownSyscall(int nr)
 {
@@ -17,7 +18,7 @@ uint32_t syscallTable[130] = {
 	/* 10 */
 	0, 0, 0, 0, 0, 0, 0, 0, syscallAddDmacHandler, 0,
 	/* 20 */
-	0, 0, syscallEnableDmac, 0, 0, 0, 0, 0, 0, 0,
+	intc_enable_irq, intc_disable_irq, syscallEnableDmac, syscallDisableDmac, 0, 0, 0, 0, 0, 0,
 	/* 30 */
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 40 */

@@ -2,6 +2,8 @@
 #include "intc.h"
 #include "memory.h"
 #include "panic.h"
+#include "kernel.h"
+#include "stdio.h"
 
 #define INTC_MASK 0xb000f010
 #define INTC_STAT 0xb000f000
@@ -17,6 +19,7 @@ static irq_handler_t *intc_handler[INTC_NUMBER_OF_HANDLERS];
 
 void intc_enable_irq(unsigned int irq_nr)
 {
+	DBG("intc_enable_irq(%d)\n");
 	if (!(saved_intc_mask & (1 << irq_nr))) {
 		saved_intc_mask |= 1 << irq_nr;
 		*intc_mask |= 1 << irq_nr;
@@ -25,6 +28,7 @@ void intc_enable_irq(unsigned int irq_nr)
 
 void intc_disable_irq(unsigned int irq_nr)
 {
+	DBG("intc_disable_irq(%d)\n");
 	if (saved_intc_mask & (1 << irq_nr)) {
 		saved_intc_mask &= ~(1 << irq_nr);
 		*intc_mask |= 1 << irq_nr;

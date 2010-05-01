@@ -20,6 +20,7 @@
 #include "getsbios.h"
 #include "getelf.h"
 #include "libkbd.h"
+#include "nvram.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -1182,8 +1183,11 @@ void initMenu(Menu *menu)
 	versionMenu = menu->addSubMenu("Versions");
 	versionMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	versionMenu->addItem("Kernelloader Version", showText, (void *) kloader_version);
+	versionMenu->addItem("PS2 Console type", showText, (void *) ps2_console_type);
+	versionMenu->addItem("PS2 Region type", showText, (void *) ps2_region_type);
 	versionMenu->addItem("PS2 ROM Version", showText, (void *) ps2_rom_version);
 	versionMenu->addItem("LIBSD Version", showText, (void *) libsd_version);
+	versionMenu->addItem("Hardware Information", showText, (void *) hardware_information);
 }
 
 extern "C" {

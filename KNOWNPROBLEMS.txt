@@ -172,7 +172,7 @@ There is somewhere a deadlock. This is diffcult to debug.
 Update: System is not crashing when using new modules, but wrong
 data may be written to USB.
 
-PR#25 - Solved
+PR#25 - Solved for non v12/v13 PS2
 Region detection is not working. The result is that eromdrvloader.irx can't be
 loaded.
 -
@@ -180,6 +180,9 @@ The workaround currently is to use a european slim PSTwo or a old fat PS2 or
 slim PSTwo (v12).
 -
 Added auto detection. This hasn't been tested, but should work.
+-
+PS2 v12 and maybe v13 still have problems. There will be an error message shown
+that eromdrvloader.irx can't be loaded. There are problems reading NVM.
 
 PR#26
 If loading of kernel fails, the configuration can't be saved. The file is destroyed.
@@ -206,3 +209,8 @@ PR#30
 Network is not working in kernelloader or system is hanging at startup.
 -
 You need to connect the network cable before starting kernelloader.
+
+PR#31 - Solved
+Pink screen with component cable.
+-
+Solved in SBIOS since kernelloader 2.2.

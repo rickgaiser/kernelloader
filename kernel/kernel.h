@@ -76,6 +76,8 @@ void syscallSifSetDChain(void);
 int32_t syscallAddDmacHandler(uint32_t channel, dmac_useg_handler_t *handler, int32_t next);
 /** Enable DMAC interrupt. */
 int32_t syscallEnableDmac(uint32_t channel);
+/** Disable DMAC interrupt. */
+int32_t syscallDisableDmac(uint32_t channel);
 /** Get sif register. */
 int syscallSifGetReg(uint32_t register_num);
 /** Set sif register. */

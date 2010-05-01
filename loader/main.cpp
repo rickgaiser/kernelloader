@@ -13,6 +13,7 @@
 #include "libkbd.h"
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
+#include "nvram.h"
 
 /**
  * Entry point for loader.
@@ -51,6 +52,8 @@ int main(int argc, char **argv)
 	checkROMVersion();
 
 	initMenu(menu);
+
+	nvram_init();
 
 	loadLoaderModules();
 

@@ -1,7 +1,6 @@
 PS2LINUXDVD = /media/cdrom
 TARGET_IP = 192.168.0.23
-EXAMPLE_ELF = ../ps2tut_01/demo1.elf
-#EXAMPLE_ELF = ../hello/hello.elf
+EXAMPLE_ELF = ../hello/hello.elf
 
 # Debug output using shared memory (working without RPC).
 SHARED_MEM_DEBUG = no

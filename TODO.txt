@@ -15,7 +15,5 @@ Audio support in Linux.
 
 DNS support for UDP instead of TCP.
 
-Display of long file names not working when loading kernel or initrd.
-
 Describe menu entries, especially what "TGE for new modules mean" -> only for XPADMAN. Other stuff is
 autodetected except XCDVDMAN which may only cause shutdown to fail and other unimportant stuff.

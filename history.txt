@@ -2,7 +2,7 @@
 - Screen position can be changed with the left analog stick
   within kernelloader. Don't expect any effect in Linux. In
   Linux you need to use the new setcrtmode from CVS.
-- Fixed pink screen problem with component signal (YCbCr)
+- Fixed pink screen problem with component signal (YPbPr)
 - Fixed problems with VGA signal.
 - Added better BSD Support (still not fully working).
 - Reworked code (mainly debug code, sharedmem.irx).
@@ -17,8 +17,9 @@
   keys may have differnt signs on it.
   For details see http://en.wikipedia.org/wiki/Keyboard_layout
 - Add auto detection of sound modules from rom1.
-- Add menu for showing versions of PS2 ROM, rom1:LIBSD and
-  kernelloader.
+- Add menu for showing versions of PS2 ROM, rom1:LIBSD, hardware
+  and kernelloader.
+- Don't show error if HDD adapter is not connected.
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.

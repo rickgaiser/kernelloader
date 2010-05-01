@@ -3,7 +3,6 @@ include config.mk
 all:
 	make -C ppm2rgb
 	make -C png2rgb
-	make -C ps2tut_01
 	make -C hello
 	make -C kernel
 	make -C sharedmem
@@ -25,7 +24,6 @@ reset:
 
 clean:
 	make -C kernel clean
-	make -C ps2tut_01 clean
 	make -C hello clean
 	make -C sharedmem clean
 	make -C eedebug clean

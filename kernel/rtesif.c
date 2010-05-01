@@ -74,7 +74,12 @@ int sif_reg_set(int reg, int val)
 		return _sb_sif_reg_set(reg, val);
 	}
 
-	return 0;
+	/* TGE has version 0x666 */
+	arg.reg = reg;
+	arg.val = val;
+
+	/* sceSifSetReg() */
+	return (int)_sbios(21, &arg);
 }
 
 static int (*_sb_sif_reg_get)(int) = NULL;
@@ -89,7 +94,9 @@ int sif_reg_get(int reg)
 		return _sb_sif_reg_get(reg);
 	}
 
-	return 0;
+	/* TGE has version 0x666 */
+	/* sceSifGetReg() */
+	return (int)_sbios(22, &reg);
 }
 
 int sif_dma_request(void *dmareq, int count)
@@ -139,6 +146,8 @@ void dmac6_handler(uint32_t *regs)
 void sif_init(void)
 {
 	sbversion = sbios(0, NULL);
+
+	DBG("SBIOS 0x%x\n", sbversion);
 
 	/* Call the SBIOS SIF init routine */
 	_sbios(16, NULL);
