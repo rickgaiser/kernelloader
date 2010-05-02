@@ -969,17 +969,26 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 	fin = gzopen(filename, "rb");
 	if (fin == NULL) {
 		error_printf("Error cannot open file %s.", filename);
+		printf("Failed to open file %s.\n", filename);
 		setEnableDisc(0);
 		return NULL;
 	}
 
 	// memalign() begins at &_end behind elf file. This ensures that the first 5 MByte are not used.
-	// Don't know the size just use 7 MB.
-	buffer = (char *) memalign(64, maxsize);
+	// Don't know the size just use 6 MB.
+	do {
+		buffer = (char *) memalign(64, maxsize);
+		if (buffer == NULL) {
+			/* Check if 512KByte less is available. */
+			maxsize -= 512 * 1024;
+		}
+	} while ((buffer == NULL) && (maxsize > (1024 * 1024)));
 
 	dprintf("buffer 0x%08x\n", (unsigned int) buffer);
 	if (buffer == NULL) {
 		gzclose(fin);
+		error_printf("Failed to allocate memory (memory leak)! Please restart kernelloader and boot kernel directly.");
+		printf("Failed to allocate memory.\n");
 		setEnableDisc(0);
 		return NULL;
 	}
@@ -987,6 +996,7 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 		if ((u32) buffer < (u32) &_end) {
 			/* This will lead to problems. */
 			error_printf("memalign() is unusable!");
+			printf("memalign() is unusable!\n");
 			setEnableDisc(0);
 			return NULL;
 		}
@@ -1006,7 +1016,13 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 		dprintf(".");
 		graphic_setPercentage(pos / (maxsize / 100), filename);
 		if ((pos + next) > maxsize) {
-			error_printf("Error file %s is too large (> 8MB).", filename);
+			error_printf("Error file %s is too big (free %ukB).\n", filename, maxsize / 1024);
+			if (maxsize < (6 * 1024 * 1024)) {
+				error_printf("Restart kernelloader for more free memory (max. 6MB for video mode auto).");
+			} else {
+				error_printf("You should use ee-strip to make the kernel smaller (gzip doesn't help).");
+			}
+			printf("Error file %s is too large (> %ukByte).\n", filename, maxsize / 1024);
 			setEnableDisc(0);
 			gzclose(fin);
 			free(buffer);
