@@ -932,7 +932,7 @@ void initMenu(Menu *menu)
 	};
 	configFileMenu->addItem(ccdfsParam.menuName, fsroot, (void *) &ccdfsParam);
 
-	Menu *linuxMenu = menu->addSubMenu("Select Kernel");
+	Menu *linuxMenu = menu->addSubMenu("Select Kernel (vmlinux)");
 	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 
 	strcpy(kernelFilename, EXAMPLE_KERNEL);
@@ -996,7 +996,7 @@ void initMenu(Menu *menu)
 	};
 	linuxMenu->addItem(kcdfsParam.menuName, fsroot, (void *) &kcdfsParam);
 
-	Menu *initrdMenu = menu->addSubMenu("Select Initrd");
+	Menu *initrdMenu = menu->addSubMenu("Select RAM disc (initrd.gz)");
 
 	initrdMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	initrdFilename[0] = 0;
