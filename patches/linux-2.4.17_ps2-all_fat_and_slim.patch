@@ -215,22 +215,24 @@ diff -urp linux-2.4.17_ps2.orig/include/asm-mips/ps2/sifdefs.h linux-2.4.17_ps2.
 diff -urp -x .depend linux-2.4.17_ps2/fs/Config.in linux-2.4.17_ps2.fat_and_slim/fs/Config.in
 --- linux-2.4.17_ps2/fs/Config.in	2002-11-08 12:30:32.000000000 +0100
 +++ linux-2.4.17_ps2.fat_and_slim/fs/Config.in	2009-12-15 23:47:07.000000000 +0100
-@@ -107,6 +107,7 @@ if [ "$CONFIG_XFS_FS" != "n" ]; then
+@@ -107,6 +107,8 @@ if [ "$CONFIG_XFS_FS" != "n" ]; then
         define_bool CONFIG_HAVE_XFS_DMAPI y
      fi
  fi
 +tristate 'PS2 filesystem support' CONFIG_PS2_FS
++tristate 'Union filesystem support' CONFIG_UNION_FS
  
  if [ "$CONFIG_NET" = "y" ]; then
  
 diff -urp -x .depend linux-2.4.17_ps2/fs/Makefile linux-2.4.17_ps2.fat_and_slim/fs/Makefile
 --- linux-2.4.17_ps2/fs/Makefile	2002-05-28 16:41:48.000000000 +0200
 +++ linux-2.4.17_ps2.fat_and_slim/fs/Makefile	2009-12-15 23:45:13.000000000 +0100
-@@ -68,6 +68,7 @@ subdir-$(CONFIG_SUN_OPENPROMFS)	+= openp
+@@ -68,6 +68,8 @@ subdir-$(CONFIG_SUN_OPENPROMFS)	+= openp
  
  subdir-$(CONFIG_XFS_DMAPI)	+= xfs_dmapi
  subdir-$(CONFIG_XFS_FS)		+= xfs
 +subdir-$(CONFIG_PS2_FS)		+= ps2fs
++subdir-$(CONFIG_UNION_FS)		+= unionfs
  mod-subdirs			+= xfs
  # xfs_support is used by xfs and a couple of other SGI components.  Because CML1
  # does not correctly handle inter-menu dependencies, set CONFIG_XFS_SUPPORT

@@ -20,6 +20,8 @@
 - Add menu for showing versions of PS2 ROM, rom1:LIBSD, hardware
   and kernelloader.
 - Don't show error if HDD adapter is not connected.
+- Added unionfs-1.0.14 to kernel patches. This is required to
+  get a full featured live DVD (write support).
 
 2.1
 - Disable DVD access if loading of eromdrvloader.irx failed.

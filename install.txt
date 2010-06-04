@@ -37,6 +37,7 @@ sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-no-bwlinux-check.patch
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.c drivers/ps2/smaprpc.c
 sh # cp ../kernelloader/driver_slim_smaprpc/smap.h drivers/ps2/smaprpc.h
 sh # cp -r ../kernelloader/driver_ps2fs/ps2fs fs/
+sh # cp -r ../kernelloader/driver_unionfs/unionfs fs/
 
 You can add support for printk over ps2link by patching Linux (system
 start is slower, this is not recommended for normal user):
@@ -229,6 +230,7 @@ Activate "File Systems" ---> "VFAT (Windows-95) fs support" (choose "*" and not 
 Recommended:
 Activate "Console drivers" ---> "Frame-buffer support" ---> "Console scrollback support"
 Activate "File systems" ---> "PS2 file system support" (choose "*" and not "M")
+Activate "Union filesystem support" ---> "PS2 file system support" (choose "M" and not "*")
 
 DHCP support:
 Activate "Networking Options" ---> "Socket Filtering"
@@ -237,6 +239,7 @@ Save configuration and then run:
 
 sh # make dep
 sh # make
+sh # make modules
 
 You should strip it, to reduce loading time and to prevent out of memory errors (less than 12MB available).
 sh # /usr/local/ps2/bin/ee-strip vmlinux

@@ -1,0 +1,2717 @@
+2010-06-04 Mega Man <kernelloader.sourceforge.net>
+
+	* Ported to PS2 Linux 2.4.17.
+
+2005-09-15  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* NEWS: Updated for release.
+	* Makefile: updated for release.
+	* Makefile.kernel: updated for release
+
+2005-09-12  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* locks.c: Removed locking code since its broken big define 0 around
+	it
+	* file.c: Removed locking references have the vfs handle it.
+	* unionfs.h: fixed bug with 2.4 compilation.
+
+2005-09-08  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c: Remove comment leftover from templates that doesn't make
+	sense in current context.
+
+2005-09-05  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* commonfops.c: Remove lower fput debug printks.
+
+2005-09-02  Shaya Potter <spotter@cs.columbia.edu>
+
+	* file.c (unionfs_mmap): Fix flag checking for mmap.
+
+2005-09-01  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* We shouldn't use d_delete, vfs_unlink already does it.  The only
+	known remaining 2.6.13 issue is the unionfs_lock (flock.sh in the
+	regression suite).
+
+	* inode.c,stale_inode.c: Support for 2.6.13's new follow_link prototype.
+	However, many of the regression tests fail for unrelated reasons (or at
+	least I think they are unrelated).
+
+	* unionctl.c: Allow --FOO to go before the union specifier (e.g.,
+	unionctl --list /mnt/unionfs now works).
+	* lookup.c: Don't partial lookup the root dentry.
+
+	* copyup.c: Check for permission setting errors.
+
+2005-08-31  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* lookup_one_len never returns NULL.
+
+2005-08-30  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_permission): Simplified code.
+
+	* inode.c (unionfs_link): Copy directory attrs to directory (BUG391).
+	Unfortunately, regression test doesn't quite catch the bug because of a
+	revalidate for the stat.
+	* commit: Don't complain about .sh file's indentation.
+
+2005-08-29  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+	
+	* INSTALL: tmpfs doesn't support fsync on directories
+
+	* Makefile: Update release target for new directory structure.
+
+	* patch-kernel.sh: Depend on Experimental, and move configuration option
+	to File Systems -> Miscellaneous file systems at the end, not as the
+	very first file system. Add UNIONFS_VERSION define.  Use tail -n +7
+	instead of tail +7.
+
+	* file.c (unionfs_fsync): Don't use dtohd on unlocked dentries.
+
+2005-08-28  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_link): Don't use unionfs_interpose with
+	INTERPOSE_LINK any more, because only one line of the whole function
+	was being used anyway.  This fixes an inode refcount leak in
+	unionfs_link, so the regression suite now passes with the new locking,
+	without any leaks.
+
+	* commonfops.c (unionfs_file_release): Update rdstate access time when
+	saving it in the inode (so that it won't be so quickly discarded).
+
+2005-08-26  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* dirfops.c (unionfs_readdir) : removed the changes made
+	for the special way in which vfs_llseek was handles for
+	Reiser4, as Reiser4 introduced a patch which made it
+	behave properly.
+
+2005-08-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Passes regression tests.
+
+	* Locking for create_parents.  Regression tests from branchman to
+	open.sh PASS.
+
+	* Basic inode operations pass sniff test with new locking (regression
+	tests not yet tried).
+
+	* Dentries need locking, and there isn't much way around it.This
+	snapshot adds some untested locking, and you won't want to use it
+	yet.  The basic principles are:
+		1. As soon as a VFS operation that touches a dentry is entered,
+		the dentry should be locked.
+		2. The lock ordering is:
+			Children before parents
+			Two children are tie broken with their address
+	There are several functions not done yet, most notably create_parents,
+	because it is going to require more thought (we walk up the parent
+	list and then back down it).  This in part is why children need to go
+	before parents (also revalidate walks up the parent list).
+
+2005-08-25  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* xattr.c: unused label causing a warning and inturn an error.
+
+2005-08-25  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (interpose,reinterpose): Interposition should lock the dentry.
+
+	* file.c: CodingStyle, and we don't need to check ftopd before ftohf.
+	* file.c (unionfs_mmap): We were checking our file instead of the lower
+	-level file for having valid operations.
+	* dirfops.c,dirhelper.c: CodyingStyle
+
+	* copyup.c: There is no need for _len at the end of functions, because
+	other versions don't exist any longer.
+
+	* lookup.c (unionfs_lookup_backend): Lock the dentry private data
+	for the whole lookup routine.
+	* branchman.c: CodingStyle fixes.
+	* rdstate.c, super.c: Use KERN_ERR if we have unfreed objects.
+
+2005-08-25  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: Fix losetup instructions.
+
+2005-08-24  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* print.c: Avoid kmallocs.
+	* rdstate.c,dirfops.c: Code style cleanups.
+
+2005-08-24  Anton Farygin  <rider@altlinux.com>
+
+	* dentry.c (d_revalidate):  Lock inode when freeing lower level ones.
+
+2005-08-24  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+	* unionfs.h: Updated forwardmap version and added a new data
+	structure bmapent.(Later on these should be unified into one header
+	rather than being in 2 header files).
+	* persistant_inode.c: Updated code to use bmapents now.
+
+2005-08-24  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c: Added code to ensure you dont add a filesystem with
+	the same fsid twice (no duplicate entries in the maps).
+	* unionimap.h: Added a new data structrue bmapent.
+	* The code in the kernel to read the maps hasent been changed so it
+	doesent work yet. Check back soon for that.
+
+2005-08-24  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_create): Use proper permissions when recreating
+	a deleted file (BUG383).
+
+2005-08-23  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* commonfops.c (copyup_deleted_file): Fix leak of name on subsequent
+	loop iterations.
+
+	* commonfops.c (copyup_deleted_file): Cleanup of major loop.
+
+	* unionfs.h (DPUT,KFREE): Don't try to free errors.
+
+	* main.c (unionfs_reinterpose): Remove d_unhashed assertion.
+	* unionfs.h (d_deleted): Create an inline function to tell
+	if a directory is deleted (i.e., unhashed and not the root).
+
+2005-08-23  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_parse_options): More checking for copyupmode.
+
+2005-08-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+	
+	* unionfs.h (get_nlinks): More intelligent link counting.
+
+	* inode.c (unionfs_create): Don't dput an IS_ERR.
+
+	* unionfs.h: sbstart is always zero
+	* main.c (unionfs_read_super): check_branch does existence checking
+
+	* unionfs_debugmacros.h: Fix stray printks.
+
+	The following fixes are so that the regression suite runs without
+	any memory or dentry leaks:
+	* branchman.c (unionfs_ioctl_addbranch): Zero newly allocated
+	arrays.
+	* copyup.c (unionfs_create_named_dirs): Fix leak of path stack.
+	* main.c: Handle get_parent.
+	* lookup.c: Make the logic to put preceding negative dentries a
+	function.
+	* unlink.c (unionfs_unlink_all): Fix dentry reference count leak.
+	* inode.c (unionfs_link): Properly handle lock_ and unlock_dir.
+	* match-dget.pl: Handle DS and DD for set and unset records.
+
+2005-08-20  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: sendfile conflicts w/ Unionfs.
+
+2005-08-19  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* dirfops.c (unionfs_readdir) : changed the way the 
+	return value of the repeated vfs_llseek (with origin
+	=1) is used. this is to allow readdir in Reiser4,
+	which returns -ENOENT (!!!) for the llseek in same
+	cases. this is for Bug #358
+
+2005-08-18  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* match-dget.pl: Insert both gets and puts into list of actions
+	for unreleased dentries.
+
+	* match-dget.pl: Dget matching script.
+	* Use DGET, DPUT, DENTRY_OPEN, and LOOKUP_ONE_LEN to
+	record when we dget and dput dentries.
+
+2005-08-17  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* match-malloc.pl: Return number of errors.
+
+	* print.c (fist_print_generic_dentry): Print inode number.
+
+	* copyup.c (unionfs_create_named_dirs): Fix dentry reference leak.
+
+2005-08-15  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* print.c (fist_print_file): Divide into generic and Unionfs halves,
+	ASSERT if we are passed a lower-level file.
+
+	* file.c (unionfs_lock): Handle write locks on r/o branches.
+
+2005-03-03  Anton Farygin  <rider@altlinux.com>
+
+	* dentry.c (unionfs_d_revalidate): Fix possible double unlock.
+
+	* branchman.c (unionfs_ioctl_incgen): Fix possible deadlock when
+	memory allocation fails.
+
+2005-08-12  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* rename.c, commonfops.c : removed the
+	dget/dput functions sandwiching the vfs_unlink as
+	these raise the refcounts and cause the .nfsXYZ
+	files to get created after unlinks. This knocks
+	out Bug#364 for 2.6.
+
+2005-08-11  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_parse_dirs): Prevent recursive Unionfs mounts.
+
+	* branchman.c: Plug a few memory leaks.
+
+2005-08-11  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_release) : fixed a case that would
+	cause a reference to the lower-level nfs inode to be
+	present. This is part of #364.
+
+2005-08-11  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionctl.c: Support --mode ro branch or --mode branch ro
+
+	* branchman.c: Only count putmaps that exist.
+
+2005-08-10  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* man/unionctl.8: No need for warning about root directory anymore.
+	* commonfops.c: Kill branch deletion ioctl.
+
+	* super.c: Magic MS_REMOUNT to remove a branch.
+	* unionctl.c: Use remount instead of ioctl to remove a branch.
+	* branchman.c (unionfs_ioctl_delbranch): Take the super, not an inode.
+
+2005-08-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_revalidate): All exit paths should go through
+	out.
+
+	* main.c (unionfs_parse_options,unionfs_parse_dirs): Simplified
+	option parsing using strsep rather than direct pointer manipulation.
+	Organized the options into types to factor out common code.
+
+2005-08-09  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* debian/*: Use official debian packaging files.
+
+	* Some AMD64 fixes.
+	* vprintk wrapper for 2.4.
+
+2005-08-09  Jan Engelhardt  <jengelh@linux01.gwdg.de>
+
+	* unionctl.c: Do not truncate "/" to "" when stripping the last "/"
+	from directories.
+
+2005-08-05  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main: Use FS_REVAL_DOT so that directories are always revalidated
+	during lookup.
+
+	* Drop err=passup, as it is unmaintained.
+
+2005-08-05  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* commonfops.c (unionfs_flush) : changed the dput to give
+	more symmetry and readability to the code.
+
+2005-08-04  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_revalidate) : return successfully if the
+	dentry is unhashed
+	* commonfops.c (unionfs_flush) : corrected the d_unhashed check
+
+2005-08-04  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* branchman.c (QUERY): Don't copy FD_SET before ioctl. FD_ZERO the
+	set before the call.
+
+	* branchman.c (newputmap): Subtract the count from old putmaps from
+	the brand new putmap's count.
+
+	* branchman.c (unionfs_ioctl_delbranch): Use putmaps.
+	* lookup.c (new_dentry_private_data): Fix branch removal when
+	transitioning from > UNIONFS_INLINE_OBJECTS to ==
+	UNIONFS_INLINE_OBJECTS.
+
+2005-08-03  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionfs.h,main.c,super.c,inode.c: removed all code
+	pertaining SETATTR_ALL since the feature is not necessary
+	and complicates things.
+	* man/unionfs.4: removed text pertaining to the setattr
+	mount option.
+
+2005-08-03  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionfs.h (putmap): We need to keep track of the mapping between
+	branch numbers for older generation numbers and the current
+	generation so that we can properly branchput.
+	* branchman.c: Add functions to manipulate putmaps.
+	* commonfops.c: Use putmaps for revalidation and close.
+
+2005-08-03  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_release) : added a check to take care
+	of the case when the dentry coming into release is from a 
+	failed lookup. This knocks bug #303 out.
+
+2005-08-03  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Remove older non-opaque directory mode.
+
+2005-08-01  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* lookup.c (unionfs_lookup_backend): Skip those hidden
+	dentries that are NULL.
+
+2005-08-01  Jan Engelhardt  <jengelh@linux01.gwdg.de>
+
+	* print.c (fist_dprint_internal): Use vprintk instead of
+	vsnprintf/printk combo.
+
+2005-08-01  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionfs_debugmacros.h (branchget,branchput):
+	ASSERT if a branch's count goes negative.
+	* super.c (unionfs_put_super): ASSERT if the branch
+	counts are not zero on unmount.
+	* commonfops.c (unionfs_file_release): Don't put branches
+	that we didn't get.
+	* commonfops.c (unionfs_open): Don't get a branch until
+	we open it.
+
+	* commonfops.c: Fix generation number increment.
+
+2005-07-26  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* main.c: cleaned up parse_options code for copyup,
+	copyupuid,copyupgid,copyupmode.
+
+2005-07-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unlink.c, main.c, rmdir.c, rename.c: Remove obsolete
+	and unmaintained DELETE_FIRST mode.
+
+2005-07-26  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* man/unionfs.4: Added default behavior into the options
+	section for entries that didnt already have it.
+
+2005-07-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_parse_options): Move directory parsing
+	out of parse options function, so we don't have as many 4+ level
+	indents.
+
+2005-07-25  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Makefile: Update version number to 1.0.14pre.
+
+2005-07-25  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* man/unionimap.8: Minor editing.
+
+2005-07-24  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* man/unionimap.8 : finished the man page: added a verbose
+	description and examples.
+
+2005-07-22  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* man/unionimap.8 : added descriptions to options in the
+	option section.
+
+2005-07-22  Jan Engelhardt  <jengelh@linux01.gwdg.de>
+
+	* unionctl.c: Use realpath so that relative pathnames are allowed
+	for mountpoints and branches.
+
+2005-07-22  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* subr.c (create_whiteout_parent) : removed this function
+	as it is not called anymore (#258).
+
+2005-07-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Makefile: Update version to 1.0.13.
+	* Makefile: Include new regression tests in distribution.
+	* man/unionimap.8: An empty placeholder man page.
+
+2005-07-21  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* missing_vfs_funcs.h: Removed get_parent function since the 2.6
+	kernel has a dget_parent function which is the appropriate one to use
+	also made note that the templates do not use either triple_up or triple_down
+	* unionfs.h: checked to see if we are in 2.6 and if so define get_parent to be
+	dget_parent.
+	* unionimap.c: fixed a typo in the usage example.
+	* man/unionfs.4: added an entry for imap
+
+2005-07-21  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_create_named_dirs) : corrected the
+	function to get rid of problems with the open-unlink
+	regression test.
+
+2005-07-20  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* unlink.c (unionfs_rmdir_all) : added checks to ensure
+	that the delete_whiteouts is not called for files. this
+	is a fix for bug 323
+
+	* rename.c (unionfs_rename_all) : changed the whiteout
+	creation call to "create_whiteout" instead of the
+	"create_whiteout_parent". this must solve 332.
+
+	* rename.c (unionfs_rename_whiteout) : change similar
+	to above to correct #336.
+
+2005-07-20  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_file_revalidate): Handle GFS and don't try
+	to reopen files that no longer exist.
+	* subr.c (unionfs_copyup_named_dentry_len): Add a bit of debugging.
+	* Fix comments that are past 80 characters and some other
+	minor style issues.
+
+	* subr.c (unionfs_create_whiteout): Don't set the parent's
+	opaque field when creating a whiteout, set your own.
+
+2005-07-20  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Fix things so that we compile on 2.4 again, and use the
+	older form of ioctl for kernels less than 2.6.11.
+
+	* ChangeLog: 80 character entries.
+
+2005-07-19  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionctl.c: Check if we are trying to remove a branch while
+	this process is causing it to be busy and print an appropriate
+	error message.
+
+	* man/unionctl.8: Minor edits.
+
+2005-07-19  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* branchman.c (unionfs_ioctl_queryfile) : changed
+	  function replacing lookup_one_len by partial lookups
+	  (second commit) : changed O_NONBLOCK to O_RDONLY
+
+2005-07-19  Shaya Potter  <spotter@cs.columbia.edu>
+
+	* unlink.c (unionfs_unlink_whiteout): Don't rename a symlink
+	to a whiteout, we need to unlink and create instead.
+
+2005-07-18  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* unlink.c (unionfs_unlink_all) : checked if the dbopaque
+	  value is set for the current dentry, as this will
+	  indicate if there is a file to the right of the current
+	  file (Fix BUG #319).
+
+2005-07-18  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* commonfops.c: Use unlocked_ioctl when it is defined.
+	* branchman.c: Change prototypes to be more consistent with
+	unlocked_ioctl.
+
+	* commit: Script for committing files
+	* Lindent: Linux indentation script.
+	* *.[ch]: Add emacs magic.
+
+2005-07-14  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* lookup.c (unionfs_lookup_backend) : fixed bug #321
+	  (that is, removed the semicolon that was introduced
+	  in the unionfs-042605-1324.tar.gz snapshot.
+
+2005-07-14  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_create_named_dirs) : corrected the usage of
+	  the name and namelen arguments sent into the function. This
+	  should take care of both bugs #299 and #322.
+
+2005-07-13  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* branchman.c (unionfs_ioctl_queryfile) : added ioctl definition
+	  that lists those branches where the specified file exists(#253).
+	* commonfops.c (unionfs_ioctl) : added the new ioctl.
+	* fist.h : added an include for the fd_set helper functions
+	* unionfs.h : added a structure unionfs_queryfile_args to
+	  pass variables to the new structure.
+	* unionctl.c : added the user interface
+	* uniondbg.c : rearranged the includes to help compilation
+
+2005-07-08  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* unionfs.h : added variables uii_totalopens and uii_writeopens to
+	  help in keeping filehandles valid after unlinks until closes.
+	* fist.h : included random.h to help get random bytes for file names
+	* commonfops.c (unionfs_file_revalidate) : added functionality to copy
+	  the lower-level file into a file with a randomly generated name
+	  obtained by using the newly added function "get_random_name" in
+	  commonfops.c
+	  (unionfs_open, unionfs_flush) : updated the uii_totalopens and
+	  uii_writeopens to be set and checked during the time of opening and
+	  flushing the file.
+	* copyup.c (unionfs_copyup_dentry_len) : made this into a wrapper
+	  function which now accepts the name of the file
+	  (unionfs_copyup_named_dentry_len).
+	  (unionfs_copyup_file) : similar wrapper to unionfs_copyup_named_file
+	  as above.
+	  (unionfs_create_dirs) : similar wrapper to unionfs_create_named_dirs
+	  as above
+	  (unionfs_copyup_named_file) : added function similar to
+	  unionfs_copyup_file which takes the file name as argument as well.
+	* main.c (unionfs_reinterpose) : ensured that deleted dentries are not
+	  reinterposed.
+	* dentry.c (unionfs_d_revalidate) : changed the check for deleted
+	  dentries to use the d_unhashed function also.
+
+2005-07-07  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+	* main.c: Ohh my god the inodes are persistent. Ohh and changed
+	interpose to use get_uin if we are using persistent inode maps.
+
+2005-07-07  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+	* super.c: fixed problem with kernel version number in an ifdef
+
+2005-07-07  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* dirfops.c: removed some debugging printk statments.
+	* persistent_inode.c: finished debugging and cleanedup get_uin.
+
+2005-06-30  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionfs.h  added extern decls for get_uin and get_lin
+	* persistent_inode.c: more work on the loading code and get_uin and
+	 get_lin
+	* dirfops.c: changed to make use of the persistent inode code only
+	if maps are loaded.
+
+2005-06-28  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* persistent_inode.c: changed how files are loaded in should be
+	done still need to test
+	* unionfs.h: added a new variable into unionfs_superblock_info
+	* unionimap.c: changed called to mkfsid
+	* usercommon.c: changed fillfsid and mkfsid. No longer uses the inode
+	since it will always be 2 since we are using the root of the fs.
+
+2005-06-24  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* Makefile: added usercommon.c into the make targets
+	* usercommon.c: Moves find_union to here and fixed it up
+	* unionimap.c: uses mkfsid now if fsid comes back as 0
+	* unionimap.h: added extern for mkfsid
+	* persistent_inode.c: fixed some bugs
+	* unionctl.c: removed find_union from here and updated calls to it.
+
+2005-06-23  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* dentry.c (d_revalidate): We shouldn't re-lookup
+	non-connected dentries.
+
+2005-06-23  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* Makefile: Include Makefile.kernel.
+
+	* subr.c (create_whiteout, create_whiteout_parent): Set the dbopaque
+	value to the branch where the whiteout gets created.  This is to solve
+	bug #294.
+
+2005-06-22  Arun M. Krishnakumar  <arunmk@fsl.cs.sunysb.edu>
+
+	* commonfops.c (unionfs_open): If the highest-priority branch
+	is read-only return -EROFS for opens with O_WRITE.
+
+2005-06-21  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* persistent_inode.c: parse_imap_options and associated calls are
+	working. maps are loaded in properly. Still need to finish and test
+	calls to use the maps.
+
+2005-06-17  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* persistent_inode.c: it appears that parse_imap_options is working
+	and so is verify_forwardmap. verify_reversemap needs to be fixed.
+
+2005-06-17  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* persistent_inode.c: Fixed some bugs still not working properly
+
+	* unionfs.h: added typedef for uuid_t.
+
+	* doit.sh: added imap entry into script.
+
+2005-06-17  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: If you have Fedora Core 4, then you need kernel-devel.
+
+	* Makefile: Fix the Makefile so that it won't recompile every
+	object every time.
+
+	* unionimap.c: Fix printf formats.
+
+2005-06-16  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c : Fixed a bug that prevented compiling on newer
+	gcc versions
+
+2005-06-16  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c : Tested and working we can now make and print valid
+	unionfs imap files.
+
+2005-06-16  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c : finished coding starting testing and debugging.
+	* unionimap.h : minor changes
+
+2005-06-15  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c : wrote some more code not tested yet
+	* unionimap.h : added a struct that is needed.
+	* Makefile: Cleanedup a conflict.
+
+2005-06-15  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* fist.h,print.c,unionfs.h: Change NODEBUG to UNIONFS_NDEBUG to be
+	more inline with the rest of the kernel.
+	* print.c: Wrap in UNIONFS_NDEBUG, so there is no need for a separate
+	flag to not compile it.
+
+	* unionctl.c: Add Unionfs version to help message
+		(not just unionctl version).
+	* unionimap.c: Add version to help message.
+
+2005-06-12  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c, match-malloc.pl: Handle KFREE(NULL).
+	* commonfops.c (unionfs_file_revalidate): NULL ftohf_ptr after freeing
+	it.
+	* commonfosp.c (unionfs_open): Allocate correctly sized ftohf_ptr.
+
+2005-06-10  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionimap.c: Beginning of a user mode program to create inode map
+	files.
+	* unionimap.h: Header for program.
+	* unionfs.h: added definitions for imap structs
+	* Makefile: added make targets for unionimap.c and .h
+
+2005-05-26  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* persistent_inode.c: Comment out 64-bit division.
+
+2005-05-25  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionfs.h : added some variables to the unionfs_sb_info struct to
+	handle persistent inodes.
+	* persistent_inode.c : more work done on the parsing functions almost
+	done but not quite there yet.
+	* main.c : added entry in parse_options to handle persistent inodes.
+
+2005-05-24  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unlink.c (unionfs_unlink_whiteout): Missing dput in truncating fix.
+
+	* unlink.c (unionfs_unlink_whiteout): Truncate whiteout after it
+	is created.
+
+2005-05-23  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Test commit.
+
+	* inode.c (unionfs_create): Fix ASSERT that had a side-effect.
+	This fixes a dentry reference count bug if you compile with
+	-DNODEBUG.
+
+2005-05-19  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unlink.c: Empty a directory of its whiteouts before deleting it,
+	and refresh the hidden dentry on a failed rmdir.
+
+	* unionfs.h: Always include ufi_file_i, so we can compile with zero
+	inline entries if we want.
+
+	* Test commit.
+
+	* Makefile: Define UNIONFS_VERSION to be the current version.
+	* main.c: Print the version of Unionfs, not main.c.
+
+2005-05-17  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* lookup.c (unionfs_lookup_backend): Fix partial lookups for
+	three or more branches.
+
+2005-05-16  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* lookup.c (unionfs_lookup_backend): Change UNIONFS_LOOKUP_PARTIAL
+	to UNIONFS_LOOKUP_REVAL_NEG, when a dentry magically turns positive
+	on us.
+
+2005-05-14  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* lookup.c (new_dentry_private_data): Fix memset'ing logic.
+	* branchman.c (unionfs_ioctl_addbranch): Fix copying logic.
+
+	* inode.c(unionfs_follow_link): Return 0 not the number of bytes
+	in follow_link.
+
+	* Reduce Unionfs module size when NODEBUG is set by not compiling
+	print.c, and using a different set of macros that don't require
+	__FILE__, __FUNCTION__, and __LINE__, and don't do as much checking
+	because we've aleady turned ASSERT off.
+
+	* Support for inline objects, so that we don't need more
+	than one allocation for inodes and only two for dentries (the dentry
+	itself and its private data).
+
+	* Separate directory file operations from normal file operations.
+
+2005-05-13  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Makefile: Increment version number.
+
+	* Makefile: Release 1.0.12
+
+2005-05-13  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Disable generic_file_sendfile, because it causes nfsd
+	to Oops.
+
+	* lookup.c (unionfs_lookup): Don't ASSERT dentry goodness along
+	the error path.
+	* dentry.c (unionfs_d_release): Handle dentries without dthod_ptrs.
+
+2005-05-11  Jaspreet Singh  <jsingh@ensim.com>
+
+	* main.c (unionfs_interpose): Move fist_copy_attr_all before
+	d_instantiate so Selinux can decide what type of inode it is.
+
+2005-05-13  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* Makefile : fixed spelling mistake
+	* persistent_inode.c : fixed typo for compilation
+
+2005-05-12  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+	* persistent_inode.c : Stupid spelling mistake in the name
+	of the file.
+
+2005-05-12  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* persistant_inode.c : Functions needed to establish and maintain
+	a persistant inode scheme for unionfs.
+	* main.c : modified parse options for persistant inodes. Not done yet
+
+2005-05-11  Jaspreet Singh  <jsingh@ensim.com>
+
+	* copyup.c (unionfs_copyup_xattrs): Don't use XATTR_CREATE,
+	instead use 0 so that it is replaced or created as needed
+	(Selinux automatically creates attributes.
+
+2005-05-11  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* print.c (fist_print_generic_dentry): ASSERT(d_count > 0) so
+	that we find dentries gone bad earlier rather than later.
+
+	* inode.c (unionfs_mkdir): bend should not go past the opaque
+	directory, but stay there.
+
+2005-05-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: Add root file system instructions based on Linux
+	Live's linuxrc.
+
+2005-05-08  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* main.c,super.c,lookup.c: Use alloc_inode in 2.6, so that only
+	two allocations need to be made per inode instead of two.  In
+	both 2.4 and 2.6 use a private kmem_cache for our dentry data,
+	so that we don't need to waste space by having kmalloc round up.
+
+	* lookup.c (new_dentry_private_data): Merge initialization and
+	reinitialization code from lookup and read_super.  Also don't
+	reallocate dentry private data if we already have enough space.
+
+	* INSTALL: Add Jaspreet Singh's selinux instructions.
+
+	* INSTALL: Add EXDEV on ro branch rename as a limitation.
+
+	* inode.c: follow_link and put_link fix for 2.6.
+
+	* lookup.c: Compile fix for 2.4.
+
+	* rename.c: If a directory is moved on a read-only branch return EXDEV,
+	so that mv essentially does a cp -r (recursive copyup in the kernel
+	would be too ugly).
+
+2005-05-06  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* lookup.c: Merge unionfs_lookup_backend and unionfs_partial_lookup,
+	partial lookups will now properly handle whiteouts.
+
+	* print.c: Fix compile error when NODEBUG is defined.
+
+	* lookup.c: Fix BUG 264.
+	* print.c: Separate generic inode printing from itohi printing.
+	Use const for print functions.
+
+2005-05-05  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Code style fixes.
+
+2005-04-27  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* inode.c changed ops vectors to C99 style initialization.
+	* file.c changed ops vectors to C99 style initialization.
+	* dentry.c changed ops vectors to C99 style initialization.
+	* super.c changed ops vectors to C99 style initialization.
+	* stale_inode.c changed ops vectors to C99 style initialization.
+
+2005-04-21  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionfs.h: added no check versions ot set_dtohd_index
+	and dtohd_index.
+	* dentry.c: changed a function call to dtohd_index_nocheck
+
+2005-04-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* lookup.c (unionfs_lookup_backend): When a whiteout is encountered,
+	set opauqeness as we do with opaque directories, to prevent partial
+	lookup from seeing past the whiteout.
+
+	* lookup.c: Separate file for lookup code.
+	* subr.c: Move unionfs_partial_lookup to lookup.c.
+	* inode.c: Move unionfs_lookup to lookup.c:
+
+	* rename.c: Don't print lower-level dentries using a Unionfs
+	specific function.
+
+	* print.c: Divide fist_print_dentry into one function for Unionfs
+	specific dentries, and then a generic function.  Also ASSERT that
+	we are really printing a Unionfs dentry (so we don't dereference
+	bad private data).
+
+	* Fix indentation comments.
+
+2005-04-25  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* subr.c: Code style fixes.
+
+2005-04-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* NEWS: Keep NEWS up to date.
+
+2005-04-21  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_filldir): Don't strncmp for .wh., if the
+	name's length is less than 4.  Old cruft can make things
+	go horribly bad (BUG 254).
+
+	* inode.c (unionfs_lookup_backend): Properly handle file
+	transitioning from a negative to a positive dentry. (BUG 215)
+
+2005-04-21  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Sendfile only exists on 2.6.
+	* main.c: Catch UNIONFS_REVAL_NEG specifically, still
+	need to understand/fix.
+
+2005-04-20  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* subr.c (unionfs_partial_lookup) ,unionfs.h
+	(unionfs_dentry_info), inode.c(unionfs_lookup):
+	Correctly mark a directory as opaque and respect that
+	during partial lookups.
+
+	* Exorcise struct typedefs and "fake" STATIC functions.
+
+	* inode.c: Experimental support for opaque directories,
+	not all of the loose ends are tied up, so this snapshot
+	will have some associated oddities.
+
+	* xattr.c: Use EOPNOTSUPP, not ENOTSUPP.
+
+	* Makefile, unionfs.h: Separation of rename/unlink code.
+	* rename.c: Separate rename code from inode.c
+	* unlink.c: Separate unlink code from inode.c
+
+2005-04-20  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* rdstate.c, unionfs.h: DOH, We were checking if
+	uii_rdversion <= MAXRDCOOKIE to decide whether or not
+	to wrap uii_cookie.
+
+2005-04-19  Fabian Franz  <fs-bugs@fabian-franz.de>
+
+	* applied patch to file.c that uses generic_file_sendfile
+	to implement sendfile.
+
+2005-04-18  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* removed a stray printk
+
+2005-04-18  Markus F.X.J. Oberhumer  <markus@oberhumer.com>
+
+	* file.c, locks.c: Use #ifdef for 64-bit locking
+	commands, which are not defined on amd64.
+
+2005-04-18  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* copyup.c: Extended attributes now copyup properly.
+	This has only been tested in 2.6 but I see no reason
+	that it shouldent work in 2.4
+	* copyup.c: unionfs_create_dirs is now nolonger bound
+	by MAX_DIRS_CREATE. We now use kmalloc to dynamically
+	allocate memory for it and "realloc" the memory when
+	needed.
+
+2005-04-18  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* copyup.c: Use list_size as the argument to xattr_free, not the
+	MAX_LIST_SIZE.
+
+	* file.c: ASSERT was asserting on the dentry, not the i_mode.
+
+2005-04-16  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Delay copyup of read-write files located on read-only
+	branches, until an operation will actually write to them (BUG 225).
+
+	* INSTALL: Cleanup kernel instructions a bit.
+
+2005-04-13  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* inode.c: unionfs_mkdir now spoofes the uid and gid of the owner
+	of the whiteout file for the purpose of removing it.
+
+2005-04-11  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+	* patch-kernel.sh : Script written to move unionfs into the kernel
+	source tree. The original script was submitted by Sven Geggus however
+	the script was cleaned up and modified for various reasons. Check the
+	file for more details.
+	* Makefile: PHONY added to the utils target to aid in building them
+	for the kernel.
+	* INSTALL: Directions added for building unionfs into a monolithic kernel.
+
+2005-04-11  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* copyup.c : changed comparison from > to >= to be compatable with 2.6.0
+	* fist.h : same as above
+	* unionfs.h : same as above
+	* rdstate.c : same as above
+	* main.c : same as above
+	* inode.c : same as above
+	* super.c : same as above
+	* xattr.c : sme as above
+
+2005-03-24  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* unionfs.h : changed UNIONFS_SUPER_MAGIC. All fist based file systems
+	  will have the first 2 bytes of the MAGIC number be f15f.
+	* super.c : statfs struct is now properly filled.
+
+2005-03-23  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* INSTALL: removed the warning about NFS exports
+	* Makefile: Increases release number.
+	* NEWS: Added release news for 1.0.11
+	* unionfs.h: added a function rdstate2offset
+	* file.c: redid llseek and readdir implementation
+	* rdstate: redid find_rdstate
+
+2005-03-21  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Add big warnings that NFS exports won't work in 1.0.10.
+
+2005-03-17  Terry Barnaby <terry1@beam.ltd.uk>
+
+	* rdstate.c (find_rdstate): Factor out rdstate search.
+	* file.c (unionfs_dir_llseek): Use rdstate if it exists.
+
+2005-03-16  Terry Barnaby <terry1@beam.ltd.uk>
+
+	* Makefile: fix clean target
+
+	* file.c (unionfs_dir_llseek): Fix mistaken use of origin
+	instead of offset.
+
+2005-03-16  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* super.c (unionfs_statfs): Use shifting instead of division.
+
+2005-03-15  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* super.c (unionfs_statfs) : df now reports the proper numbers.
+	duplicate super blocks are not factored into the calculations and
+	all the block sizes are normalized to the first partition.
+
+2005-03-14  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_read_super) : In 2.4 the kernel expects a valid
+	super block or null we were returning an error pointer and this
+	caused an Oops. This has been fixed.
+
+2005-03-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionfs_getlk (unionfs_getlk): Add preprocessor define for
+	2.6.11+, and add a missing case.
+
+2005-03-10  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* locks.c (unionfs_setlk): fixed a typo in the 2.6 function
+
+2005-03-10  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* misc/snapmerge: Explain how to get two snapshots merged into one
+	snapshot.
+
+	* file.c (unionfs_dir_llseek), locks.c (unionfs_setlk): Fix build
+	on 2.6.
+
+2005-03-09  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_lock): function is completely rewritten to actually
+	work.
+	* locks.c (unionfs_setlk,unionfs_getlk): locks.c was added to house
+	locking functions so file.c doesent get overcrowded. unionfs_setlk
+	and unionfs_getlk were added and placed in this file with some
+	helper functions for 2.6
+
+2005-03-08  Terry Barnaby <terry1@beam.ltd.uk>
+
+	* file.c (unionfs_dir_lseek): Allow seek to beginning/end of dirs.
+
+2005-03-07  Fernando Freiregomez <fernado.freiregomez@telefonica.es>
+
+	* misc/snapmerge: Fix permissions/times after copying files.
+
+2005-03-07  Lucas Correia Villa Real <lucasvr@gobolinux.org>
+	* Makefile: Use MODDIR instead of /lib/modules/`uname -r`
+
+2005-03-07  Eduard Bloch <blade@debian.org>
+	* man/*: Fix man page sections
+	* Makefile: Add separate modules target, remove excessive uname -r's
+	so that kernel version can be overridden.
+
+2005-03-03  Anton Farygin  <rider@altlinux.com>
+
+	* Makefile: Can now build utilities without building kernel module.
+
+2005-03-03  Terry Barnaby <terry1@beam.ltd.uk>
+
+	* dentry.c (unionfs_d_revalidate): Use fist_copy_attr_all to
+	make the cache appear more coherent.
+
+2005-03-02  Fabian Franz  <fs-bugs@fabian-franz.de>
+2005-03-02  Anton Farygin  <rider@altlinux.com>
+	* dirhelper.c: Fix BUG 184: vfs_readdir is allowed to return positive
+	results.
+
+2005-03-02  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_readdir): Remove buf.error which was unused.
+
+2005-03-02  Anton Farygin  <rider@altlinux.com>
+
+	* Fix BUG 205: mv on symlinks
+
+	* Fix BUG 203: Kernel oops on creat file with len of name > 252
+
+2005-02-24  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* RPM spec file included in release.  Remove CVS directory from
+	debian directory in release.
+
+	* Add fsid= to interactions, with pointer to exports(5).
+
+2005-02-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* unionctl.c (find_union): Start off w/ a 1K buffer and double it
+	if the lines in /proc/mounts don't fit.  Thanks to J. H. Wilson for
+	finding and patching this bug.
+
+	* main.c (unionfs_interpose): Reorganize if statement.
+
+	* rdstate.c (add_filldir_node,find_filldir_node): Don't print the
+	names in debug mode because they aren't '\0' terminated.
+
+2005-02-22  Fabian Franz  <fs-bugs@fabian-franz.de>
+
+	* Applied patch to bug 193 Fixed the problem with
+	hardlinks not having the same inode number.
+
+2005-02-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_delete): d_delete should not be defined (or
+	call the lower d_delete).  Thanks to Fabian Franz for identifying
+	this issue.
+
+2005-02-22  Fabian Franz  <fs-bugs@fabian-franz.de>
+
+	* copyup.c (unionfs_copyup_dentry_len): Applied patch provided
+	for bug #196. A device was being decoded when it didnt have to be.
+
+2005-02-22  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* README: Article URL.
+
+2005-02-18  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* dirhelper.c (create_dir_whs) : commiting chips change to make
+	sure it creates whiteouts properly.
+
+2005-02-17  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: Squashfs is generally OK, but we do have flock problems.
+
+	* file.c (unionfs_dir_llseek): Untested fix for BUG 187.
+
+2005-02-09  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_link): Fixed linking if the underlying file
+	system is read-only. The fix causes an issue with device being
+	busy on umount.  * rdstate.c (find_filldir_node): Print statement
+	was referencing a bad pointer.
+
+
+2005-02-08  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_copyup_xattrs): Use PASSERT, other compile fixes.
+	* xattr.c (xattr_alloc, xattr_free): Shouldn't be static.
+	* Go back to GFP_KERNEL, because GFP_NOFS causes problems with vserver.
+
+2005-02-08  Jaspreet Singh  <jsingh@ensim.com>
+
+	* copyup.c (unionfs_copyup_xattrs): Use security functions.
+
+2005-02-08  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_copyup_xattrs): Take the inode lock as is done in
+	setxattr.
+	* inode.c (unionfs_link): Reference counting on error paths/compile fix.
+
+2005-02-07  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_link): On copyup path directory was not unlocked.
+
+2005-02-07  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_xattr_copyup): Review of code, not yet tested.
+
+	* inode.c (unionfs_link): Revert to Chip's version of
+	unionfs_link.
+
+2005-02-07  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Makefile: Allow module prefixes to be specified for
+	RPM_BUILD_ROOT
+	* rpm/unionfs.spec: Compiled, tested, and installed.
+
+2005-02-06  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* Makefile added a target for uninstall to accomodate rpm removal
+
+2005-02-02  Anton Farygin  <rider@altlinux.com>
+
+	* copyup.c (unionfs_copyup_permissions): Use ATTR_FORCE to make
+	sure any user can change permissions.
+	* copyup.c (unionfs_create_dirs): Twiddle current->fsuid/fsgid
+	so that any user's copyup will behave properly.
+
+2005-02-02  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_mmap): Don't ASSERT that the lower mmap
+	operation is there, instead return ENODEV, as is done in
+	do_mmap_pgoff.  NTFS (and others) don't support mmap, so
+	neither should we when stacked on top.
+
+2005-02-01  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* dirhelper.c : fixed 2.6 compilation. call to vfs_creat missing
+	last param in 2.6
+
+	* Makefile : namei.c is no longer needed so it was removed from
+	the make file.
+
+2005-01-28  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* subr.c, dirhelper.c: Move mkdir/rmdir helpers into separate
+	file.
+
+	* unionfs.h, fist.h: Remove unused/redundant definitions.
+
+2005-01-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* rdstate.c, unionfs.h: Move finding and adding filldir nodes
+	into rdstate.c.  This reduced the readdir code size, and should
+	also let us reuse the code for the subr.c functions.
+	* subr.c: Use an rdstate instead of a second readdir to remove
+	files in delete_whiteouts.
+	* namei.c: Removed vfs_unlink_nozombie.
+
+2005-01-19  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* INSTALL: Add more CFLAGS options to make things smaller.
+
+	* unionfs.h, file.c, rdstate.c: Change DIREOF from -1 to 2^31-1 to
+	fix readdir.
+
+	* unionctl.c: Don't strip trailing slash for "/" when searching for
+	the Union.
+
+	* Makefile: Include INSTALL.
+
+2005-01-14  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* branchman.c (unionfs_ioctl_addbranch): Fix error path resource leak.
+
+2005-01-14  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* copyup.c (unionfs_copyup_permissions): Changed so it actually works now
+	instead of corrupting certian bits.
+	* copyup.c (unionfs_create_dirs): Function actually uses unionfs_copyup_permissions
+	for setting directory permissions instead of setting them explicitly.
+
+2005-01-14  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_dir_llseek): Allow llseek to the current
+	offset in the directory, but nowhere else.
+	* file.c (unionfs_readdir): Save the last offset, so we
+	can lseek to it (for pretend).
+
+	* Remove all occurrences of GFP_KERNEL and replace with GFP_NOFS,
+	so our allocations can't cause file system calls.
+
+2005-01-13  Rakesh N. Iyer  <riyer@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_readdir): Fixed deadlock in rdstate search.
+
+2005-01-13  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Split README into INSTALL as well.
+
+	* Makefile: Spit out a message saying to read install.
+
+	* Don't build xattr functions w/o -DUNIONFS_XATTR
+
+2005-01-11  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* inode.c: Initial implementation of hardlinking a file on a read only branch.
+	  Attributes are not copied properly yet.
+
+2005-01-10  Sai Suman  <suman@pantasys.com>
+
+	* copyup.c: Fix usage of unionfs_copyup_permissions.
+
+2005-01-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* super.c: 2.4 compile fixes
+
+	* fist.h: Updated FISTBUG for gcc 2.9.5
+
+2005-01-10  David P. Quigley  <dquigley@fsl.cs.sunysb.edu>
+
+	* xattr.c: Format changes for size_t.
+
+	* doit.sh: Call optional postdoit script
+
+2005-01-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* AUTHORS file.
+
+	* README updates.
+
+	* Allow NFS exports on 2.6 (Sai Suman)
+	* Fixes to print format in xattr.c (Sai Suman)
+
+	* debian/*: Debian packaging from Alex de Landgraaf.
+
+	* Remove -Wno-unused-label for gcc 2.9.5 (alex@delandgraaf.com).
+	* Allow "EXTRACFLAGS=-DNODEBUG" in fistdev.mk to disable
+	the printing/ASSERT facility, cutting object size in half.
+
+2005-01-09  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* unionfs.h: Warn when compiling on unsupported kernels.
+	* super.c: Compile fix for 2.6.8.
+	* Makefile: Include ChangeLog in the release.
+
+2005-01-07  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Prepare 1.0.6 release.
+
+	* Fix 2.6 compile issues in new code.
+
+	* rdstate.c: Move readdir state away from subr.c.
+	Use a kmem_cache for filldir nodes.
+
+	* copyup.c: Move copyup functions away from subr.c
+
+2005-01-06  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Working NFS readdir.  On close we store left-over
+	readdir state in the inode for up to 5 seconds.  If a readdir
+	has a matching cookie, then we pull the state out of the inode
+	and use it.  We also needed to use our own offsets, otherwise
+	the NFS client got confused.
+
+	* subr.c: Remember the number of entries in our hash table for
+	each inode, and use that as the number for the next readdir.
+
+	* Makefile: Fix dependencies on .h files.
+
+	* print.c: Consistencify printing of files and superblocks
+	and shorten some overly verbose output that added no information,
+	but reduced the effective kernel log size.
+
+	* fist.h: Make gcc check fist_dprint_internal formats.
+
+	* file.c,unionfs.h: Separate readdir state into a separate structure.
+
+	* file.c,unionfs.h,subr.c: Make readdir state use variable sized
+	hash tables based on number of pages in lower-level directories.
+
+	* Makefile: Install unionfs.ko, not unionfs.o if it exists.
+
+	* main.c: Remove MODULE_PARM because it is deprecated.
+
+2005-01-04  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_read): Fix "inifite" cat bug on 2.6
+
+	* Makefile: Auto-select 2.4 vs. 2.6 for build.
+
+	* Unify 2.4 and 2.6 Makefiles
+
+	* Fixes for printing file structures at debug level 18.
+
+	* Fixes for 2.4 compilation.
+
+2004-12-30  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* *.[ch]: Update year.
+
+2004-12-29  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c: Embed rename.txt into comment.
+
+2004-12-29  Charles P. Wright  <cwright@cs.sunysb.edu>
+
+	* inode.c, unionfs.h: Changed directory copyup function back to
+	old prototype.
+
+	* subr.c (unionfs_copyup_dentry_len): Handle directories, devices,
+	and symlinks.
+
+2004-12-27  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c: Only request copyup of parent directories.
+
+	* subr.c (unionfs_copyup_dentry_len): Handle directory copyup
+	(required for chmod).
+
+	* main.c (unionfs_parse_options): Fix along error path.
+
+2004-12-06  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_interpose): Allow mount point crossing.
+
+	* README, Makefile, inode.c: Turn off extended attributes, unless
+	the user specifically turns them back on by defining UNIONFS_XATTR.
+	This prevents us from getting various compile errors depending on
+	vendor-specific patches.
+
+2004-11-10  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* Fix .cvsignore and release.
+
+	* README: Added warning that anything less than 2.4.20 is unsupported.
+
+	* namei.c: Removed inode_dir_notify calls when we are on less than
+	2.4.20, because the symbol is not exported.
+
+	* Fixed lots of bad casts from pointer to int in printks.
+
+	* main.c (unionfs_parse_options): Fix for badly ordered variables.
+
+	* main.c (unionfs_read_super): Remove double free along error path.
+
+	* wrapfs.h (dtopd_lhs): Remove cast from LHS of assignments.
+
+2004-11-09  Erez Zadok  <ezk@cs.sunysb.edu>
+
+	* released unionfs-1.0.2.
+
+	* README (site): fix typo. missing "`".
+
+	* Makefile (clean): remove tarball.
+
+	* README: updated.
+
+2004-11-09  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* released unionfs-1.0.1.
+
+	* Makefile: Include man pages in the release.
+
+2004-11-07  Erez Zadok  <ezk@cs.sunysb.edu>
+
+	* released unionfs-1.0.
+
+	* announce-email.txt: revised announcement text.
+
+2004-09-23  Erez Zadok  <ezk@cs.sunysb.edu>
+
+	* announce-email.txt: draft announcement email.
+
+	* README: revised.
+
+2004-09-15  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Don't allocate directory hash table for files.
+
+	* inode.c (unionfs_setattr): Don't do partial lookup if setattr is not
+	set to all (should improve delete_whiteout).
+
+	* Some grayout code (we don't discuss rename_first anymore, so it
+	actually doesn't matter).
+
+2004-08-24  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* namei.c (vfs_create_nozombie): Whiteout creation needs a version
+	of vfs_create that won't down the i_zombie.
+
+	* subr.c (create_dir_whs_filldir):  Don't ASSERT that the whiteout
+	doesn't already exist, because we can have multiple files with
+	the same name in other branches.
+
+2004-08-23  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_mkdir, unionfs_symlink, unionfs_mknod): lookup
+	whiteout in 'bstart' not 'bindex'. We always looked up on first branch
+	as bindex was set to 0
+
+2004-08-20  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_inode_revalidate): Walk up the tree to revalidate
+	inodes like we do for dentries.
+
+	* inode.c, subr.c, unionfs.h: Use multilocks to protect against
+	unionfs_partial_lookup and revalidate operations racing against
+	each other.
+
+	* unionfs.h: Implementation of "multilocks".
+
+	* Makefile: install target
+
+	* We don't change size, so no sca_*.[ch] files.
+
+	* main.c (unionfs_hidden_dentry_index): This function is unused now
+	that Mohammad took it out, so I removed it.
+
+	* Removed unnecessary files.
+
+	* COPYING: SUNY we can't be blamed for anything notice; and the GPL.
+
+2004-08-19  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_setattr): using dtohd_index() instead of
+	unionfs_hidden_dentry() because an intermediate hidden dentry
+	could be NULL and we dont want PASSERT to oops on us
+
+2004-08-19  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_unlink_all): We shouldn't have negative dentries
+	unless they are the first one.
+
+	* inode.c (unionfs_inode_revalidate): PASSERT(hidden_inode) instead
+	of Oopsing.
+
+	* inode.c (unionfs_rename_all): Typo in the clobbering unlink.
+
+	* inode.c (unionfs_rename_all): No debug printks.
+
+	* unionfs.h (get_nlinks): Don't sum up non-directories.
+
+	* subr.c (unionfs_refresh_hidden_dentry): Re-lookup a dentry, this
+	is needed on rename reverts because vfs_rename trashes the dentry
+	of the target.
+
+	* inode.c (unionfs_rename_all): Working revert.
+
+2004-08-18  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_rename_all): New rename that handles more cases,
+	revert code doesn't work yet.
+
+2004-08-18  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* inode.c (rmdir_all): exit if error is not -EROFS and not -ENOTEMPTY
+
+	* inode.c (rmdir_all): exit from function and dont create whiteout
+	if vfs_rmdir returns error other than -EROFS
+
+
+2004-08-17  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_unlink_all): Unlock the directory on error.
+
+	* inode.c (unionfs_setattr): Lock on all attribute changes, not just
+	some.
+
+	* inode.c (do_rename): Check renames based on index rather than
+	new_dentry which might not exist.
+
+	* Makefile: debugging symbols are very useful for Oops tracing
+
+	* unionfs.h (CUR_MAX_BRANCH): Removed CUR_MAX_BRANCH which was always
+	sbend + 1, and replaced with sbmax (that doesn't require a redundant
+	and possbly inconsistent field within the super-block).
+
+	* unionfs.h (dtopd): Converted from a macro to an inline function
+	so that we can do more checking of the private data that we are
+	returning.
+
+	* unionfs.h (dtohd_index) Added a udi_bcount field to the private data
+	so we would Oops rather than silently overflow array bounds.
+
+	* dentry.c: Recursively revalidate the parent (the ASSERT that was
+	checking this was mis-written).  It turns out that our parent was not
+	always valid.
+
+	* file.c (unionfs_file_revalidate): Always reassign the read-ahead
+	values because the older file might have different values and llseek
+	will cause an assertion failure.
+
+	* inode.c (unionfs_lookup_backend): Treat revalidated negative and
+	positive dentries differently.
+
+2004-08-16  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c: Use an fd_set instead of an integer for tracking successful
+	renames.
+
+	* branchman.c: Don't allow more than FD_SETSIZE (1024) branches.
+
+	* unionctl.c: Specific message for exceeding FD_SETSIZE.
+
+2004-08-11  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c: Return ENAMETOOLONG when looking up ".wh.*"
+
+	* unionctl.c: Add ioctl.
+
+	* branchman.c: Don't allow branches without MAY_READ
+
+	* unionctl.c: Convert branch pathnames into index automatically.
+
+	* unionctl.c: Match the longest prefix of our path inside of
+	/proc/mounts instead of the path itself.  This is required so that
+	remove doesn't need to open the root of the union.
+
+	* unionctl.c: Remove branch ioctl and list branch configuration.
+
+2004-08-10  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* file.c: added CAP_SYS_ADMIN checks before calling unionfs ioctls
+
+	* uniondbg.c: now contains debugging related ioctls
+
+	* unionctl.c: now contains ioctls to add, remove and set branch
+	permissions moved here
+
+	* uniondbg.c: ioctls to add, remove and set branch permissions
+	moved here
+
+	* fist_ioctl.c: remaining ioctls stay here
+
+	* subr.c: making sure copyupuid, copyupgid and copyupmode are all
+	specified when copyup option is set to mounter.
+
+	* inode.c: implemented unionfs_rename_first()
+
+2004-08-09  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* inode.c: more places where we should exit if get an error other than
+	-EROFS in unlink/rmdir and related functions.
+
+	* subr.c: exit if get an error other than -EROFS when
+	creating/deleting whiteouts
+
+	* inode.c: making sure that we create/mkdir/symlink/mknod to the
+	left only if the error returned is -EROFS, otherwise passup
+
+	* subr.c: use notify_change instead of directly modifying the inode
+	fields.
+
+	* subr.c: use notify_change instead of directly modifying the inode
+	fields.
+
+	* main.c: added copyupuid, copyupgid and copyupmode mount options.
+	These options will specify the mode, uid and gid of copied-up files.
+	copyup option should be set to mounter.
+
+	* subr.c: using the above mount time values for copied-up files.
+
+	* unionfs.h added these values in the unionfs super block.
+
+2004-06-17  Charles P. Wright <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_flush): Flush all branches (only makes a
+	difference for directories).
+
+2004-08-03  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* super.c: Implemented unionfs_show_options. Can now view unionfs
+	mount time options in /proc/mounts
+
+	* inode.c: using is_robranch_super instead of is_robranch in
+	create, mkdir, symlink, mknod operations, whenever we try to
+	remove whiteouts if they exist.
+
+	* main.c: while parsing options using strcmp wherever we can,
+	removed all magic numbers, copyup options are now preserve,
+	currentuser, mounter
+
+	* subr.c: when copying up the default mode should be original
+	owner (preserve)
+
+2004-08-02  Mohammad Nayyer Zubair  <zubair@filer.fsl.cs.sunysb.edu>
+
+	* main.c: unionfs mount time flag changed from being an integer
+	flag to several text options that will together make up the flag.
+
+2004-05-17  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* branchman.c: Fixed off by one error when adding more than 8
+	branches.
+
+2004-05-10  Charles P. Wright  <cwright@polarbear.fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_read_super): Error check to prevent oops on bad
+	mount-time options.
+
+2004-04-21  Charles P. Wright  <cwright@polarbear.fsl.cs.sunysb.edu>
+
+	* file.c: revalidate files when the are passed into our methods,
+	this allows copy-up of open files.  Yeah snapshots.
+
+	* dentry.c: Should not use d_hash and d_compare because Unionfs is
+	in charge of the namespace, not the lower-level file systems.
+
+	* Unionfs now has split-view caches.  If compiled with
+	-DSPLIT_VIEW_CACHES, then Unionfs supports duplicating the super
+	block structure and dynamically selecting the correct structure to
+	use when crossing into the unionfs mountpoint.  Right now the
+	default behavior is that root has one view, and every other user
+	has another view.
+
+	If the super block is not duplicated then everything works as
+	before.
+
+2004-04-20  Charles P. Wright  <cwright@polarbear.fsl.cs.sunysb.edu>
+
+	* branchman.c: Super Duper works!  An ioctl can let you create a
+	super block that is a copy of the original.  When you stat the
+	mountpoint that super block is returned.  Now to fix the reference
+	counting bugs associated with unmount. :)
+
+2004-04-19  Charles P. Wright  <cwright@arcticfox.foo>
+
+	* super.c (unionfs_select_super): return s_root for now
+
+2004-03-15  Charles P. Wright  <cwright@arcticfox.foo>
+
+	* dentry.c (unionfs_d_revalidate): Fix refcounts.
+
+	* inode.c (unionfs_inode_revalidate): Fix reference counting.
+
+	* inode revalidate "works" (e.g., no Oopses or other broken f/s
+	behavior), but has broken reference counting.
+
+2004-03-14  Charles P. Wright  <cwright@arcticfox.foo>
+
+	* main.c (unionfs_interpose): Changed neg_dent_flag to which was
+	true if we did *not* have a negative dentry to is_negative_dentry
+	which *is* true if we have a negative dentry.  Fixed related
+	assert (which was ASSERT(1)).
+
+	* inode.c (unionfs_lookup): Read through and simplified lookup by
+	removing duplicated code or nasty if/else statements when if
+	continue would work(to the tune of 20%).  Clarified comments as
+	well.  Now instead of being a 248 line monster it is a 199 line
+	monster.
+
+	* UNIONFS-TODO: We still need to solve whiteouts (i.e., you can
+	sucessfully stat a whiteout in Unionfs).  Note this is not
+	introduced by my changes.
+
+2004-03-12  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* branchman.c (unionfs_ioctl_rdwrbranch): Read/write branch setting.
+
+2004-03-11  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* branchman.c (unionfs_ioctl_addbranch): Refcount fix.
+
+2004-03-04  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (do_rename): Correctly check is_readonly.
+
+	* fist.h (print_exit_pointer): Print out pointer using %p and
+	don't convert using PTR_ERR if it is not IS_ERR.
+
+	* subr.c (unionfs_create_parent_dir): Return error as pointer
+
+	* subr.c (create_whiteout): Check branch before creating whiteouts.
+
+	* unionfs.h (VALID_MOUNT_FLAGS): Define valid mount flags in the
+	header, so main.c doesn't need to know all of them.
+
+	* doit.sh (FLAG): Default mode should be UNLINK_ALL, not
+	UNLINK_WHITEOUT.
+
+	* inode.c (unionfs_unlink): Unlink creates whiteout to the left.
+
+2004-03-03  Charles P. Wright  <cwright@polarbear.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_create): Creation on a robranch will
+	cause the file to be created to the left.
+
+	* unionfs.h: More macros for checking if things are on read-only
+	branches.
+
+	* xattr.c: Separate xattrs from inode.c.
+
+	* ATTACH-TODO.txt: Unionfs doesn't attach.
+
+	* README.attach: Unionfs doesn't attach.
+
+	* mmap.c: Unionfs doesn't filter data.
+
+	* vm_area.c: No data filtering.
+
+2004-03-02  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c: Updated parsing code so that dirs can be specified as
+	b0=rw,b1,b2=ro,b3.  Defaults to rw.  Need to actually integrate
+	the permission checking code elsewhere.
+
+2003-11-10  Harikesavan Pathangi Krishnan  <hari@a-rh72i.fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_readdir): Changed code to fix the NFS related bug.
+
+2003-10-27  Harikesavan Pathangi Krishnan  <hari@mooby.fsl.cs.sunysb.edu>
+
+	* subr.c (unionfs_copyup_dentry_len): This is a modified form of
+	unionfs_copyup_dentry() that takes in the length of file to be
+	copied up. The length is useful when the file size is changed in
+	the setattr.
+
+2003-10-01  Puja Gupta  <puja@t6.fsl.cs.sunysb.edu>, Jay, Mohammad.
+
+	* subr.c (unionfs_copyup_dentry): fixed copyup bug, update bstart, bend
+	on error on vfs_create.
+
+2003-09-27  Puja Gupta  <puja@a-rh8.fsl.cs.sunysb.edu>, Hari, Jay.
+
+	* inode.c (unionfs_rename_all): fixed to call rename and create
+	whiteout for test_rename script.
+
+2003-09-26  Puja Gupta  <puja@a-rh8.fsl.cs.sunysb.edu>, Zubair, Hari.
+
+	* subr.c (create_whiteout): removed unnecessary dput of hidden_dentry.
+
+2003-09-26  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>, Hari
+
+	* subr.c, inode.c, unionfs.h: Better function name and comments.
+
+	* inode.c (unionfs_rename_all): changed to create whiteouts
+	properly on error conditions.
+	(unionfs_rename_whiteout): initilize parent dentry.
+
+2003-09-26  Harikesavan Pathangi Krishnan  <hari@icon.fsl.cs.sunysb.edu>, Puja.
+
+	* print.c (fist_print_dentry): added print for d_parent, aligned.
+
+	* subr.c (create_whiteout_left_parent): Added function for
+	creating whiteout in a parent directory by a char * string.
+	(unionfs_create_parent_dir): initialize dtohd before checking and
+	changing the bstart and bend for new dentry.
+	(unionfs_copyup_dentry): removed extra dput, since fput internally
+	does that.
+
+	* inode.c (unionfs_rename_whiteout): fixed to support copyup for EROFS.
+
+2003-09-24  Puja Gupta  <puja@story.fsl.cs.sunysb.edu>, Hari, Jay.
+
+	* subr.c (unionfs_create_parent_dir): Fixed updating bstart for copyup.
+
+2003-09-23  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>, Hari, Jay.
+
+	* subr.c (unionfs_create_parent_dir): Updates bstart, bend, dputs
+	extra negative dentries.
+
+2003-09-23  Puja Gupta  <puja@story.fsl.cs.sunysb.edu>, Hari, Jay.
+
+	* subr.c (unionfs_create_parent_dir): Dput the previous negative
+	dentry.
+
+	* inode.c (unionfs_create, unionfs_mkdir, unionfs_mknod, unionfs_link)
+	(unionfs_symlink): Removed dgets and dputs to handle errors in
+	vfs functions.  Now handled in unionfs_create_parent_dir.
+	(do_rename): removed dputs and dgets to balance with create_parent.
+
+2003-09-22  Harikesavan Pathangi Krishnan  <hari@t1.fsl.cs.sunysb.edu>, Mohammad.
+
+	* subr.c (unionfs_create_parent_dir): Fixed a bug related to
+	igrabbing lower inode.
+
+2003-09-22  Akshat Aranya  <aaranya@t6.fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_parse_options): Fix some memory leaks in error
+	paths.
+
+2003-09-22  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_read_super): Fixed error path.
+
+2003-09-22  Erez Zadok  <ezk@ulkesh.fsl.cs.sunysb.edu>
+
+	* match-malloc.pl: document this script with a procedure telling
+	how to use malloc debugging.  Use -DFIST_MALLOC_DEBUG from now on.
+
+2003-09-22  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* fist.h, main.c, subr.c: turned off MEMORY_DEBUG.
+
+2003-09-22  Puja Gupta  <puja@t1.fsl.cs.sunysb.edu>
+
+	* main.c (unionfs_read_super): Memory fix.
+
+2003-09-22  Puja Gupta  <puja@mooby.fsl.cs.sunysb.edu>
+
+	* inode.c, dentry.c, super.c: Memory Leak Checks.
+
+2003-09-22  Erez Zadok  <ezk@agora.fsl.cs.sunysb.edu>
+
+	* subr.c: add transcation counter to malloc/free debugging.
+
+	* match-malloc.pl: perl script to parse log output from
+	KMALLOC/KFREE macros, and report leaks etc.
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Puja, Hari, Jay.
+
+	* inode.c (unionfs_lookup): changed the dput location of hidden
+	whiteout dentry in the code.
+
+2003-09-22  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* subr.c (check_empty): added list_del.
+
+	* inode.c (unionfs_lookup): kfree moved at out.
+	(unionfs_unlink_whiteout): added kfree.
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Puja, Hari, Jay
+
+	* subr.c (create_parent_dir()): added support for left to right
+	copy up.  Could be used in unionfs_link()
+
+2003-09-21  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>, Jay, Hari, Mohammad.
+
+	* subr.c (check_whiteout): check for error on kmalloc.
+	(check_empty): moved kfree after 'out' label.
+
+	* main.c (unionfs_read_super): changed to dput superblock dentries on
+	error conditions.
+
+	* file.c (unionfs_filldir): check for error on kmalloc.
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Puja, Hari, Jay.
+
+	* inode.c (unionfs_link()): unlinking .wh.foo (if exists)
+	while creating link called foo
+
+2003-09-21  Puja Gupta <pugupta@cs.sunysb.edu>, Hari, Jay, Mohammad.
+
+	* inode.c (unionfs_mkdir, unionfs_mknod): dget hidden_dentry if not
+	calling create_parent_dir.
+
+	* inode.c (unionfs_mkdir, unionfs_mknod): removed extra dget before
+	removing whiteout.
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Hari, Jay, Puja.
+
+	* inode.c (unionfs_symlink()):  removed extra dget() in symlink
+
+2003-09-21  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* inode.c, dentry.c, unionfs.h: variable declaration re-shuffled to
+        compile on local machine.
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Hari, Jay, Puja
+
+	* subr.c (create_dir_whs()):  removed extra dget on hidden dentry
+
+	* file.c (unionfs_open()): calling branchput if get an error in
+	opening hidden dentry
+
+2003-09-21  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>, Jay, Hari, Mohammad.
+
+	* inode.c: removed extra bstart, and comments.
+
+	* file.c (unionfs_readdir): Added a bindex++ to {un,re}-reverted code.
+	Works now!! ;-)
+
+2003-09-21  Mohammad Nayyer Zubair  <zubair@t1.fsl.cs.sunysb.edu>, Hari, Jay, Puja.
+
+	* subr.c (create_whiteout_left()): synched reference counts for
+	hidden_dentry; added a dget for the hidden_dentry
+
+2003-09-21  Puja Gupta  <puja@t1.fsl.cs.sunysb.edu>, Jay.
+
+	* inode.c (unionfs_create): removed extra dget, dput for vfs_rename.
+	Removed extra dputs, d_drop on error.
+
+2003-09-21  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* subr.c (unionfs_create_parent_dir): removed extra dput on error
+	in lookup.
+	(create_whiteout_left): mode set to create whiteout.
+	(delete_whiteouts): removed dput on NULL hidden_dentry.
+
+2003-09-20  Mohammad Nayyer Zubair  <zubair@mooby.fsl.cs.sunysb.edu> Puja, Jay
+
+	* inode.c:  removed all "dtohd_index(dentry, bindex) = NULL" references and any
+	extra dputs
+
+	* subr.c:  modified code in troublesome create_whiteout_left() function.
+	Removed extra dgets on the parent and dputting the hidden dentry
+
+2003-09-20  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* subr.c: added branchput for branchgets.
+
+	* print.c (fist_checkinode): fixed the count print condition.
+
+	* inode.c (unionfs_unlink_whiteout): changes to dget, notify_change.
+	match dget and dput.
+
+2003-09-20  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Makefile (tags): target for tags
+
+	* inode.c (unionfs_unlink_whiteout): Refcount fix.
+
+2003-09-20  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_readdir): reverting back to file.c before changes
+	related to readdir_called flag.  Was going into an infinite loop due
+	to some condition.  The current version works fine.
+
+	* subr.c (create_dir_whs_filldir): replaced "return err" with
+	"goto out", which was causing an infinite loop.
+	(check_whiteout, delete_whiteouts): replaced 'ret' with err.
+
+2003-09-19  Puja Gupta  <puja@icon.fsl.cs.sunysb.edu>
+
+	* subr.c (create_dir_whs): added filldir_called flag.
+
+2003-09-19  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>, Jay, Hari, Mohammad.
+
+	* subr.c (check_empty): check if filldir is called or not.
+
+2003-09-19  Harikesavan Pathangi Krishnan  <hari@t1.fsl.cs.sunysb.edu>, Jay, Chip, Puja, Mohammad
+
+	* subr.c (check_empty): Added a flag field in the callback
+	structure that makes readdir call once again if all the contents
+	of the directory are not read.
+
+2003-09-19  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_release): free resources on file close.
+
+	* file.c (unionfs_filldir): Print a warning on any duplicate, but
+	don't return -EIO.
+
+	* subr.c (create_whiteout_left): fix a refcount leak
+
+2003-09-19  Mohammad Nayyer Zubair  <zubair@mooby.fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_filldir()): fixed the rm -Rf (-EIO, ENOTEMTPY
+	error) cases.  return -EIO ONLY when get a 'foo' and 'foo' exists
+	in the same directory, which would indicate corruption in the file
+	system. Before were returning -EIO ALSO if filldir gets a
+	'.wh.foo' and 'foo', latter being in the linked list already
+
+2003-09-17  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>, Hari, Mohammed.
+
+	* Makefile: Changing back to old file.
+
+	* subr.c (create_whiteout_left): removed dput, hidden_dentry == NULL.
+
+	* inode.c (do_rename): If error, make hidden_dentry NULL.
+	(unionfs_rename_all): copyup file on err = -EROFS.
+
+	* unionfs.h: added copyup_dentry.
+
+	* subr.c (unionfs_copyup_dentry): added this function, called from
+	setattr.
+	(unionfs_copyup_file): modified, calls copyup_dentry internally. Added
+	checks before kfree.
+
+	* inode.c (unionfs_setattr): calls copyup when trying to setattr for a
+	RO branch.
+
+	* fist.h (FISTBUG): imported from ncryptfs.
+
+2003-09-17  Harikesavan Pathangi Krishnan  <hari@t1.fsl.cs.sunysb.edu>
+
+	* inode.c: Fixed the bug related to creation of whiteouts on the
+	leftmost branch when a directory on that branch is rmdir'ed.
+
+2003-09-16  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* subr.c: fixed indentation for readdir actors
+
+	* inode.c (unionfs_rmdir): create_whiteout can just not do anything
+
+	* unionfs.h (itohi, dtohd): Reference count check before returning
+	to user space.
+
+2003-09-16  Puja Gupta  <puja@a-rh8.fsl.cs.sunysb.edu>, Hari, Mohammad.
+
+	* inode.c (unionfs_create): removed a dget, was giving a seg fault.
+	(unionfs_lookup): error check for lookup_one_len added.
+	(unionfs_rmdir_all): checking if rmdir failed on leftmost, and if it
+	had whiteouts, remove them, and call vfs_rmdir again, to create
+	whiteout.
+
+2003-09-16  Mohammad Nayyer Zubair  <zubair@t6.fsl.cs.sunysb.edu> Hari <hari@fsl.cs.sunysbe.du>
+
+	* main.c (unionfs_interpose()):  removed unnecessary fist_prints()
+
+2003-09-16  Mohammad Nayyer Zubair  <zubair@t6.fsl.cs.sunysb.edu> Hari <hari@fsl.cs.sunysbe.du>
+
+	* print.c (fist_print_dentry() and fist_print_inode()): removed
+	the anding code when printing the mode of the inode. Was printing
+	a negative mode value.
+
+2003-09-15  Puja Gupta  <puja@a-rh8.fsl.cs.sunysb.edu>, Hari, Mohammed.
+
+	* subr.c: fput for copied up file not required.
+
+	* print.c: print level 9 changed to 8.  Level 9 doesn't get printed.
+
+	* unionfs.h (IS_COPYUP_ERR, IS_WRITE_FLAG): Added.
+
+	* subr.c (unionfs_copyup_file): Checks added, replaced variables, fixed.
+
+	* inode.c (unionfs_permission): One code for files and directories.
+	Error bypassed for -EROFS, but not for leftmost branch.
+
+	* file.c (unionfs_open): Check added for RO partition, and call copyup.
+
+2003-09-15  Mohammad Nayyer Zubair  <zubair@t6.fsl.cs.sunysb.edu> Hari <hari@fsl.cs.sunysbe.du>
+
+	* inode.c (unionfs_mknod): done. removes whiteout if
+	present. format similar to unionfs_mkdir(). Tested.
+
+2003-09-14  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* inode.c (do_rename): Fixed parent directory for lookup of whiteout.
+	(unionfs_rename_whiteout): Added case for DELETE_WHITEOUT for rename.
+        (unionfs_rename): Check destination->inode before S_ISDIR.
+
+2003-09-14  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_filldir): Remove a duplicate from the list if
+	filldir fails.
+
+	* dentry.c (unionfs_d_revalidate, unionfs_d_compare, unionfs_d_hash):
+	Turned into utility functions for printing to reduce volume of debug
+	output.
+
+2003-09-14  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_rename_all): fix for bindex counter.
+	(unionfs_rename_all): check if error not occured in bstart of
+	destination.
+	(unionfs_rename_all): whiteout is always create in the bstart of
+	source, not to go to left of it.
+
+2003-09-14  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Detect EIO on single directories by doing duplicate elimination
+	routine.
+
+2003-09-13  Puja Gupta  <puja@t3.fsl.cs.sunysb.edu>, Jay.
+
+	* inode.c: added dput for hidden_dentry, whiteout_dentry that
+	are not used after lookup.
+
+	* subr.c: added dput for hidden_dentry, whiteout_dentry that
+	are not used after lookup.
+
+2003-09-13  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* PASSERT is for pointers.  ASSERT is for non-pointer conditions.
+
+2003-09-12  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* main.c: Sanity checks on flag=.
+
+	* subr.c (create_whiteout_left): Balanced a dput w/ a dget.
+
+	* print.c: exit should be level 5, not 4.  hidden_dentries/inodes
+	are level 9 instead of 8.
+
+	* Changed ASSERT to Oops when the pointer is poisoned.
+
+	* Changed ASSERT(foo != NULL) to ASSERT(foo)
+
+	* Default flag is 0x0.
+
+2003-09-11  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>, Hari, Zubair, Jay.
+
+	* inode.c (unionfs_create, unionfs_symlink): whiteouts truncated
+	to zero and ctime updated.
+
+	* unionfs.h: added flags COPYUP_OWNER, COPYUP_FS_MOUNTER,
+	redefined flags.
+
+	* inode.c: unlock parent added.
+
+	* file.c (unionfs_open): check for error and call copyup on EROFS.
+
+	* inode.c (unionfs_unlink): changed the function like rmdir. Used
+	rename instead of unlink, create for whiteouts.
+	(unionfs_mkdir): restructured code.
+
+	* unionfs.h (GLOBAL_ERR_PASSUP): removed DELETE_ERR_PASSUP.
+	GLOBAL_ERR_PASSUP indicates whether to pass error back or create
+	whiteouts/try again.
+
+	* inode.c (unionfs_create, unionfs_symlink, unionfs_link):
+	restructured changed *_ERR_PASSUP to GLOBAL_ERR_PASSUP.
+
+	* unionfs.h (GLOBAL_ERR_PASSUP): added, for all functions,
+	whether, on error, should passup or try to make up for error
+	encountered.
+
+	* inode.c (unionfs_symlink): updating bstart, bend for symlink
+	create.  Restructured the code.
+
+2003-09-11  Mohammad Nayyer Zubair  <zubair@t6.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_symlink): done. removes whiteout if
+	present. same format as in unionfs_create()
+
+	* inode.c (unionfs_link): creating destination path in source's
+	branch instead of vice versa
+
+	* inode.c (unionfs_rmdir_all): removed unneccessary d_drop()
+	call. unionfs_rmdir() calls it at the end
+
+2003-09-10  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_rmdir): Split into several functions.
+
+	* subr.c (delete_whiteouts): Delete all whiteouts in
+	a given directory in a given branch.
+
+	* subr.c (check_empty): Check if a directory is empty.
+
+2003-09-10  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>, Hari.
+
+	* unionfs.h: unionfs_interpose now returns void.
+
+	* subr.c (unionfs_partial_lookup): removed extra dput.
+	unionfs_reinterpose now returns void.
+
+	* main.c (unionfs_reinterpose): is now a void function and igrab
+	was called twice for already existing hidden inode. Fixed.
+
+	* file.c (single_branch_filldir): removed fist_dprint printed
+	extra newline character on commandline during readdir.
+
+	* unionfs.h (COPYUP_CURRENT): removed multiple definition.
+
+2003-09-09  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* subr.c (unionfs_full_lookup): Removed this function, was similar
+	to unionfs_partial_lookup.
+
+	* inode.c (unionfs_unlink): added if-else for three different
+	options for unlink, and also for error handling (passup or
+	whiteout). Replaced unionfs_full_lookup with
+	unionfs_partial_lookup (Both functions were same, just change in
+	name).  Added dget, dput at appropriate places.
+
+	* unionfs.h (DELETE_FIRST, DELETE_WHITEOUT, DELETE_ERR_PASSUP):
+	added, and removed all other unlink flags.
+
+2003-09-09  Mohammad Nayyer Zubair  <zubair@t6.fsl.cs.sunysb.edu> Hari <hari@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_lookup):  returning EIO for directory whiteout.
+
+2003-09-02 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu> Hari <hari@fsl.cs.sunysb.edu>
+
+	* inode.c: mkdir and create revisted, restructured and tested
+
+2003-09-08  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_write): Fixed positioning code.
+
+2003-09-07  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_create): added dget, get_parent, double_lock
+	and error check for vfs_rename of whiteouts. Added d_drop for any
+	negative dentry at the end of function.
+	(unionfs_mkdir): added error check for vfs_unlink of whiteouts,
+	unionfs_interpose, create_dir_whs.  Removed multiple unlock_dir.
+
+	* subr.c (create_dir_whs_filldir, create_whiteout_left):
+	changed char name[PATH_MAX] to char *name.
+
+	* inode.c (unionfs_create, unionfs_lookup, unionfs_unlink)
+	(unionfs_mkdir): changed char name[PATH_MAX] to char *name.
+	(unionfs_rmdir): removed unused name, wh_name.
+
+2003-09-06  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_create): reverted back to the loop for create
+	from bstart to zeroth branch.
+
+2003-09-02 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c: file to file rename done.
+
+	* major items left: dir to dir rename
+
+	* minor items left: mknod, symlink
+
+2003-09-05  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c (unionfs_filldir, single_branch_filldir): Removed memory
+	leak for debug output in filldirs.
+	(unionfs_readdir): Return -failure from filldir (previously our
+	filldir had no error propagation).
+
+	* ioctls via extended attributes works.
+
+	* branchman.c (unionfs_ioctl_delbranch): Don't let people delete
+	the last remaining branch.  It would be cooler if we could, but
+	probably not worth all the effort to make the root dentry behave
+	properly when there is nothing underneath it.
+
+	* file.c: Removed branch management functions.
+
+	* inode.c): xattr functions.
+
+	* branchman.c: Branch management functions.
+
+2003-09-03  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* super.c (unionfs_clear_inode): Fixed cleanup of stale inodes.
+
+	* fist.h (ASSERT2): Macro to print out caller when we fail.
+
+	* Changed ASSERT2's to ASSERT, since they weren't really being
+	used as an ASSERT2.
+
+	* unionfs.h (itohi, dtohd): Converted to a function, added an
+	ASSERT2 to make sure we don't underflow the array.
+
+2003-09-02 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* subr.c: removed the unnecessary vfs_rename() function call in
+	create_whiteout_left(). Doing vfs_create() directly.
+
+	* inode.c: fixes in lookup(). Started on unionfs_rename().
+
+
+2003-09-01 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* subr.c: added function int remove_whiteouts(dentry_t *dentry,
+	dentry_t *hidden_dentry, int bindex)
+	Called by unionfs_rmdir(). Does vfs_readdir() and then unlinks all
+	whiteouts entries in it.
+
+2003-09-01  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Updated CUR_MAX_BRANCH and MOUNT_FLAG.
+
+	* dentry.c (unionfs_d_revalidate): Make negative dentries that
+	just turned negative stale.
+
+	* inode.c (unionfs_inode_revalidate): Make negative inodes stale.
+
+	* stale_inode.c: Functions to make a magic stale inode.
+
+2003-09-01 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c: unionfs_mkdir() done and works as per updated design.
+	Creating whiteout entries for all entires to the right. Details on
+	this are in the updated function_description.html file
+
+	* file.c: a separate filldir function for single branch directory.
+	Ignoring whiteout entries.
+
+	* subr.c: added a function: int create_whs_right(dentry_t *dentry,
+	int cur_index) Does a vfs_readdir on all directories starting from
+	cur_index + 1 and creates whiteout entries in cur_index (called in
+	unionfs_mkdir()). Details on this are in the updated
+	function_description.html file
+
+	preliminary cases are working as expected
+
+	Left: rename, mknod, symlink.
+
+2003-09-01  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Add branch ioctl and trimmed unionfs_dir_fops.
+
+	* fist.h: Structure for add branch ioctl.
+
+	* fist_ioctl.c: Add branch and cleaner branchcount ioctl.
+
+2003-08-31  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* dentry.c (unionfs_d_revalidate): Do revalidation of dentries,
+	we now can remove the leftmost branch and expose old contents.
+
+2003-08-27 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c: unionfs_unlink() implemented as per new design specs
+	(ignoring intermiate directories for now)
+
+	* subr.c: added create_whiteout_left(dentry, index) function:
+	creates a whiteout in index, on error it proceeds to the left.
+
+	* file.c: in fill_dir() ignoring whiteout entries
+
+	* Left: mkdir, mknod, symlink, rmdir, rename
+
+2003-08-27  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* Branch removal sort of works.
+
+2003-08-27 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c: unionfs_create() implemented as per new design specs.
+	If found a .wh.foo entry, vfs_rename it to foo.
+
+	* inode.c: unionfs_lookup() implemented as per new design specs.
+	If found a whiteout entry, just stop lookup
+
+	* inode.c: unionfs_link() implemented as per new design specs
+
+	* inode.c: unionfs_setattr() implemented as per new design specs
+
+	* inode.c: unionfs_permission() implemented as per new design specs.
+
+	* file.c: calling unionfs_copyup_file() in unionfs_open() if open
+	with specified flags fails with the current underlying file
+
+	* subr.c:  fixes in unionfs_copyup_file()
+
+	* unionfs.h: modified mount time flags
+
+	* Still left (according to new specs): mkdir, symlink, mknod,
+	unlink, rmdir, rename hard.
+
+2003-08-26  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_inode_revalidate): Refresh inode from lower level.
+
+	* fist_ioctl.c: Increment super generation number.
+
+	* file.c (unionfs_ioctl_incgen): Increment super generation number.
+
+2003-08-20  Charles P. Wright  <cwright@fsl.cs.sunysb.edu>
+
+	* file.c: Branch reference counters updated on open/close.  Need
+	to figure out how do to update them when a unionfs directory
+	becomes the cwd of a process.
+
+	* doit.sh: Source doitopts or doitopts.`uname -n` so different
+	developers can have different setups, w/o changing CVS.
+
+	* unionfs.h: Added generation number to super block, inode, and dentries.
+
+	* attach.c: Not used.
+
+2003-08-13  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* subr.c: some fixes in unionfs_copyup_file() (untested yet)
+
+	* file.c: calling unionfs_copyup_file() if write() fails on the
+	leftmost file.  Failure could result because of read-only
+	permissions on the file so probably should do copy up only if
+	branch is mounted RO.
+
+	* unionfs.h: modified definition for unionfs_copyup_file()
+
+2003-08-13  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* subr.c: added function: unionfs_copyup_file(inode_t *dir,
+	dentry_t *dentry, int oldbindex, int newbindex) first does
+	recursive directory creation, then does vfs_create() and then
+	reads PAGE_SIZE bytes from old file to new file
+
+	* subr.c, inode.c: moved useful functions:
+	unionfs_create_parent_dir() and unionfs_partial_lookup() to subr.c
+	from inode.c
+
+	* unionfs.h: definition for unionfs_copyup_file
+
+	* Makefile: added subr.o to the list of OBJS
+
+2003-08-13  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* unionfs.h: added definition for unionfs_create_whiteout.
+
+2003-08-12  Puja Gupta  <puja@mooby.fsl.cs.sunysb.edu>
+
+	* inode.c: reverting back to old copy without changes to rename.
+
+2003-08-04  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* unionfs.h (UNLINK_WHITEOUT, UNLINK_ALL_FIRST, UNLINK_ERR): New flags
+	for handling various unlink options.
+
+	* main.c (unionfs_parse_options): fixed check for getting mount flags.
+
+	* inode.c (unionfs_unlink): added unlink for whiteout. If flag is set
+	for UNLINK_WHITEOUT, try to create whiteout in branches to left, create
+	recursive subdirectories.  Also added check for various flags for
+	unlink_first or unlink_all, and how to handle error on unlink.
+	(unionfs_create_parent_dir): check in for loop fixed.
+
+2003-08-04  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* file.c: readdir is working fine with the hashtable in the private
+	data of unionfs file.
+	diff -ru on gcc tarball is successful
+
+	* inode.c: implemented option 2 of link(), recursively creating source
+	path in destination branch when branches are different
+
+	* unionfs.h: added two mount time flags
+	LINK_EXDEV: just return -EXDEV when dentries are on different branches
+	LINK_RECURSIVE: recursively create source path in target branch
+
+2003-07-31  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* file.c: readdir/filldir's linked list converted into a hashtable
+	of size HASHTABLE_SIZE Duplicate elimation is working. Still to
+	test the gcc tarball.
+
+	* unionfs.h: converted dir_list list head to an array of list
+	heads of size HASHTABLE_SIZE
+
+
+2003-07-30  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* unionfs.h: changed to new flag, CREATE_RW_ERR, UNLINK_WHITEOUT,
+	UNLINK_ERR.  Function definition for unionfs_partial_lookup.
+
+	* inode.c (unionfs_partial_lookup): added, called from
+	unlink. Looks up the remaining files that were not looked up in
+	unionfs_lookup.
+	(unionfs_unlink): code now transferred to unionfs_partial_lookup.
+	(unionfs_create): flag name is CREATE_RW_ERR.
+
+	* inode.c (unionfs_create): changed to new flag values.
+
+	* unionfs.h (IS_SET): changed flags to be exclusive. Also, changed
+	IS_SET to work on place value of bit.
+
+2003-07-27  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* file.c (unionfs_open): removed ftohd_index(file, bindex) = NULL.
+	unionfs_getdents_callback now has file_t *.
+	(unionfs_filldir, unionfs_readdir): changed the global list_head
+	for duplicate elimination to have a list_head in private data of
+	file. So, the list of name, namelen is stored in this new
+	list_head, and compared against this.
+
+	* unionfs.h: added struct filldir_node to private data of file.
+	Thus, every file has unique and seperate list for readdir.
+
+	* doit.sh: "flag=" instead of "flags=".
+
+2003-07-28  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c: unionfs_link's option 1 done. Return -EXDEV if old and
+	new dentries are in different branches / starting option 2: if
+	different branches, creating destination path in the source branch
+
+	* unionfs.h: added a simple function which returns the sum of all
+	the underlying inodes' nlink value
+
+	* inode.c: calling the above function wherever nlinks value was
+	being set
+
+2003-07-24  Puja Gupta  <puja@t2.fsl.cs.sunysb.edu>
+
+	* unionfs.h: #defines for MOUNT_FLAG, CREATE_PASSUP,
+	CREATE_RW_ERR_PASSUP, CREATE_TRY_LEFT and IS_SET.
+
+	* main.c (unionfs_parse_options): parse the mount time flag and
+	initialize it.
+
+	* inode.c (unionfs_create): added handling of partial errors to
+	handle various cases: 1) Try to Left (default), 2) PassUp, 3) If
+	EPERM on RW branch, PassUp.
+
+	* doit.sh: changed mount options to include "flag=".
+
+2003-07-24  Puja Gupta  <pugupta@cs.sunysb.edu>
+
+	* inode.c (unionfs_setattr): added check for NULL hidden dentry.
+	(unionfs_inode_revalidate): added ASSERT2 for inode.
+
+2003-07-24  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* file.c: in unionfs_open, now only opening leftmost file instead
+	of opening all of the hidden files.  Opening all directories
+	though.
+
+	* inode.c: setattr function done. Assigning 'correct' value to the
+	n_links variable in the unionfs inode.  In inode_revalidate
+	function assigning 'correct' value to the n_links variable in the
+	unionfs inode.
+
+	* main.c: just moved sum_nlinks variable to the beginning of the
+	  interpose function. diff -ru on a randomly distributed
+	  (recursive) gcc tarball is failing. Some duplicate files are
+	  being listed.  'ls' on the directory containing above duplicate
+	  files also lists the files twice. Files have same unionfs inode.
+	  Checking out whats happening.
+
+2003-07-22  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* main.c: in interpose() added lines which compute the sum of the
+	nlinks of the underlying inodes and assigns this sum to the
+	unionfs inode.
+
+	* inode.c: in permission() added check for a null hidden inode
+
+2003-07-22  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* unionfs.h: init_file_array is now init_ftohf_ptr,
+	init_inode_array is now init_itohi_ptr, init_sb_array is now
+	init_stohs_ptr, added init_stohiddenmnt_ptr, init_dentry_info,
+	init_dentry_array is now init_dtohd_ptr.  All this makes sure that
+	all allocated memory is initialized to zero before its being used.
+
+	* super.c (unionfs_read_inode): init_inode_array is now init_itohi_ptr.
+
+	* main.c (unionfs_parse_options): init_priv_inode is now
+	init_dentry_info.
+	(unionfs_parse_options): memset, init_stohs_ptr, init_stohiddenmnt_ptr
+	added for initialize memory allocated to NULL.
+	(unionfs_read_super): init_dtohd_ptr added to initialize to NULL.
+
+	* inode.c (unionfs_lookup): init_dentry_array is now init_dtohd_ptr.
+
+	* file.c (unionfs_open): added init_ftohf_ptr, setting underlying
+	file pointer to NULL.
+
+2003-07-21  Puja Gupta <pugupta@cs.sunysb.edu>
+
+	* inode.c (unionfs_create): get rid of the hidden dentry that lead
+	to an unsuccessful attempt to create. Update bstart, bend
+	accordingly.
+	(unionfs_create_parent_dir): added "count--" for proper pointer
+	position. Updated private data, bstart for the dentry and inode of
+	intermediate directories created.  Also, updated bend for the
+	negative dentry returned from this function to create.
+
+	* main.c (unionfs_interpose): removed comments and extra line
+	spaces.
+
+2003-07-20  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* unionfs.h (MAX_DIR_CREATE): added MAX_DIR_CREATE for the number of
+	directories allowed to be created in recursive subdir creation.
+	Should be dynamic.
+
+	* inode.c (unionfs_create): changed to handle partial error by
+	recursively creating directory to left branches.
+	(unionfs_create_parent_dir): added this function, it creates
+	hidden directory path for a given parent inode and dentry in
+	specified branch. (Still to test)
+
+2003-07-15  Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* inode.c <unionfs_lookup>: Found a bug while mounting unionfs on
+	a randomly distributed (recursive) am-utils tarball on 5 branches.
+	Basically we were not memsetting the array of pointers to hidden
+	objects after kmallocing a CUR_MAX_BRANCH number of pointers for
+	dentry, inode, file and sb.  They were assumed to be NULL in
+	lookup and hence were not explicitly set to NULL in the array when
+	requireed.
+
+	* unionfs.h: Added macros which initialize hidden arrays to NULL
+
+2003-07-15  Puja Gupta  <puja@mooby.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_lookup): added few debug statements.
+	(unionfs_unlink): Since lookup for file had just the leftmost
+	entry, unlink now internally calls lookup for all remaining
+	branches.  And the current policy for unlink is, unlink
+	all. (Tested).
+
+	* unionfs.h: added definition for unionfs_reinterpose.
+
+	* main.c (unionfs_reinterpose): This new function takes a dentry
+	with leftmost hidden inode interposed, and reinterposes the newly
+	lookedup hidden inodes in remaining branches.  Called from
+	unionfs_unlink.
+
+	* mount_tarball.sh, mount_tarball_random.sh: These scripts are now
+	moved to ../tools directory.
+
+2003-07-13  Puja Gupta  <puja@mooby.fsl.cs.sunysb.edu>
+
+	* inode.c (unionfs_lookup): fixed initialization of negative dentry.
+
+	* print.c (fist_print_inode), (fist_print_file),(fist_print_dentry),
+	(fist_print_sb): made more readable, pointers now printed with %p.
+
+2003-07-10  Puja Gupta  <puja@idol.fsl.cs.sunysb.edu>
+
+	* super.c (unionfs_statfs): check for duplicate superblock data being
+	added.
+	(unionfs_umount_begin): check for NULL hidden_sb, hidden_sb->s_op.
+
+2003-07-10 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* print.c: fist_print_inode(): prints underlying inodes if any.
+	fist_print_dentry(): prints underlying dentries if any.
+	fist_print_files(): prints underlying files if any.
+	fist_print_superblock(): prints underlying sbs if any.
+
+2003-07-10 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* print.c: improved the formatting of printing inode, dentry and
+	sb
+
+	* main.c, inode.c removed unneccessary lines printing debugging
+	info in interpose()
+
+2003-07-13 Mohammad Nayyer Zubair <mzubair@ic.sunysb.edu>
+
+	* file.c inode.c: removed debugging info lines
+
+	* created mount_tarball.sh.  right now, distributes an equal
+		number of files/dirs among N branches tar-ing am-utils
+		through unionfs mount point gives same package buildall
+		through mount point gives same structure/files

@@ -1,0 +1,156 @@
+* Unionfs 1.0.14
+Features:
+- Dropped unmaintained setattr,diropaque,delete=first and mount flags
+- Updated unionfs.4 to reflect default mount modes
+- You can use the root of the Union to remove branches with unionctl
+- Use official Debian packaging files.
+- Linux 2.6.13 support.
+
+Bug fixes:
+- Fixed several dentry refcount bug introduced by new deletion framework.
+- Fixed uninitialized fd_set in the query ioctl.
+- Branch reference counting now works across insertion and removal of branches.
+  This prevents the branch counts from getting "confused".
+- Handle "/" as a branch in unionctl.
+- Removed static buffer for debug prints in favor of vprintk.
+- NFS silly renames avoided during several cases.
+- Attempting a write lock causes a copyup, so that the underying flock will
+  work.
+- Cleaned up mount option parsing.
+- Improved link counting for directories.
+
+* Unionfs 1.0.13
+- Unionfs now handles deleting an open file (and several other deletion fixes).
+  Thanks to the Knoppix people and Tomas Matejicek for finding these bugs.
+- The NODEBUG flag has been renamed to UNIONFS_NDEBUG.
+- Instead of allocating all of the lower-level pointers in dentries, inodes
+  and files, we have a fixed number of them preallocated and malloc only if
+  we exceed that number.
+- Fixed a dentry reference count bug with UNIONFS_NDEBUG.
+- Support for persistent inode numbers across mounts.
+- Added a "which-branch" ioctl and corresponding --query to unionctl, so that
+  it is possible to find out where a file or directory is coming from.
+- In 2.6.11 and onwards, don't take the BKL for ioctls.
+
+* Unionfs 1.0.12
+- Copy-up is delayed until a write operation occurs, so spurious copy-ups are
+  avoided.
+- Improved copyup UID spoofing for mkdir
+- Instructions and shell script for compiling Unionfs into a monolothic kernel.
+- Added support for opaque directories, which mask the contents of
+  lower-priority directories.  This makes recreating a removed directory an
+  O(1)  operation instead of an O(n) operation, and also makes subsequent
+  operations faster.  There were also several whiteout related fixes bundled
+  in here.
+- Fixed bug with whiteouts on Reiserfs
+- Fixed bug when a file transitioned from a negative dentry to a positive
+  dentry (i.e., if you add a branch that inserts a file you previously
+  looked up, but did not exist)
+- Fixed return code for extended attribute functions
+- amd64 compile fixes
+- Extended attribute copy-up
+- Unionfs returns EXDEV instead of copying up a directory on move, this
+  fixes a bug where Unionfs would "forget" the contents of a copied up
+  directory after unmount.
+- Fix for following symlinks
+- Improved print routines (separated generic from unionfs printing routines)
+- INSTALL has some instructions for using Unionfs as a root file system and
+  also for using Unionfs with Selinux.
+- Dentry private data uses a separate kmem_cache and inodes in 2.6 use their
+  own kmem_cache.  This should improve performance a bit because there are
+  fewer individual memory allocations (and less wasted space).
+
+* Unionfs 1.0.11
+This release fixes NFS exporting which was broken in 1.0.10.
+- f_pos and lseek's offsets are unified, so readdir works on NFS exported
+  unionfs mounts again.
+
+* Unionfs 1.0.10
+This release fixes several bugs over 1.0.9, but it will not correctly work if
+you want to NFS export it.  For that you need to use 1.0.9 on 2.4.  In 1.0.11,
+we will fix NFS exports correctly.
+
+- Don't d_delete entries that don't have positive refcounts (Fabian Franz)
+- Hardlinks should point to the same inode (Fabian Franz)
+- File locking works correctly.
+- Improved directory llseeking.
+- snapmerge preserves permissions/times after copying files
+- Improved Makefile
+- Unionfs_d_revalidate copies attributes so the cache appears more coherent.
+- Directory reading bug fixed.
+- symlink copyup fixed
+- Don't oops when creating files longer than 252 characters
+- Some readdir fixes.
+- df produces correct size results
+
+* Unionfs 1.0.9
+- Fixed copyup permissions bugs (Anton Farygin)
+- NTFS mmap will no longer cause Oops (but it won't do the mmap, as NTFS
+  doesn't support mmap).
+- Moved directory reading helper routines into dirhelper.c from subr.c
+- We no longer require hacked copies of vfs_create and vfs_unlink
+- Moved finding and adding filldir_nodes into rdstate.c
+- Added a sample RPM spec file, for those who want to package Unionfs
+  (Note, we are currently not distributing source or binary RPMS)
+- Fixed unionfs_link to allow hard-linking of files with a source of a
+  readonly file system.
+- Fixed apt-get on rw/ro branch configuration (related to unionfs_link)
+- Modified regression/link.sh to reflect the changes in unionfs_link. It
+  now includes tests to make sure linking on a read only filesystem works.
+- Fixed an issue where unionfs_dir_llseek would cause an Oops
+
+* Unionfs 1.0.8
+- Fixed bug with readdir (but oddly not ls) that prevented that last entry
+  from being shown.
+- Include INSTALL file with information about installing Unionfs.
+- Fix unionctl bug with "/" as the path to search for
+- Fix to copyup permissions on directories
+- Allow llseek to current directory position, but no others
+
+* Unionfs 1.0.7
+- Fixed locking for readdir state, this fixes a kernel Oops on preemptive
+  kernels, and deadlocks on SMP kernels.
+- Prevent readdir from giving -ESTALE on last entry.
+- Fixes for gcc 2.9.5 (Alex de Landegraaf)
+- Debian package scripts (Alex de Landegraaf)
+- NFS Export on 2.6 (Sai Suman)
+- Copyup permissions fix (Sai Suman)
+- Warn when compiling on unsupported kernels (<2.6.9 or <2.4.20)
+- Improved hardlink support (but not quite there yet)
+
+* Unionfs 1.0.6
+A lot of code has changed in the 1.0.6 release, so it may not be as stable as
+the 1.0.5 release.
+
+- Makefile fix over 1.0.5 for install target on 2.6
+- unionfs.h, fist.h Makefile dependency fixed
+- Support for readdir over NFS
+- Hash table sizes are now based on the size of the lower-level directory
+- In 2.4 inode private data resides in the inode.u field, saving memory
+- Use kmem caches for filldir nodes rather than wasting space with extra
+  large kmallocs, also move short names inline
+
+* Unionfs 1.0.5
+- Support for both 2.6 and 2.4 kernels
+
+* Unionfs 1.0.4
+- Copyup now correctly handles directories, devices, and symlinks.
+- Extended attributes are now off by default because they cause too many
+  compile problems.
+- The regression tests is now included in the release, but is not actually
+  installed.  These tests are rather primitive, but do check some fundamental
+  Unionfs behavior on multiple branches.
+
+* Unionfs 1.0.3
+- Compile fixes for older (and newer) compilers than found on Redhat 9.
+- Compile fixes for older kernels.
+- Don't Oops when passed bad directories.
+
+* Unionfs 1.0.2
+- Minor README updates
+
+* Unionfs 1.0.1
+- Fix to release target which includes manual pages.
+
+* Unionfs 1.0
+- First public release
