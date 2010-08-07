@@ -172,8 +172,8 @@ int sbcall_halt(tge_sbcall_halt_arg_t *arg)
 
 #endif
 		/* Power off manually. */
-		_sb(0, 0xBF402017);
-		_sb(0xF, 0xBF402016);
+		_sb(0, 0xBF402017); /* SCMD */
+		_sb(0xF, 0xBF402016); /* SCMD Power off */
 	//}
 
 	core_save_disable(&status);
