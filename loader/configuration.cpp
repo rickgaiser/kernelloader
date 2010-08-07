@@ -88,10 +88,11 @@ extern "C" {
 				}
 				val = strchr(buffer, '=');
 
-				/* remove carriage return. */
-				val[strlen(val) - 1] = 0;
 				if (val != NULL) {
 					vector < ConfigurationItem * >::iterator i;
+
+					/* remove carriage return. */
+					val[strlen(val) - 1] = 0;
 
 					*val = 0;
 					val++;
