@@ -56,10 +56,10 @@ before starting kernelloader and there must be a network link.
 How to Build a VGA cable
 ########################
 
-You can build your VGA cable yourself without soldering. You need to be the
+You can build your VGA cable yourself without soldering. You need to buy the
 following products:
 - one PS2 or PS3 component cable (YPbPr)
-- one RGB cinch to VGA adaper (1 x female Sub-D 15 pol, 3 x cinch female orxi
+- one RGB cinch to VGA adaper (1 x female Sub-D 15 pol, 3 x cinch female or
   male with colours
   Red, Green and Blue)
 - If the 3 x cinch is male, you need a 3 x cinch adapter
@@ -128,7 +128,7 @@ If your PS2 is an old fat PS2 (v7 or earlier, maybe also v8 or v9, but not
 the first PS2 without libsd), sound is automatically working. LIBSD 1.04
 or lower is needed to get sound support. There is also the SDRDRV needed.
 The newer PS2 consoles include newer versions of LIBSD and SDRDRV. These
-version doesn't work with the Linux sound driver. To get sound working
+versions don't work with the Linux sound driver. To get sound working
 you can get these files from RTE, an old game disc or from a BIOS dump
 of a old PS2.
 
