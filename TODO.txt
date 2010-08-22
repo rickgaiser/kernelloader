@@ -17,3 +17,9 @@ DNS support for UDP instead of TCP.
 
 Describe menu entries, especially what "TGE for new modules mean" -> only for XPADMAN. Other stuff is
 autodetected except XCDVDMAN which may only cause shutdown to fail and other unimportant stuff.
+
+Fix heavy load USB problems on slim.
+
+Fix heavy load Network (Samba) problems on slim.
+
+Reset ist irgendwie in Syscall 0 und 1 vergraben.

@@ -4,7 +4,7 @@
 
 #include "stdint.h"
 
-#define LOADER_VERSION "2.2"
+#define LOADER_VERSION "2.3"
 
 #ifdef __cplusplus
 extern "C" {
