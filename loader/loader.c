@@ -333,7 +333,6 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = 1,
 	},
 	{
 		.path = "host:ps2dev9.irx",

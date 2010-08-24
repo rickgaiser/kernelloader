@@ -81,9 +81,9 @@ diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/prom.c linux-2.4.17_ps2.fat_and_sl
  void __init prom_free_prom_memory(void)
  {
  }
-diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/sbcall.c
+diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2/arch/mips/ps2/sbcall.c
 --- linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c	2002-04-12 12:20:16.000000000 +0200
-+++ linux-2.4.17_ps2.fat_and_slim/arch/mips/ps2/sbcall.c	2009-08-14 11:47:24.000000000 +0200
++++ linux-2.4.17_ps2/arch/mips/ps2/sbcall.c	2010-08-24 01:44:20.000000000 +0200
 @@ -42,6 +42,14 @@ EXPORT_SYMBOL(ps2sif_getotherdata);
  EXPORT_SYMBOL(ps2sif_removerpc);
  EXPORT_SYMBOL(ps2sif_removerpcqueue);
@@ -99,7 +99,7 @@ diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2.fat_and_
  /*
   *  SIF DMA functions
   */
-@@ -319,6 +327,19 @@ static void sif1_dma_handler(int irq, vo
+@@ -319,6 +327,24 @@ static void sif1_dma_handler(int irq, vo
      spin_unlock(&ps2sif_dma_lock);
  }
  
@@ -116,10 +116,15 @@ diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2.fat_and_
 +
 +	handleSimulatedIRQ(sifCmdBufferIrq->data[0]);
 +}
++
++static void handlePowerOff(void *sifCmdBuffer, void *arg)
++{
++	kill_proc(1, SIGPWR, 1);
++}
  
  /*
   *  Initialize
-@@ -326,8 +347,17 @@ static void sif1_dma_handler(int irq, vo
+@@ -326,8 +352,13 @@ static void sif1_dma_handler(int irq, vo
  
  int __init ps2sif_init(void)
  {
@@ -130,22 +135,29 @@ diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/sbcall.c linux-2.4.17_ps2.fat_and_
 +    setcmdhandlerbufferparam.db = usrCmdHandler;
 +    setcmdhandlerbufferparam.size = sizeof(usrCmdHandler) / 8;
 +
-+	addcmdhandlerparam.fid = 0x20;
-+	addcmdhandlerparam.func = handleRPCIRQ;
-+	addcmdhandlerparam.data = NULL;
-+
      if (sbios(SB_SIFINIT, 0) < 0)
  	return -1;
      if (sbios(SB_SIFINITCMD, 0) < 0)
-@@ -336,6 +366,13 @@ int __init ps2sif_init(void)
+@@ -336,6 +367,24 @@ int __init ps2sif_init(void)
  	return -1;
      if (request_irq(IRQ_DMAC_6, sif1_dma_handler, SA_INTERRUPT, "SIF1 DMA", NULL))
  	return -1;
 +	if (sbios(SB_SIFSETCMDBUFFER, &setcmdhandlerbufferparam) < 0) {
 +		printk("Failed to initialize EEDEBUG handler (1).\n");
 +	} else {
++		addcmdhandlerparam.fid = 0x20;
++		addcmdhandlerparam.func = handleRPCIRQ;
++		addcmdhandlerparam.data = NULL;
 +		if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
 +			printk("Failed to initialize SIF IRQ handler.\n");
++		}
++
++		/* The module poweroff.irx is configured to inform us. */
++		addcmdhandlerparam.fid = 20;
++		addcmdhandlerparam.func = handlePowerOff;
++		addcmdhandlerparam.data = NULL;
++		if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++			printk("Failed to initialize SIF Power Off handler.\n");
 +		}
 +	}
      if (sbios(SB_SIFINITRPC, 0) < 0)
@@ -373,3 +385,226 @@ diff -rup linux-2.4.17_ps2.orig/include/asm-mips/ps2/cdvdcall.h linux-2.4.17_ps2
 +
 +	return (res);
 +}
+diff -urp linux-2.4.17_ps2.orig/arch/mips/ps2/powerbutton.c linux-2.4.17_ps2/arch/mips/ps2/powerbutton.c
+--- linux-2.4.17_ps2.orig/arch/mips/ps2/powerbutton.c	2002-04-09 10:11:52.000000000 +0200
++++ linux-2.4.17_ps2/arch/mips/ps2/powerbutton.c	2010-08-24 16:25:35.000000000 +0200
+@@ -14,33 +14,50 @@
+ #include <linux/kernel.h>
+ #include <linux/config.h>
+ #include <linux/spinlock.h>
++#include <linux/sched.h>
++
+ #include <asm/signal.h>
+ #include <asm/ps2/sifdefs.h>
+ #include <asm/ps2/sbcall.h>
++#include <asm/ps2/powerbutton.h>
++
+ #include "ps2.h"
+ 
++#define POWEROFF_SID 0x9090900
++
++#define PWRBTN_MODE_SHUTDOWN             0x01
++#define PWRBTN_MODE_ENABLE_AUTO_SHUTOFF  0x02
++
++static ps2sif_clientdata_t cd_poweroff_rpc;
++static int rpc_initialized;
++static struct semaphore poweroff_rpc_sema;
++
+ static void powerbutton_handler(void *);
+ 
+-int __init ps2_powerbutton_init(void)
++static void poweroff_rpcend_notify(void *arg)
++{
++	complete((struct completion *)arg);
++	return;
++}
++
++/* Install powerhook with RTE (module CDVDFSV).
++ * This will not work with TGE.
++ */
++static int __init rte_powerhook(void)
+ {
+ 	int res;
+ 	struct sb_cdvd_powerhook_arg arg;
+ 
+-#ifdef CONFIG_PS2_SBIOS_VER_CHECK
+-	if (sbios(SB_GETVER, NULL) < 0x0201)
+-	    	return (-1);
+-#endif
+-
+ 	/*
+ 	 * XXX, you should get the CD/DVD lock.
+ 	 * But it might be OK because this routine will be called
+-	 * in early stage of boot sequece.
++	 * in early stage of boot sequence.
+ 	 */
+ 
+ 	/* initialize CD/DVD */
+ 	do {
+ 		if (sbios_rpc(SBR_CDVD_INIT, NULL, &res) < 0)
+-			return (-1);
++			return -1;
+ 	} while (res == -1);
+ 
+ 	/* install power button hook */
+@@ -48,7 +65,94 @@ int __init ps2_powerbutton_init(void)
+ 	arg.arg = NULL;
+ 	sbios(SB_CDVD_POWERHOOK, &arg);
+ 
+-	return (0);
++	return 0;
++}
++
++/* Install powerhook with TGE (module poweroff.irx).
++ * This will not work with RTE.
++ */
++static int __init tge_powerhook(void)
++{
++	int loop;
++	struct completion compl;
++	int rv;
++	volatile int j;
++
++	init_MUTEX(&poweroff_rpc_sema);
++
++	init_completion(&compl);
++
++	/* bind poweroff.irx module */
++	for (loop = 100; loop; loop--) {
++		rv = ps2sif_bindrpc(&cd_poweroff_rpc, POWEROFF_SID,
++			SIF_RPCM_NOWAIT, poweroff_rpcend_notify, (void *)&compl);
++		if (rv < 0) {
++			printk("poweroff.irx: bind rv = %d.\n", rv);
++			break;
++		}
++		wait_for_completion(&compl);
++		if (cd_poweroff_rpc.serve != 0)
++			break;
++		j = 0x010000;
++		while (j--) ;
++	}
++	if (cd_poweroff_rpc.serve == 0) {
++		printk("poweroff.irx bind error 1, power button will not work.\n");
++		return -1;
++	}
++	rpc_initialized = -1;
++	return 0;
++}
++
++int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff)
++{
++	struct completion compl;
++	int rv;
++
++	if (!rpc_initialized) {
++		return -1;
++	}
++
++	init_completion(&compl);
++	down(&poweroff_rpc_sema);
++	do {
++		rv = ps2sif_callrpc(&cd_poweroff_rpc, PWRBTN_MODE_ENABLE_AUTO_SHUTOFF,
++			SIF_RPCM_NOWAIT,
++			NULL, 0,
++			&enable_auto_shutoff, sizeof(enable_auto_shutoff),
++			(ps2sif_endfunc_t) poweroff_rpcend_notify,
++			(void *)&compl);
++	} while (rv == -E_SIF_PKT_ALLOC);
++	if (rv != 0) {
++		printk("ps2_powerbutton_enable_auto_shutoff callrpc failed, (%d)\n", rv);
++	} else {
++		wait_for_completion(&compl);
++	}
++	up(&poweroff_rpc_sema);
++	return rv;
++}
++
++
++int __init ps2_powerbutton_init(void)
++{
++	int rte_rv;
++	int tge_rv;
++
++	rpc_initialized = 0;
++
++#ifdef CONFIG_PS2_SBIOS_VER_CHECK
++	if (sbios(SB_GETVER, NULL) < 0x0201)
++	    	return (-1);
++#endif
++
++	rte_rv = rte_powerhook();
++	tge_rv = tge_powerhook();
++
++	if ((rte_rv == 0) || (tge_rv ==0)) {
++		return 0;
++	} else {
++		return -1;
++	}
+ }
+ 
+ static void powerbutton_handler(void *arg)
+diff -urp linux-2.4.17_ps2.orig/init/main.c linux-2.4.17_ps2/init/main.c
+--- linux-2.4.17_ps2.orig/init/main.c	2003-02-27 09:43:25.000000000 +0100
++++ linux-2.4.17_ps2/init/main.c	2010-08-24 16:13:44.000000000 +0200
+@@ -61,6 +61,10 @@
+ #include <linux/isapnp.h>
+ #endif
+ 
++#ifdef CONFIG_PS2
++#include <asm/ps2/powerbutton.h>
++#endif
++
+ #ifdef CONFIG_IRDA
+ extern int irda_proto_init(void);
+ extern int irda_device_init(void);
+@@ -824,6 +828,11 @@ static void prepare_namespace(void)
+ 	real_root_dev = ROOT_DEV;
+ #endif
+ 
++#ifdef CONFIG_PS2
++	/* Disable auto shutdown, because file system could be damged. */
++	ps2_powerbutton_enable_auto_shutoff(0);
++#endif
++
+ #ifdef CONFIG_BLK_DEV_RAM
+ #ifdef CONFIG_BLK_DEV_INITRD
+ 	if (mount_initrd)
+diff -urp linux-2.4.17_ps2.orig/kernel/panic.c linux-2.4.17_ps2/kernel/panic.c
+--- linux-2.4.17_ps2.orig/kernel/panic.c	2002-03-04 11:32:30.000000000 +0100
++++ linux-2.4.17_ps2/kernel/panic.c	2010-08-24 16:39:53.000000000 +0200
+@@ -16,6 +16,10 @@
+ #include <linux/init.h>
+ #include <linux/sysrq.h>
+ #include <linux/interrupt.h>
++#ifdef CONFIG_PS2
++#include <asm/ps2/powerbutton.h>
++#endif
++
+ 
+ asmlinkage void sys_sync(void);	/* it's really int */
+ 
+@@ -58,8 +62,13 @@ NORET_TYPE void panic(const char * fmt, 
+ 		printk(KERN_EMERG "In interrupt handler - not syncing\n");
+ 	else if (!current->pid)
+ 		printk(KERN_EMERG "In idle task - not syncing\n");
+-	else
++	else {
+ 		sys_sync();
++#ifdef CONFIG_PS2
++		/* Enable power button, because init will not handle any signals. */
++		ps2_powerbutton_enable_auto_shutoff(-1);
++#endif
++	}
+ 	bust_spinlocks(0);
+ 
+ #ifdef CONFIG_SMP
+diff -Nurp linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h
+--- linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h	2010-08-24 16:02:41.000000000 +0200
+@@ -0,0 +1,6 @@
++#ifndef __ASM_PS2_POWERBTN_H
++#define __ASM_PS2_POWERBTN_H
++
++int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff);
++
++#endif

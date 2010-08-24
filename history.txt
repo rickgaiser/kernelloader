@@ -1,5 +1,7 @@
 2.3
 - Fix crash when bad configuration file is loaded.
+- Fix for power button. System will shutdown when power button
+  is pressed.
 
 2.2
 - Screen position can be changed with the left analog stick
