@@ -633,13 +633,14 @@ void patchLibsd(uint8_t *buffer, uint32_t size)
  * @param start Physical start address (included).
  * @param end Physical end address (excluded).
  */
-int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	uint32_t entry = 0;
 	uint32_t area;
+	int copied_entry = 0;
 
 	start = start & 0x0FFFFFFF;
 	end = end & 0x0FFFFFFF;
@@ -749,17 +750,171 @@ int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t s
 						last, name, end);
 					return -4;
 				}
+				if (((dest & 0x0FFFFFFF) <= (entry & 0x0FFFFFFF))
+					&& (((dest + size) & 0x0FFFFFFF) > (entry & 0x0FFFFFFF))) {
+					copied_entry = -1;
+				}
 			}
 		}
 	}
+	if (!copied_entry) {
+		error_printf("The ELF doesn't contain code at the entry point.\n");
+		return -5;
+	}
 	return 0;
+}
+
+int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+{
+	Elf64_Ehdr_t *file_header;
+	int pos = 0;
+	int i;
+	uint32_t entry = 0;
+	uint32_t area;
+	int copied_entry = 0;
+
+	start = start & 0x0FFFFFFF;
+	end = end & 0x0FFFFFFF;
+	if (highest != NULL) {
+		*highest = 0;
+	}
+
+	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	pos += sizeof(Elf64_Ehdr_t);
+	if (file_header->magic != ELFMAGIC) {
+		error_printf("Magic 0x%08x is wrong.\n", file_header->magic);
+		return -1;
+	}
+	entry = file_header->entry;
+	printf("entry is 0x%08llx\n", (unsigned long long) file_header->entry);
+	area = entry >> 28;
+	switch(area) {
+		case 0x8:
+		case 0xa:
+			/* Everything is fine. */
+			break;
+		default:
+			error_printf("Bad entry address 0x%08x of %s is not accessible by loader.",
+				entry, name);
+			return -20;
+	}
+	entry = entry & 0x0FFFFFFF;
+	if (entry < start) {
+		error_printf("Entry point 0x%08x of %s is before 0x%08x.",
+			entry, name, start);
+		return -21;
+	}
+	if (entry >= end) {
+		error_printf("Entry point 0x%08x of %s is after  0x%08x.",
+			entry, name, end);
+		return -21;
+	}
+	for (i = 0; i < file_header->phnum; i++)
+	{
+		Elf64_Phdr_t *program_header;
+		program_header = (Elf64_Phdr_t *) &buffer[pos];
+		pos += sizeof(Elf64_Phdr_t);
+		if ( (program_header->type == PT_LOAD)
+			&& (program_header->memsz != 0) )
+		{
+			uint32_t dest;
+			uint32_t size;
+
+			printf("VAddr: 0x%08llx PAddr: 0x%08llx Offset 0x%08llx Size 0x%08llx\n",
+				(unsigned long long) program_header->vaddr,
+				(unsigned long long) program_header->paddr,
+				(unsigned long long) program_header->offset,
+				(unsigned long long) program_header->filesz);
+
+			// Get physical address which can be accessed by loader.
+			dest = program_header->paddr;
+			size = program_header->memsz;
+			if (size < program_header->filesz) {
+				size = program_header->filesz;
+			}
+
+			if (size != 0) {
+				if (program_header->filesz != 0) {
+					char *startaddr;
+					char *endaddr;
+					/* Check if file is completly loaded. */
+					startaddr = &buffer[program_header->offset];
+					endaddr = startaddr + program_header->filesz;
+
+					if ((startaddr < buffer) || (startaddr >= &buffer[filesize])) {
+						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, startaddr - buffer);
+						return -30;
+					}
+					if ((endaddr < buffer) || (endaddr >= &buffer[filesize])) {
+						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, endaddr - buffer);
+						return -31;
+					}
+				}
+				uint32_t last;
+				area = dest >> 28;
+				switch(area) {
+					case 0x8:
+					case 0xa:
+						/* Everything is fine. */
+						break;
+					default:
+						error_printf("Bad memory address 0x%08x of %s is not accessable by loader.",
+							dest, name);
+						return -2;
+				}
+				dest = dest & 0x0FFFFFFF;
+
+				if (dest < start) {
+					error_printf("The memory region start address 0x%08x of %s is before 0x%08x.",
+						dest, name, start);
+					return -3;
+				}
+
+				last = dest + size;
+				if (highest != NULL) {
+					if (*highest < last) {
+						*highest = last;
+					}
+				}
+				if (last >= end) {
+					error_printf("The memory region end address 0x%08x of %s is after 0x%08x.",
+						last, name, end);
+					return -4;
+				}
+				if (((dest & 0x0FFFFFFF) <= (entry & 0x0FFFFFFF))
+					&& (((dest + size) & 0x0FFFFFFF) > (entry & 0x0FFFFFFF))) {
+					copied_entry = -1;
+				}
+			}
+		}
+	}
+	if (!copied_entry) {
+		error_printf("The ELF doesn't contain code at the entry point.\n");
+		return -5;
+	}
+	return 0;
+}
+
+int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+{
+	Elf32_Ehdr_t *file_header;
+	int pos = 0;
+
+	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	if (file_header->info[0] == 2) {
+		/* 64 Bit ELF file. */
+		return check_sections64(name, buffer, filesize, start, end, highest);
+	} else {
+		/* 32 Bit ELF file. */
+		return check_sections32(name, buffer, filesize, start, end, highest);
+	}
 }
 
 /**
  * Copy program sections of ELF file to memory.
  * @param buffer Pointer to ELF file.
  */
-entry_t *copy_sections(char *buffer)
+entry_t *copy_sections32(char *buffer)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
@@ -773,12 +928,13 @@ entry_t *copy_sections(char *buffer)
 		return NULL;
 	}
 	entry = (entry_t *) file_header->entry;
-	iop_dprintf(U2K("entry is 0x%08x\n"), (int) entry);
+	iop_printf(U2K("entry is 0x%08x\n"), (int) entry);
 	for (i = 0; i < file_header->phnum; i++)
 	{
 		Elf32_Phdr_t *program_header;
 		program_header = (Elf32_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf32_Phdr_t);
+
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
 		{
@@ -789,13 +945,13 @@ entry_t *copy_sections(char *buffer)
 
 			if (program_header->filesz != 0)
 			{
-				iop_dprintf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+				iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
 					program_header->vaddr,
 					program_header->paddr,
 					program_header->offset,
 					program_header->filesz);
 				memcpy(dest, &buffer[program_header->offset], program_header->filesz);
-				iop_dprintf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+				iop_printf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
 			}
 			int size = program_header->memsz - program_header->filesz;
 			if (size > 0)
@@ -805,12 +961,80 @@ entry_t *copy_sections(char *buffer)
 	return entry;
 }
 
+entry_t *copy_sections64(char *buffer)
+{
+	Elf64_Ehdr_t *file_header;
+	int pos = 0;
+	int i;
+	entry_t *entry = NULL;
+
+	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	pos += sizeof(Elf64_Ehdr_t);
+	if (file_header->magic != ELFMAGIC) {
+		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		return NULL;
+	}
+	entry = (entry_t *) ((uint32_t) (file_header->entry & 0xFFFFFFFF));
+	iop_printf(U2K("entry is 0x%08x\n"), (int) entry);
+	iop_printf(U2K("phnum %d\n"), (int) file_header->phnum);
+	for (i = 0; i < file_header->phnum; i++)
+	{
+		Elf64_Phdr_t *program_header;
+		program_header = (Elf64_Phdr_t *) &buffer[pos];
+		pos += sizeof(Elf64_Phdr_t);
+
+		iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+			program_header->vaddr,
+			program_header->paddr,
+			program_header->offset,
+			program_header->filesz);
+		if ( (program_header->type == PT_LOAD)
+			&& (program_header->memsz != 0) )
+		{
+			unsigned char *dest;
+
+			// Copy to physical address which can be accessed by loader.
+			dest = (unsigned char *) ((uint32_t) (program_header->paddr & 0xFFFFFFFF));
+
+			if (program_header->filesz != 0)
+			{
+				iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+					program_header->vaddr,
+					program_header->paddr,
+					program_header->offset,
+					program_header->filesz);
+				memcpy(dest, &buffer[program_header->offset], program_header->filesz);
+				iop_printf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+			}
+			int size = program_header->memsz - program_header->filesz;
+			if (size > 0)
+				memset(&dest[program_header->filesz], 0, size);
+		}
+	}
+	return entry;
+}
+
+entry_t *copy_sections(char *buffer)
+{
+	Elf32_Ehdr_t *file_header;
+	int pos = 0;
+
+	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	if (file_header->info[0] == 2) {
+		/* 64 Bit ELF file. */
+		return copy_sections64(buffer);
+	} else {
+		/* 32 Bit ELF file. */
+		return copy_sections32(buffer);
+	}
+}
+
 /**
  * Verify if program sections of ELF are copied correctly to memory.
  * Required to check if kernel can be started without problems.
  * @param buffer Pointer to ELF file.
  */
-void verify_sections(char *buffer)
+void verify_sections32(char *buffer)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
@@ -865,6 +1089,78 @@ void verify_sections(char *buffer)
 		}
 	}
 	return;
+}
+
+void verify_sections64(char *buffer)
+{
+	Elf64_Ehdr_t *file_header;
+	int pos = 0;
+	int i;
+	entry_t *entry = NULL;
+
+	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	pos += sizeof(Elf64_Ehdr_t);
+	if (file_header->magic != ELFMAGIC) {
+		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		panic();
+	}
+	entry = (entry_t *) ((uint32_t) (file_header->entry & 0xFFFFFFFF));
+	iop_dprintf(U2K("entry is 0x%08x\n"), (int) entry);
+	for (i = 0; i < file_header->phnum; i++)
+	{
+		Elf64_Phdr_t *program_header;
+		program_header = (Elf64_Phdr_t *) &buffer[pos];
+		pos += sizeof(Elf64_Phdr_t);
+		if ( (program_header->type == PT_LOAD)
+			&& (program_header->memsz != 0) )
+		{
+			unsigned char *dest;
+
+			// Copied to physical address which can be accessed by loader.
+			dest = (unsigned char *) ((uint32_t)(program_header->paddr & 0xFFFFFFFF));
+
+			if (program_header->filesz != 0)
+			{
+				iop_dprintf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+					program_header->vaddr,
+					program_header->paddr,
+					program_header->offset,
+					program_header->filesz);
+				if (memcmp(dest, &buffer[program_header->offset], program_header->filesz) != 0) {
+					iop_prints(U2K("Verify failed"));
+					panic();
+				};
+				iop_dprintf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+			}
+			unsigned int size = program_header->memsz - program_header->filesz;
+			if (size > 0) {
+				unsigned int i;
+
+				for (i = 0; i < size; i++) {
+					if (dest[program_header->filesz] != 0) {
+						iop_prints(U2K("Verify failed in memset"));
+						panic();
+					}
+				}
+			}
+		}
+	}
+	return;
+}
+
+void verify_sections(char *buffer)
+{
+	Elf32_Ehdr_t *file_header;
+	int pos = 0;
+
+	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	if (file_header->info[0] == 2) {
+		/* 64 Bit ELF file. */
+		return verify_sections64(buffer);
+	} else {
+		/* 32 Bit ELF file. */
+		return verify_sections32(buffer);
+	}
 }
 
 /**
@@ -1938,6 +2234,7 @@ int real_loader(void)
 		}
 
 		/* Install linux kernel. */
+		iop_prints(U2K("Copy kernel\n"));
 		entry = copy_sections(buffer);
 
 		/* Can only verify ELF files. */
