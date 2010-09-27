@@ -68,7 +68,7 @@ int sif_reg_set(int reg, int val)
 		arg.reg = reg;
 		arg.val = val;
 		/* sceSifSetReg() */
-		return (int)_sbios(21, &arg);
+		return (int)sbios(21, &arg);
 	} else if (sbversion <= 0x250) {
 		(int (**)(int, int))_sb_sif_reg_set = 0x80002700;
 		return _sb_sif_reg_set(reg, val);
@@ -79,7 +79,7 @@ int sif_reg_set(int reg, int val)
 	arg.val = val;
 
 	/* sceSifSetReg() */
-	return (int)_sbios(21, &arg);
+	return (int)sbios(21, &arg);
 }
 
 static int (*_sb_sif_reg_get)(int) = NULL;
@@ -88,7 +88,7 @@ int sif_reg_get(int reg)
 {
 	if (sbversion <= 0x200) {
 		/* sceSifGetReg() */
-		return (int)_sbios(22, &reg);
+		return (int)sbios(22, &reg);
 	} else if (sbversion <= 0x250) {
 		(int (**)(int))_sb_sif_reg_get = 0x800027c0;
 		return _sb_sif_reg_get(reg);
@@ -96,7 +96,7 @@ int sif_reg_get(int reg)
 
 	/* TGE has version 0x666 */
 	/* sceSifGetReg() */
-	return (int)_sbios(22, &reg);
+	return (int)sbios(22, &reg);
 }
 
 int sif_dma_request(void *dmareq, int count)
@@ -110,7 +110,7 @@ int sif_dma_request(void *dmareq, int count)
 	arg.count  = count;
 
 	/* sceSifSetDma() */
-	return _sbios(18, &arg);
+	return sbios(18, &arg);
 }
 
 void dmac5_handler(uint32_t *regs)
@@ -150,7 +150,7 @@ void sif_init(void)
 	DBG("SBIOS 0x%x\n", sbversion);
 
 	/* Call the SBIOS SIF init routine */
-	_sbios(16, NULL);
+	sbios(16, NULL);
 
 	/* sif0 dma handler */
 	dmac_register_handler(DMAC_CIS5, dmac5_handler);
@@ -164,7 +164,7 @@ void sif_init(void)
 void sif_set_dchain(void)
 {
 	/* Call the SBIOS SIF init routine */
-	_sbios(SB_SIFSETDCHAIN, NULL);
+	sbios(SB_SIFSETDCHAIN, NULL);
 }
 
 static void rpc_wakeup(void *p, int result)
@@ -177,11 +177,11 @@ void SifInitRpc(int mode)
 {
 	struct sbr_common_arg carg;
 
-	_sbios(SB_SIFINITRPC, 0);
+	sbios(SB_SIFINITRPC, 0);
 	carg.arg = NULL;
 	carg.func = rpc_wakeup;
 	carg.para = NULL;
-	_sbios(SBR_IOPH_INIT, &carg);
+	sbios(SBR_IOPH_INIT, &carg);
 #if 0
 	while (1) {
 		err = sbios_rpc(SBR_IOPH_INIT, NULL, &result);
