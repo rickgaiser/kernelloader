@@ -10,6 +10,8 @@ void iop_prints(const char *text);
 /** Print 32-bit value as hexadecimal. */
 void iop_printx(uint32_t val);
 
+void iop_putc(unsigned char c);
+
 /** Print string using iop memory (for debugging). */
 int puts(const char *s);
 #else

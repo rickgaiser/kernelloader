@@ -68,7 +68,7 @@ void iop_init_shared(void)
 }
 
 /** Print one character. */
-static void iop_putc(unsigned char c)
+void iop_putc(unsigned char c)
 {
 #ifdef SBIOS_DEBUG
 	char buf[2];

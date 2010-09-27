@@ -134,6 +134,8 @@ static int sio_putc(int c)
 /* Output a character over the serial port.  */
 int sbcall_putc(tge_sbcall_putc_arg_t *arg)
 {
+	iop_putc(arg->c);
+
 	/* Translate \n to \r\n.  */
 	if (arg->c == '\n') {
 		sio_putc('\r');
