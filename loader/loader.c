@@ -41,19 +41,20 @@
 #define SET_PCCR(val) \
 	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
 
-#define I_MASK 0x1000F010
-#define D_CTRL 0x1000E000
-#define D_ENABLEW 0x1000F590
-#define D0_CHCR  0x10008000
-#define D1_CHCR  0x10009000
-#define D2_CHCR  0x1000A000
-#define D3_CHCR  0x1000B000
-#define D4_CHCR  0x1000B400
-#define D5_CHCR  0x1000C000
-#define D6_CHCR  0x1000C400
-#define D7_CHCR  0x1000C800
-#define D8_CHCR  0x1000D000
-#define D9_CHCR  0x1000D400
+#define I_STAT 0xB000F000
+#define I_MASK 0xB000F010
+#define D_CTRL 0xB000E000
+#define D_ENABLEW 0xB000F590
+#define D0_CHCR  0xB0008000
+#define D1_CHCR  0xB0009000
+#define D2_CHCR  0xB000A000
+#define D3_CHCR  0xB000B000
+#define D4_CHCR  0xB000B400
+#define D5_CHCR  0xB000C000
+#define D6_CHCR  0xB000C400
+#define D7_CHCR  0xB000C800
+#define D8_CHCR  0xB000D000
+#define D9_CHCR  0xB000D400
 #define BARRIER() \
 	/* Barrier. */ \
 	__asm__ __volatile__("sync.p"::);
@@ -983,11 +984,6 @@ entry_t *copy_sections64(char *buffer)
 		program_header = (Elf64_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf64_Phdr_t);
 
-		iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
-			program_header->vaddr,
-			program_header->paddr,
-			program_header->offset,
-			program_header->filesz);
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
 		{
@@ -1801,6 +1797,19 @@ uint32_t *getSBIOSCallTable(char *addr)
 	return (uint32_t *) jumpBase;
 }
 
+void disableTimers(void)
+{
+	volatile uint32_t *tm0_mode = (uint32_t *) 0xB0000010;
+	volatile uint32_t *tm1_mode = (uint32_t *) 0xB0000810;
+	volatile uint32_t *tm2_mode = (uint32_t *) 0xB0001010;
+	volatile uint32_t *tm3_mode = (uint32_t *) 0xB0001810;
+
+	*tm0_mode = 0;
+	*tm1_mode = 0;
+	*tm2_mode = 0;
+	*tm3_mode = 0;
+}
+
 /**
  * Load kernel, initrd and required modules. Then start kernel.
  * @param mode Graphic mode that should be used.
@@ -1813,7 +1822,7 @@ int real_loader(void)
 	char *sbios = NULL;
 	struct ps2_bootinfo *bootinfo = (struct ps2_bootinfo *) PS2_BOOTINFO_OLDADDR;
 	register int sp asm("sp");
-	const char *commandline;
+	static char commandline[MAX_INPUT_LEN] = "";
 	uint32_t *patch;
 	uint32_t iopaddr;
 	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
@@ -1828,10 +1837,10 @@ int real_loader(void)
 	uint32_t initrd_start = 0;
 	uint32_t initrd_size = 0;
 
-	commandline = getKernelParameter();
-
 	/* Initialize memboot parameter. */
 	memset(bootinfo, 0, sizeof(struct ps2_bootinfo));
+
+	strcpy(commandline, getKernelParameter());
 
 	bootinfo->size = sizeof(struct ps2_bootinfo);
 	bootinfo->maxmem = 32 * 1024 * 1024 - 4096;
@@ -1996,6 +2005,10 @@ int real_loader(void)
 					initrd_header[1] = initrd_size;
 
 					initrd_start |= KSEG0_MASK;
+
+					/* Linux 2.6 has parameters for initrd. */
+					snprintf(commandline, sizeof(commandline), "%s rd_start=0x%08x rd_size=0x%08x",
+						getKernelParameter(), initrd_start, initrd_size);
 				} else {
 					error_printf("Loading of initrd failed (1).");
 					return -9;
@@ -2093,6 +2106,9 @@ int real_loader(void)
 		/* Disable performance counters. */
 		SET_PCCR(0);
 
+		/* Disable all timers. */
+		disableTimers();
+
 		/* Flush cache to be sure that jump2kernelspace() will work. */
 		flushDCacheAll();
 		invalidateICacheAll();
@@ -2181,11 +2197,13 @@ int real_loader(void)
 		__asm__ __volatile__("mtc0 %0, $28\nsync.p\n"::"r" (0x011c1020));
 		__asm__ __volatile__("mtc0 %0, $29\nsync.p\n"::"r" (0x40004190));
 
-#if 0
 		/* Disable all INTC interrupts. */
-		*((volatile unsigned int *) I_MASK) = 0;
+		*((volatile uint32_t *) I_MASK) = *((volatile uint32_t *) I_MASK);
 		BARRIER();
-
+		/* Acknowledge all interrupts. */
+		*((volatile uint32_t *) I_STAT) = *((volatile uint32_t *) I_STAT);
+		BARRIER();
+#if 0
 		/* Suspend all DMA channels. */
 		*((volatile unsigned int *) D_ENABLEW) = 1 << 16;
 		BARRIER();
