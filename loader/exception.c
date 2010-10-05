@@ -62,6 +62,7 @@ void exception(int nr, uint32_t *regs)
 	uint32_t epc;
 	uint32_t error_epc;
 	uint32_t badVAddr;
+	uint32_t badPAddr;
 	uint32_t cause;
 
 	epc = 0;
@@ -99,6 +100,10 @@ void exception(int nr, uint32_t *regs)
 	__asm__ __volatile__("mfc0 %0,$8":"=r" (badVAddr):);
 	iop_prints(U2K("badVAddr 0x"));
 	iop_printx(badVAddr);
+	iop_prints(U2K("\n"));
+	__asm__ __volatile__("mfc0 %0,$23":"=r" (badPAddr):);
+	iop_prints(U2K("badPAddr 0x"));
+	iop_printx(badPAddr);
 	iop_prints(U2K("\n"));
 	while(1);
 }
