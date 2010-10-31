@@ -1,3 +1,11 @@
+2.4
+- Add support for 64 bit kernels.
+- Add support for Linux 2.6 initial RAM disk parameters (initrd).
+- Fix alignment in SIF command interrupt handler. This could
+  randomly freeze drivers. Which could freeze the whole
+  system. Kernelloader should now support more kernels like
+  the NetBSD kernel.
+
 2.3
 - Fix crash when bad configuration file is loaded.
 - Fix for power button. System will shutdown when power button

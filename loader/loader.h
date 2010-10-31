@@ -1,10 +1,10 @@
-/* Copyright (c) 2007 - 2009 Mega Man */
+/* Copyright (c) 2007 - 2010 Mega Man */
 #ifndef _LOADER_H_
 #define _LOADER_H_
 
 #include "stdint.h"
 
-#define LOADER_VERSION "2.3"
+#define LOADER_VERSION "2.4"
 
 #ifdef __cplusplus
 extern "C" {

@@ -160,7 +160,9 @@ u32 sif_cmd_send(u32 fid, u32 flags, void *packet, u32 packet_size, void *src, v
 
 static void sif_cmd_interrupt()
 {
-	u128 packet[8];
+	u128 packetbuf[8 + 1];
+	u128 *packet;
+	volatile unsigned int packet_aligned; /* volatile needed, because caller doesn't respect stack alignment. */
 	u128 *pktbuf;
 	cmd_data_t *cmd_data = &_sif_cmd_data;
 	tge_sifcmd_header_t *header;
@@ -168,6 +170,11 @@ static void sif_cmd_interrupt()
 	int size, pktquads, i = 0;
 	uint32_t id;
 
+	/* Align packet or u128 copy will fail. */
+	packet_aligned = (unsigned int) packetbuf;
+	packet_aligned += 16 - 1;
+	packet_aligned &= ~(16 - 1);
+	packet = (void *) packet_aligned;
 	header = (tge_sifcmd_header_t *)cmd_data->pktbuf;
 
 	if (!(size = (header->size & 0xff)))
@@ -251,7 +258,7 @@ static void change_addr(void *packet, void *harg)
 	cmd_data->iopbuf = pkt->buf;
 }
 
-/* TGE function has a return value of 0. */
+/* RTE function has a return value of 0. */
 void SifInitCmd(void)
 {
 	u32 status;
@@ -288,7 +295,7 @@ void SifInitCmd(void)
 	sifCmdSysBuffer[1].harg = &_sif_cmd_data;
 	core_restore(status);
 
-	/* No check here if IOP is alredy initialized. Assumption is that it is
+	/* No check here if IOP is already initialized. Assumption is that it is
 	 * already initialized
 	 */
 
