@@ -21,6 +21,8 @@ int puts(const char *s);
 #define iop_printx(val) do {} while(0)
 /** Do nothing .*/
 #define puts(text) do {} while(0)
+/** Do nothing .*/
+#define iop_putc(c) do {} while(0)
 #endif
 
 #endif /* _IOPMEMDEBUG_H_ */
