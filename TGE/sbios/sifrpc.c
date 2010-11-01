@@ -57,9 +57,6 @@ struct rpc_data {
 
 extern struct rpc_data _sif_rpc_data;
 
-/** Only one rpc call is possible at the same time. */
-int rpc_call_active = 0;
-
 void *_rpc_get_packet(struct rpc_data *rpc_data);
 void *_rpc_get_fpacket(struct rpc_data *rpc_data);
 static void rpc_packet_free(void *packet);
@@ -163,17 +160,6 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 		SifRpcEndFunc_t endfunc, void *efarg)
 {
 	SifRpcCallPkt_t *call;
-	u32 status;
-
-	core_save_disable(&status);
-	if (rpc_call_active) {
-		core_restore(status);
-
-		/* Client already in use. */
-		return -E_SIF_PKT_ALLOC;
-	}
-	rpc_call_active = 1;
-	core_restore(status);
 
 	call = (SifRpcCallPkt_t *)_rpc_get_packet(&_sif_rpc_data);
 	if (!call) {
@@ -329,7 +315,6 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 #endif
 			client->end_function(client->end_param);
 		}
-		rpc_call_active = 0;
 	} else if (request->cid == 0x80000009) {
 		client->server = request->server;
 		client->buff   = request->buff;
