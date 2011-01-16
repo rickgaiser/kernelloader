@@ -9,9 +9,6 @@ EE_OBJS += SMS_SIF.o SMS_CDVD.o SMS_CDDA.o getrte.o getsbios.o getelf.o ps2dev9.
 EE_OBJS += nvram.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
 EE_LIBS += -lmc -lfileXio -lkbd -lcdvd
-ifneq ($(LIBJPG),)
-EE_LIBS += -L$(LIBJPG)/lib -ljpg
-endif
 ifneq ($(LIBTIFF),)
 EE_LIBS += -L$(LIBTIFF) -ltiff
 endif

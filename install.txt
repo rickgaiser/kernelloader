@@ -57,7 +57,7 @@ USB is unstable with v14 or higher slim PSTwo. Sound need old module
 version available on old games or in old rom1.
 
 INSTALL:
-First you need to compile ps2smap and ps2link from ps2dev svn and copy the
+First you need to compile ps2smap and ps2link from ps2dev and copy the
 modules "ps2smap.irx" and "ps2link.irx" to the directory "$PS2SDK/iop/irx/".
 Then run make for a test (You should change the ip address in
 "loader/Makefile" and in "loader/loader.c" variable "ifcfg"):
@@ -67,14 +67,16 @@ PS2SDK
 To compile kernelloader you need PS2SDK, if you don't use it already
 install it as follows:
 
-sh # svn co -r 1601 svn://svn.ps2dev.org/ps2/trunk/ps2toolchain
+sh # git clone https://github.com/ps2dev/ps2toolchain.git
 sh # cd ps2toolchain
+sh # git checkout ae6f9c003c98470040e78cec739ea86a49de2a39
 sh # sudo bash ./toolchain.sh
 sh # cd ..
 
 After this you need to compile a patched version of ps2sdk:
-sh # svn co -r 1679 svn://svn.ps2dev.org/ps2/trunk/ps2sdk
+sh # git clone https://github.com/ps2dev/ps2sdk.git
 sh # cd ps2sdk
+sh # git checkout 38267d0159d686b6e424221ccc2f3cea80b21f8c
 sh # patch -p0 <../kernelloader/patches/ps2sdk-readnvm.patch
 sh # make
 sh # sudo make install
@@ -84,7 +86,10 @@ USB
 ###
 You need also to install the usb driver:
 
-sh # svn co -r 1601 svn://svn.ps2dev.org/ps2/trunk/usb_mass
+svn.ps2dev.org is not available, so you need to use the mirror:
+
+sh # svn co -r 1601 http://psp.jim.sh/svn/ps2/trunk/usb_mass
+
 sh # cd usb_mass
 sh # cd iop
 sh # make
@@ -94,8 +99,10 @@ sh # cd ..
 STL
 ###
 STL is used and need to be installed:
+sh # git clone https://github.com/ps2dev/ps2sdk-ports/stlport.git
+sh # cd ps2sdk-ports
+sh # git checkout 256d65f916d974d79a382e118be365b62273c9ac
 
-sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/stlport
 sh # cd stlport
 sh # make
 sh # sudo make install
@@ -104,10 +111,10 @@ sh # cd ..
 ZLIB
 ####
 ZLIB need to be installed:
-sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2sdk-ports/zlib
 sh # cd zlib
 sh # make
 sh # sudo make install
+sh # cd ..
 sh # cd ..
 
 PS2LINK
@@ -116,14 +123,21 @@ If you want to debug something then you also need ps2link, but the
 following steps are not required, when you don't activate it in
 config.mk.
 
-sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2eth
+sh # git clone https://github.com/ps2dev/ps2eth.git
 sh # cd ps2eth
+sh # git checkout 2eb548cea263995f35b5bb0a2451a96871a59994
 sh # make
-sh # sudo cp smap/ps2smap.irx /usr/local/ps2dev/ps2sdk/iop/irx/
+sh # sudo mkdir -p /usr/local/ps2dev/ps2eth/smap/
+sh # sudo cp smap/ps2smap.irx /usr/local/ps2dev/ps2eth/smap/
 sh # cd ..
-sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/ps2link
+sh # https://github.com/ps2dev/ps2link.git
 sh # cd ps2link
+sh # git checkout 3c6c81637293b93edd1af23f6c0f501af9948352
 sh # make
+
+It may stop with an error that ps2-packer is missing. It is not
+needed to build it completely. Just continue:
+
 sh # sudo cp iop/ps2link.irx /usr/local/ps2dev/ps2sdk/iop/irx/
 sh # cd ..
 
@@ -138,16 +152,15 @@ export PS2_SRC_PREFIX=$HOME/ps2src
 You need to adjust it to your prefered path.
 export PS2SDKSRC="${PS2_SRC_PREFIX}/ps2sdk"
 export GSKITSRC="${PS2_SRC_PREFIX}/gsKit"
-export LIBTIFF="${PS2_SRC_PREFIX}/libtiff"
-export LIBJPG="${PS2_SRC_PREFIX}/libjpg/libjpg"
 export PS2ETH="${PS2_SRC_PREFIX}/ps2eth"
 
 GSKIT
 #####
 The graphic library is used for displaying everything. You need to install it:
-sh # cd $PS2SDKSRC
-sh # svn co -r 1588 svn://svn.ps2dev.org/ps2/trunk/gsKit
+sh # cd $PS2_SRC_PREFIX
+sh # git clone https://github.com/ps2dev/gsKit.git
 sh # cd gsKit
+sh # git checkout 946922b3c15498b3c1a36203195964ddf2fe46e7
 sh # make
 sh # make install
 
@@ -155,21 +168,25 @@ SJCRUNCH
 ########
 sjcrunch is a packer for PS2 elf files. This is required to get smaller
 file size and to get a version which can be booted by Action Replay
-Media Player. You need to download it from:
-
-http://www.ps2dev.org
+Media Player.
 
 sh # cd $PS2SDKSRC
+sh # wget http://sksapps.com/mis/sjcrunch-2.1.zip
 sh # mkdir sjcrunch
 sh # cd sjcrunch
-sh # unzip sjcrunch-2.1.zip
+sh # unzip ../sjcrunch-2.1.zip
 sh # cd pc
+
+On new Linux systems the program need to be patched:
+
+sh # patch -p0 <../../kernelloader/patches/sjcrunch_lzo2.patch
+
 sh # make
 sh # cd ..
 sh # cp pc/sjcrunch_packer script
-sh # cd sjcrunch
-sh # sed <sjcrunch -e s-SJCRUNCH_PATH=.*-SJCRUNCH_PATH=$(pwd)- -e s-SJCRUNCH_PACKER=.*-SJCRUNCH_PACKER=\$SJCRUNCH_PATH/sjcrunch_packer- >/usr/local/ps2dev/ps2sdk/bin/sjcrunch
-sh # chmod +x /usr/local/ps2dev/ps2sdk/bin/sjcrunch
+sh # cd script
+sh # sudo (sed <sjcrunch -e s-SJCRUNCH_PATH=.*-SJCRUNCH_PATH=$(pwd)- -e s-SJCRUNCH_PACKER=.*-SJCRUNCH_PACKER=\$SJCRUNCH_PATH/sjcrunch_packer- >/usr/local/ps2dev/ps2sdk/bin/sjcrunch)
+sh # sudo chmod +x /usr/local/ps2dev/ps2sdk/bin/sjcrunch
 
 Kernelloader
 ############

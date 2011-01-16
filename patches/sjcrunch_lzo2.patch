@@ -1,0 +1,46 @@
+Patch for sjcrunch to use it with Ubuntu package liblzo2-dev.
+This also fixes a pointer bug on 64 bit systems.
+
+You can install the package on Ubuntu with:
+apt-get install liblzo2-dev
+
+--- Makefile	2011-01-16 12:44:04.520648975 +0100
++++ Makefile	2011-01-16 12:43:59.820649014 +0100
+@@ -1,7 +1,7 @@
+ OBJS = sjcrunch_packer.o
+ 
+ all: $(OBJS)
+-	gcc $(OBJS) -o sjcrunch_packer -L. -I/usr/include -L/usr/local/lib -llzo
++	gcc $(OBJS) -o sjcrunch_packer -L. -I/usr/include -L/usr/local/lib -llzo2
+ 
+ .c.o:
+ 	gcc -c $< -o $*.o
+--- sjcrunch_packer.c.orig	2011-01-16 13:14:30.370649000 +0100
++++ sjcrunch_packer.c	2011-01-16 13:16:09.930648973 +0100
+@@ -3,7 +3,7 @@
+ #include <string.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
+-#include <lzo1x.h>
++#include <lzo/lzo1x.h>
+ 
+ #include "tamtypes.h"
+ #include "elf.h"
+@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
+ 
+ 	outFile = fopen(argv[2], "wb");
+ 	if(!outFile) {
+-		printf("*** ERROR *** Failed to open output file: %d\n", argv[2]);
++		printf("*** ERROR *** Failed to open output file: %s\n", argv[2]);
+ 		exit(1);
+ 	}
+ 
+@@ -251,7 +251,7 @@ int Compress(u8 *Input, u32 InSize, FILE
+ 
+ 	int Return;
+ 	u8 *In, *Out, *WrkMem;
+-	u32 InLen, OutLen;
++	lzo_uint InLen, OutLen;
+ 	u32 TotalSize = 0;
+ 	int i = 0;
+ 
