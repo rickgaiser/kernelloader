@@ -300,42 +300,46 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 {
 	SifRpcClientData_t *client = request->client;
 	void *pkt_addr;
+	SifRpcEndFunc_t volatile end_function;
+	void * volatile end_param;
 
 	data = data;
 
+	/* No callback as default. */
+	end_function = NULL;
+	end_param = NULL;
+
 	pkt_addr = client->hdr.pkt_addr;
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
 	printf("cid 0x%x pkt_addr 0x%x\n", (uint32_t) request->cid, (uint32_t) pkt_addr);
 #endif
+	/* Interrupts are disabled, so it is safe to increment it. */
+	client->hdr.sema_id++;
+
 	if (request->cid == 0x8000000a) {
 		/* Response to RPC call. */
-		if (client->end_function) {
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
-			printf("Calling 0x%x\n", (uint32_t) client->end_function);
-#endif
-			client->end_function(client->end_param);
-		}
+		end_function = client->end_function;
+		end_param = client->end_param;
 	} else if (request->cid == 0x80000009) {
 		client->server = request->server;
 		client->buff   = request->buff;
 		client->cbuff  = request->cbuff;
-		/* Callback is not part of PS2SDK, but is required for linux. */
-		if (client->end_function) {
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
-			printf("Calling 0x%x\n", (uint32_t) client->end_function);
-#endif
-			client->end_function(client->end_param);
-		}
-	}
 
-	/* Interrupts are disabled, so it is safe to increment it. */
-	client->hdr.sema_id++;
+		/* Callback is not part of PS2SDK, but is required for linux. */
+		end_function = client->end_function;
+		end_param = client->end_param;
+	}
+	/* Mark RPC as finished, so that next RPC call in end_function will work. */
+	client->hdr.pkt_addr = NULL;
+
+	if (end_function != NULL) {
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+		printf("Calling 0x%x\n", (uint32_t) end_function);
+#endif
+		end_function(end_param);
+	}
 
 	rpc_packet_free(pkt_addr);
-	/* If end function calls SifRpc, pkt_addr changed already. */
-	if (client->hdr.pkt_addr == pkt_addr) {
-		client->hdr.pkt_addr = NULL;
-	}
 }
 
 static void *search_svdata(u32 sid, struct rpc_data *rpc_data)

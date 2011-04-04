@@ -78,6 +78,9 @@
 /** Trace macro for function call. */
 #define CD_CHECK_SCMD(cmd) cdCheckSCmd(cmd, __FILE__, __LINE__)
 
+/* SCMD is locked. Retry possible if interrupts are enabled otherwise error. */
+#define SCMD_EAGAIN (core_in_interrupt() ? -SIF_RPCE_GETP : -SIF_RPCE_SENDP)
+
 s32 bindSCmd = -1;
 
 SifRpcClientData_t clientSCmd __attribute__ ((aligned(64)));	// for s-cmds
@@ -118,7 +121,7 @@ int sbcall_cdvdreadrtc(tge_sbcall_rpc_arg_t *carg)
 {
 	//tge_sbcall_cdvdwritertc_arg_t *arg = carg->sbarg;
 	if (CD_CHECK_SCMD(CD_SCMD_READCLOCK) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_READCLOCK, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 16, cdvdreadrtcStage2, carg) < 0) {
 		CDVD_UNLOCKS();
@@ -136,7 +139,7 @@ int sbcall_cdvdwritertc(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_cdvdwritertc_arg_t *arg = carg->sbarg;
 	if (CD_CHECK_SCMD(CD_SCMD_WRITECLOCK) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	memcpy(sCmdSendBuff, arg, 8);
 	SifWriteBackDCache(sCmdSendBuff, 8);
@@ -161,8 +164,9 @@ static void SCmdStage2(void *rarg)
 // returns:     disk type (CDVD_TYPE_???)
 int sbcall_cdvdgettype(tge_sbcall_rpc_arg_t *carg)
 {
-	if (CD_CHECK_SCMD(CD_SCMD_GETDISCTYPE) == 0)
-		return -1;
+	if (CD_CHECK_SCMD(CD_SCMD_GETDISCTYPE) == 0) {
+		return SCMD_EAGAIN;
+	}
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_GETDISCTYPE, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
 		CDVD_UNLOCKS();
@@ -177,7 +181,7 @@ int sbcall_cdvdgettype(tge_sbcall_rpc_arg_t *carg)
 int sbcall_cdvdgeterror(tge_sbcall_rpc_arg_t *carg)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_GETERROR) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_GETERROR, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, SCmdStage2, carg) < 0) {
 		CDVD_UNLOCKS();
@@ -209,7 +213,7 @@ int sbcall_cdvdtrayrequest(tge_sbcall_rpc_arg_t *carg)
 {
 	tge_sbcall_cdvdtrayrequest_arg_t *arg = carg->sbarg;
 	if (CD_CHECK_SCMD(CD_SCMD_TRAYREQ) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	memcpy(sCmdSendBuff, &arg->request, 4);
 	SifWriteBackDCache(sCmdSendBuff, 4);
@@ -234,7 +238,7 @@ int sbcall_cdvdtrayrequest(tge_sbcall_rpc_arg_t *carg)
 s32 cdApplySCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u16 outBuffSize)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_SCMD) == 0)
-		return 0;
+		return SCMD_EAGAIN;
 
 	*(u16 *) & sCmdSendBuff[0] = cmdNum;
 	*(u16 *) & sCmdSendBuff[2] = inBuffSize;
@@ -263,7 +267,7 @@ s32 cdApplySCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 s32 cdStatus(void)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_STATUS) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_STATUS, 0, 0, 0, sCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
@@ -288,7 +292,7 @@ s32 cdStatus(void)
 s32 cdBreak(void)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_BREAK) == 0)
-		return 0;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_BREAK, 0, 0, 0, sCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
@@ -312,7 +316,7 @@ s32 cdBreak(void)
 s32 cdCancelPowerOff(u32 * result)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_CANCELPOWEROFF) == 0)
-		return 0;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_CANCELPOWEROFF, 0, 0, 0, sCmdRecvBuff, 8, 0, 0) < 0) {
 		SignalSema(sCmdSemaId);
@@ -338,7 +342,7 @@ s32 cdCancelPowerOff(u32 * result)
 s32 cdBlueLedCtrl(u8 control, u32 * result)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_BLUELEDCTRL) == 0)
-		return 0;
+		return SCMD_EAGAIN;
 
 	*(u32 *) sCmdSendBuff = control;
 	SifWriteBackDCache(sCmdSendBuff, 4);
@@ -366,7 +370,7 @@ s32 cdBlueLedCtrl(u8 control, u32 * result)
 s32 cdPowerOff(u32 * result)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_POWEROFF) == 0)
-		return 0;
+		return SCMD_EAGAIN;
 
 	if (SifCallRpc(&clientSCmd, CD_SCMD_POWEROFF, 0, 0, 0, sCmdRecvBuff, 8, 0, 0) < 0) {
 		CDVD_UNLOCKS();
@@ -377,6 +381,7 @@ s32 cdPowerOff(u32 * result)
 	CDVD_UNLOCKS();
 	return *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
 }
+#endif
 
 static void MmodeStage2(void *rarg)
 {
@@ -385,7 +390,6 @@ static void MmodeStage2(void *rarg)
 	carg->result = 1;
 	carg->endfunc(carg->efarg, carg->result);
 }
-#endif
 
 // set media mode
 // 
@@ -400,7 +404,7 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 	tge_sbcall_cdvdmmode_arg_t *arg = carg->sbarg;
 
 	if (CD_CHECK_SCMD(CD_SCMD_MMODE) == 0)
-		return -1;
+		return SCMD_EAGAIN;
 
 	memcpy(sCmdSendBuff, &arg->media, 4);
 	SifWriteBackDCache(sCmdSendBuff, 4);
@@ -411,9 +415,14 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 	}
 	return 0;
 #else
-	/* Function not supported, simulate success. */
-	carg->result = 1;
-	carg->endfunc(carg->efarg, carg->result);
+	/* Function not supported, simulate by calling different function. */
+	if (CD_CHECK_SCMD(CD_SCMD_GETERROR) == 0)
+		return SCMD_EAGAIN;
+
+	if (SifCallRpc(&clientSCmd, CD_SCMD_GETERROR, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, MmodeStage2, carg) < 0) {
+		CDVD_UNLOCKS();
+		return -SIF_RPCE_SENDP;
+	}
 	return 0;
 #endif
 }
@@ -429,7 +438,7 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 s32 cdChangeThreadPriority(u32 priority)
 {
 	if (CD_CHECK_SCMD(CD_SCMD_SETTHREADPRI) == 0)
-		return 0;
+		return CD_SCMD_MMODE;
 
 	memcpy(sCmdSendBuff, &priority, 4);
 	SifWriteBackDCache(sCmdSendBuff, 4);
@@ -454,13 +463,9 @@ s32 cdChangeThreadPriority(u32 priority)
  */
 int cdvdLockS(const char *file, int line)
 {
-	u32 status;
-
 	file = file;
 	line = line;
 
-	core_save_disable(&status);
-	core_restore(status);
 	if (sbios_tryLock(&cdvdMutexS)) {
 		printf("cdvdLockS %s:%d fail 1\n", file, line);
 		return 1;

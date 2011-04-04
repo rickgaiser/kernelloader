@@ -13,7 +13,7 @@
 
 #define SBCALL_MAX	256
 
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
 static const char *sbiosDescription[] = {
 	"GETVER",
 	"HALT",
@@ -496,7 +496,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 {
 	int ret;
 	int (*sbfunc)(void *) = dispatch[sbcall];
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
 	const char *description = "unknown";
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {
@@ -514,7 +514,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 
 	ret = sbfunc(arg);
 
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
 	printf("rv of sbios call %d\n", ret);
 #endif
 

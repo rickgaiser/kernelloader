@@ -21,6 +21,35 @@
 #define KSEG1ADDR(addr)		((void *)(PHYSADDR(addr) | K1BASE))
 #define UNCACHED_SEG(addr) KSEG1ADDR(addr)
 
+#define CORE_IE (1 << 0)
+#define CORE_EXL (1 << 1)
+#define CORE_ERL (1 << 2)
+#define CORE_EIE (1 << 16)
+
+/* Return true if interrupts are disabled. */
+static inline int core_in_interrupt(void)
+{
+	u32 status;
+
+	 __asm__  __volatile__(
+		"mfc0 %0, $12\n"
+		"sync.p\n":"=r" (status));
+
+	if ((status & CORE_EIE) == 0) {
+		/* interrupts disabled, IE bit not used. */
+		return -1;
+	}
+	if ((status & CORE_IE) == 0) {
+		/* interrupts disabled. */
+		return -1;
+	}
+	if ((status & (CORE_EXL | CORE_ERL)) != 0) {
+		/* exception handler. */
+		return -1;
+	}
+	return 0;
+}
+
 /* Disable interrupts and save the previous contents of COP0 Status.  */
 static inline void core_save_disable(u32 *status)
 {

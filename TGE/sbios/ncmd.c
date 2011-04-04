@@ -61,6 +61,9 @@
 #define CD_NCMD_READCHAIN		0x0F	// XCDVDFSV only
 #endif
 
+/* NCMD is locked. Retry possible if interrupts are enabled otherwise error. */
+#define NCMD_EAGAIN (core_in_interrupt() ? -SIF_RPCE_GETP : -SIF_RPCE_SENDP)
+
 /** Trace macro for function call. */
 #define CD_CHECK_NCMD(cmd) cdCheckNCmd(cmd, __FILE__, __LINE__)
 
@@ -152,7 +155,7 @@ int sbcall_cdvdread(tge_sbcall_rpc_arg_t *carg)
 		return -1;
 #endif
 	if (CD_CHECK_NCMD(CD_NCMD_READ) == 0)
-		return -2;
+		return NCMD_EAGAIN;
 
 	readData[0] = arg->lbn;
 	readData[1] = arg->sectors;
@@ -209,7 +212,7 @@ int sbcall_cdvdread_video(tge_sbcall_rpc_arg_t *carg)
 		return 0;
 #endif
 	if (CD_CHECK_NCMD(CD_NCMD_DVDREAD) == 0)
-		return -2;
+		return NCMD_EAGAIN;
 
 	readData[0] = arg->lbn;
 	readData[1] = arg->sectors;
@@ -238,7 +241,7 @@ int cdCddaRead(u32 lbn, u32 nsectors, void *buf, CdvdReadMode_t *rm)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_CDDAREAD) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	readData[0] = lbn;
 	readData[1] = nsectors;
@@ -314,7 +317,7 @@ static void cdGetTocStage2(void *rarg)
 int sbcall_cdvdgettoc(tge_sbcall_rpc_arg_t *carg)
 {
 	if (CD_CHECK_NCMD(CD_NCMD_GETTOC) == 0) {
-		return -1;
+		return NCMD_EAGAIN;
 	}
 	getTocSendBuff[0] = (u32) tocBuff;
 	SifWriteBackDCache(tocBuff, 3072);
@@ -339,7 +342,7 @@ s32 cdSeek(u32 sectorLoc)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_SEEK) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	seekSector = sectorLoc;
 	SifWriteBackDCache(&seekSector, 4);
@@ -371,7 +374,7 @@ s32 cdStandby(void)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_STANDBY) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	cdCallbackNum = CD_NCMD_STANDBY;
 	cbSema = 1;
@@ -408,7 +411,7 @@ int sbcall_cdvdstop(tge_sbcall_rpc_arg_t *carg)
 		return 0;
 #endif
 	if (CD_CHECK_NCMD(CD_NCMD_STOP) == 0) {
-		return -2;
+		return NCMD_EAGAIN;
 	}
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_STOP, SIF_RPC_M_NOWAIT, 0, 0, 0, 0, NCmdCallback, carg) < 0) {
@@ -430,7 +433,7 @@ s32 cdPause(void)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_PAUSE) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	cdCallbackNum = CD_NCMD_PAUSE;
 	cbSema = 1;
@@ -462,7 +465,7 @@ s32 cdApplyNCmd(u8 cmdNum, const void *inBuff, u16 inBuffSize, void *outBuff, u1
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_NCMD) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	*(u16 *) & nCmdRecvBuff[0] = cmdNum;
 	*(u16 *) & nCmdRecvBuff[2] = inBuffSize;
@@ -500,7 +503,7 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_READIOPMEM) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	readData[0] = sectorLoc;
 	readData[1] = numSectors;
@@ -540,7 +543,7 @@ s32 cdReadIOPMem(u32 sectorLoc, u32 numSectors, void *buf, CdvdReadMode_t * mode
 s32 cdNCmdDiskReady(void)
 {
 	if (CD_CHECK_NCMD(CD_NCMD_DISKREADY) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	if (SifCallRpc(&clientNCmd, CD_NCMD_DISKREADY, 0, 0, 0, &nCmdRecvBuff, 4, 0, 0) < 0) {
 		SignalSema(nCmdSemaId);
@@ -572,7 +575,7 @@ s32 cdReadChain(CdvdChain_t * readChain, CdvdReadMode_t * mode)
 	if (cdNCmdDiskReady() == CDVD_READY_NOTREADY)
 		return 0;
 	if (CD_CHECK_NCMD(CD_NCMD_READCHAIN) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	if (cdDebug > 0) {
 		printf("call cdReadChain cmd 0\n");
@@ -809,7 +812,7 @@ s32 cdStResume(void)
 int cdStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode_t *rm)
 {
 	if (CD_CHECK_NCMD(15) == 0)
-		return 0;
+		return NCMD_EAGAIN;
 
 	if (cdDebug > 0) {
 		printf("call cdreadstm call\n");
@@ -847,7 +850,7 @@ int cdCddaStream(u32 lbn, u32 nsectors, void *buf, CdvdStCmd_t cmd, CdvdReadMode
 	u32 sector_size;
 
 	if (CD_CHECK_NCMD(17) == 0)
-		return cmd < CDVD_ST_CMD_INIT ? -1 : 0;
+		return cmd < CDVD_ST_CMD_INIT ? NCMD_EAGAIN : -2;
 
 	if (rm->sectorType == CDVD_SECTOR_2368)
 		sector_size = 2368;
