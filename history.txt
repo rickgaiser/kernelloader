@@ -1,3 +1,7 @@
+2.5
+- Fixed CDVD problems in Linux 2.2. This allows to install
+  Sony's Linux Toolkit with kernelloader.
+
 2.4
 - Add support for 64 bit kernels.
 - Add support for Linux 2.6 initial RAM disk parameters (initrd).
