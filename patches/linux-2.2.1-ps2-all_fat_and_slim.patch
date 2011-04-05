@@ -1,0 +1,653 @@
+This patch adds the following to the Linux 2.2 kernel:
+- Support for reading DVD video discs.
+- USB support for slim PSTwo.
+- Handling of power button on fat PS2.
+- Fixes in CDVD driver (kernelloader 2.5 is needed).
+
+This patch doesn't include the network driver for the slim PSTwo.
+
+diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/irq.c linux/arch/mips/ps2/kernel/irq.c
+--- linux-2.2.1-orig/arch/mips/ps2/kernel/irq.c	Fri Mar  9 11:21:40 2001
++++ linux/arch/mips/ps2/kernel/irq.c	Sat Mar  5 23:23:46 2011
+@@ -507,6 +507,35 @@ static inline void irqdispatch_one(int i
+ 	}
+ }
+ 
++void handleSimulatedIRQ(int irq)
++{
++	struct irqaction *action;
++	int do_random;
++
++	kstat.irqs[0][irq]++;
++	action = irq_action[irq];
++	if (action->flags & SA_INTERRUPT) {
++		/* fast interrupt handler */
++		do {
++			action->handler(irq, action->dev_id, NULL);
++			action = action->next;
++		} while (action);
++	} else {
++		/* normal interrupt handler */
++		if (!(action->flags & SA_INTERRUPT))
++			__sti();
++		do_random = 0;
++		do {
++			do_random |= action->flags;
++			action->handler(irq, action->dev_id, NULL);
++			action = action->next;
++		} while (action);
++		if (do_random & SA_SAMPLE_RANDOM)
++			add_interrupt_randomness(irq);
++		__cli();
++	}
++}
++
+ asmlinkage void ps2_intc_irqdispatch(struct pt_regs *regs)
+ {
+ 	int irq, cpu = smp_processor_id();
+diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c linux/arch/mips/ps2/kernel/powerbutton.c
+--- linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c	Wed Nov 14 10:17:38 2001
++++ linux/arch/mips/ps2/kernel/powerbutton.c	Sat Mar  5 23:08:47 2011
+@@ -13,26 +13,48 @@
+ #include <linux/types.h>
+ #include <linux/kernel.h>
+ #include <linux/config.h>
++#include <linux/sched.h>
+ #include <asm/signal.h>
+ #include <asm/ps2/sifdefs.h>
+ #include <asm/ps2/sbcall.h>
++#include <asm/ps2/powerbutton.h>
+ 
++#define POWEROFF_SID 0x9090900
++
++#define PWRBTN_MODE_SHUTDOWN             0x01
++#define PWRBTN_MODE_ENABLE_AUTO_SHUTOFF  0x02
++
++struct rpc_wait_queue {
++    struct wait_queue *wq;
++    volatile int woken;
++};
++
++static ps2sif_clientdata_t cd_poweroff_rpc;
++static int rpc_initialized;
++static struct semaphore poweroff_rpc_sema;
+ static void powerbutton_handler(void *);
+ 
+-__initfunc(int ps2_powerbutton_init(void))
++static void rpc_wakeup(void *arg)
++{
++    struct rpc_wait_queue *rwq = (struct rpc_wait_queue *)arg;
++
++    rwq->woken = 1;
++    if (rwq->wq != NULL)
++	wake_up(&rwq->wq);
++}
++
++/* Install powerhook with RTE (module CDVDFSV).
++ * This will not work with TGE.
++ */
++static int __init rte_powerhook(void)
+ {
+ 	int res;
+ 	struct sb_cdvd_powerhook_arg arg;
+ 
+-#ifdef CONFIG_PS2_SBIOS_VER_CHECK
+-	if (sbios(SB_GETVER, NULL) < 0x0201)
+-	    	return (-1);
+-#endif
+-
+ 	/*
+ 	 * XXX, you should get the CD/DVD lock.
+ 	 * But it might be OK because this routine will be called
+-	 * in early stage of boot sequece.
++	 * in early stage of boot sequence.
+ 	 */
+ 
+ 	/* initialize CD/DVD */
+@@ -48,6 +70,108 @@ __initfunc(int ps2_powerbutton_init(void
+ 
+ 	return (0);
+ }
++
++/* Install powerhook with TGE (module poweroff.irx).
++ * This will not work with RTE.
++ */
++static int __init tge_powerhook(void)
++{
++	int loop;
++	struct rpc_wait_queue rwq;
++	int rv;
++	volatile int j;
++	unsigned long flags;
++
++	sema_init(&poweroff_rpc_sema, 1);
++
++	rwq.wq = NULL;
++	rwq.woken = 0;
++
++	/* bind poweroff.irx module */
++	for (loop = 100; loop; loop--) {
++		save_flags(flags); cli();
++		rv = ps2sif_bindrpc(&cd_poweroff_rpc, POWEROFF_SID,
++			SIF_RPCM_NOWAIT, rpc_wakeup, (void *)&rwq);
++		if (rv < 0) {
++			printk("poweroff.irx: bind rv = %d.\n", rv);
++			break;
++		}
++		while (!rwq.woken)
++			sleep_on(&rwq.wq);
++		if (cd_poweroff_rpc.serve != 0)
++			break;
++		restore_flags(flags);
++		j = 0x010000;
++		while (j--) ;
++	}
++	if (cd_poweroff_rpc.serve == 0) {
++		restore_flags(flags);
++		printk("poweroff.irx bind error 1, power button will not work.\n");
++		return -1;
++	}
++	rpc_initialized = -1;
++	restore_flags(flags);
++	return 0;
++}
++
++int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff)
++{
++	struct rpc_wait_queue rwq;
++	int rv;
++	unsigned long flags;
++
++	if (!rpc_initialized) {
++		return -1;
++	}
++
++	rwq.wq = NULL;
++	rwq.woken = 0;
++	down(&poweroff_rpc_sema);
++	do {
++		save_flags(flags); cli();
++		rv = ps2sif_callrpc(&cd_poweroff_rpc, PWRBTN_MODE_ENABLE_AUTO_SHUTOFF,
++			SIF_RPCM_NOWAIT,
++			NULL, 0,
++			&enable_auto_shutoff, sizeof(enable_auto_shutoff),
++			(ps2sif_endfunc_t) rpc_wakeup,
++			(void *)&rwq);
++		if (rv == -E_SIF_PKT_ALLOC) {
++			restore_flags(flags);
++		}
++	} while (rv == -E_SIF_PKT_ALLOC);
++	if (rv != 0) {
++		printk("ps2_powerbutton_enable_auto_shutoff callrpc failed, (%d)\n", rv);
++	} else {
++		while (!rwq.woken)
++			sleep_on(&rwq.wq);
++	}
++	restore_flags(flags);
++	up(&poweroff_rpc_sema);
++	return rv;
++}
++
++
++int __init ps2_powerbutton_init(void)
++{
++	int rte_rv;
++	int tge_rv;
++
++	rpc_initialized = 0;
++
++#ifdef CONFIG_PS2_SBIOS_VER_CHECK
++	if (sbios(SB_GETVER, NULL) < 0x0201)
++	    	return (-1);
++#endif
++
++	rte_rv = rte_powerhook();
++	tge_rv = tge_powerhook();
++
++	if ((rte_rv == 0) || (tge_rv ==0)) {
++		return 0;
++	} else {
++		return -1;
++	}
++ }
+ 
+ static void powerbutton_handler(void *arg)
+ {
+diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/init.c linux/arch/mips/ps2/sbios/init.c
+--- linux-2.2.1-orig/arch/mips/ps2/sbios/init.c	Wed Nov 14 10:17:39 2001
++++ linux/arch/mips/ps2/sbios/init.c	Sat Mar  5 20:10:19 2011
+@@ -27,6 +27,11 @@ struct ps2_bootinfo *ps2_bootinfo = &ps2
+ 
+ char arcs_cmdline[CL_SIZE] = "root=/dev/hda1";
+ 
++static void sbios_prints(const char *text)
++{
++	printk("SBIOS: %s", text);
++}
++
+ int __init prom_init(int argc, char **argv, char **envp)
+ {
+ 	struct ps2_bootinfo *bootinfo;
+@@ -86,6 +91,9 @@ int __init prom_init(int argc, char **ar
+ 	       bootinfo, oldbootinfo ? "(old style)" : "");
+ 	printk("boot option string at 0x%08x: %s\n",
+ 	       ps2_bootinfo->opt_string, arcs_cmdline);
++
++	/* Register Callback for debug output. */
++	sbios(SB_SET_PRINTS_CALLBACK, sbios_prints);
+ 
+ 	return 0;
+ }
+diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/sbcall.c linux/arch/mips/ps2/sbios/sbcall.c
+--- linux-2.2.1-orig/arch/mips/ps2/sbios/sbcall.c	Wed Nov 14 10:17:40 2001
++++ linux/arch/mips/ps2/sbios/sbcall.c	Sat Mar  5 20:16:35 2011
+@@ -20,6 +20,33 @@
+ #include <asm/ps2/sifdefs.h>
+ #include <asm/ps2/sbcall.h>
+ 
++typedef struct t_SifCmdHeader
++{
++	u32 size;
++	void *dest;
++	int cid;
++	u32 unknown;
++} SifCmdHeader_t;
++
++static uint32_t usrCmdHandler[256];
++
++typedef struct {
++	struct t_SifCmdHeader    sifcmd;
++	u32 data[16];
++} iop_sifCmdBufferIrq_t;
++
++void handleRPCIRQ(iop_sifCmdBufferIrq_t *sifCmdBufferIrq, void *arg)
++{
++	extern void handleSimulatedIRQ(int irq);
++
++	handleSimulatedIRQ(sifCmdBufferIrq->data[0]);
++}
++
++static void handlePowerOff(void *sifCmdBuffer, void *arg)
++{
++	kill_proc(1, SIGPWR, 1);
++}
++
+ /*
+  *  SIF DMA functions
+  */
+@@ -252,12 +279,36 @@ static void sif0_dma_handler(int irq, vo
+ 
+ __initfunc(int ps2sif_init(void))
+ {
++    struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
++    struct sb_sifsetcmdbuffer_arg setcmdhandlerbufferparam;
++
++    setcmdhandlerbufferparam.db = usrCmdHandler;
++    setcmdhandlerbufferparam.size = sizeof(usrCmdHandler) / 8;
++
+     if (sbios(SB_SIFINIT, 0) < 0)
+ 	return -1;
+     if (sbios(SB_SIFINITCMD, 0) < 0)
+ 	return -1;
+     if (request_irq(IRQ_DMAC_5, sif0_dma_handler, SA_INTERRUPT, "SIF0 DMA", NULL))
+ 	return -1;
++    if (sbios(SB_SIFSETCMDBUFFER, &setcmdhandlerbufferparam) < 0) {
++        printk("Failed to initialize EEDEBUG handler (1).\n");
++    } else {
++        addcmdhandlerparam.fid = 0x20;
++        addcmdhandlerparam.func = handleRPCIRQ;
++        addcmdhandlerparam.data = NULL;
++        if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++            printk("Failed to initialize SIF IRQ handler.\n");
++        }
++
++        /* The module poweroff.irx is configured to inform us. */
++        addcmdhandlerparam.fid = 20;
++        addcmdhandlerparam.func = handlePowerOff;
++        addcmdhandlerparam.data = NULL;
++        if (sbios(SB_SIFADDCMDHANDLER, &addcmdhandlerparam) < 0) {
++            printk("Failed to initialize SIF Power Off handler.\n");
++        }
++    }
+     if (sbios(SB_SIFINITRPC, 0) < 0)
+ 	return -1;
+ 
+diff -urp linux-2.2.1-orig/drivers/ps2/cdvd.c linux/drivers/ps2/cdvd.c
+--- linux-2.2.1-orig/drivers/ps2/cdvd.c	Wed Nov 14 10:17:43 2001
++++ linux/drivers/ps2/cdvd.c	Tue Apr  5 22:20:48 2011
+@@ -94,6 +94,9 @@ struct ps2cdvd_event {
+ 	void *arg;
+ };
+ 
++#define DVD_DATA_SECT_SIZE 2064
++#define DVD_DATA_OFFSET 12
++
+ /*
+  * function prototypes
+  */
+@@ -151,7 +154,7 @@ int ps2cdvd_read_ahead = 32;
+ #if 1
+ unsigned long ps2cdvd_debug = DBG_DIAG;
+ #else
+-unsigned long ps2cdvd_debug = (DBG_DIAG | DBG_READ | DBG_INFO);
++unsigned long ps2cdvd_debug = (DBG_DIAG | DBG_READ | DBG_INFO | DBG_STATE);
+ #endif
+ static int ps2cdvd_major = PS2CDVD_MAJOR;
+ static int ps2cdvd_blocksizes[1] = { DATA_SECT_SIZE, };
+@@ -588,10 +591,19 @@ ps2cdvd_enter_leave(int state, int enter
+ 	  break;
+ 	case STAT_LABEL_READ:
+ 	  if (enter) {
+-	    if (ps2cdvd_send_read(16, 1, labelbuf, &DataMode) < 0) {
+-	      DPRINT(DBG_DIAG, "send_read() failed\n");
+-	      res_state = ps2cdvd_enter(STAT_ERROR);
+-	    }
++            if (media_mode == SCECdDVDV) {
++	      if (ps2cdvd_send_read_dvd(16, 1, labelbuf, &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read_dvd() failed\n");
++                res_state = ps2cdvd_enter(STAT_ERROR);
++              } else {
++                memcpy(labelbuf, labelbuf + DVD_DATA_OFFSET, DATA_SECT_SIZE);
++              }
++            } else {
++	      if (ps2cdvd_send_read(16, 1, labelbuf, &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read() failed\n");
++                res_state = ps2cdvd_enter(STAT_ERROR);
++              }
++            }
+ 	  } else {
+ 	  }
+ 	  break;
+@@ -626,15 +638,27 @@ ps2cdvd_enter_leave(int state, int enter
+ 	    DPRINT(DBG_READ, "REQ %p: sec=%ld  n=%ld  buf=%p\n",
+ 		   CURRENT, CURRENT->sector,
+ 		   CURRENT->current_nr_sectors, CURRENT->buffer);
+-	    if (ps2cdvd_send_read(CURRENT->sector/4,
+-				  ps2cdvd_databuf_size,
+-				  ps2cdvd_databuf,
+-				  &DataMode) < 0) {
+-	      DPRINT(DBG_DIAG, "send_readdata() failed\n");
+-	      res_state = ps2cdvd_enter(STAT_ERROR);
+-	    } else {
+-	      ps2cdvd_databuf_addr = CURRENT->sector/4;
+-	    }
++            if (media_mode == SCECdDVDV) {
++	      if (ps2cdvd_send_read_dvd(CURRENT->sector/4,
++				    ps2cdvd_databuf_size,
++				    ps2cdvd_databuf,
++				    &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read_dvd() failed\n");
++	        res_state = ps2cdvd_enter(STAT_ERROR);
++	      } else {
++	        ps2cdvd_databuf_addr = CURRENT->sector/4;
++	      }
++            } else {
++	      if (ps2cdvd_send_read(CURRENT->sector/4,
++				    ps2cdvd_databuf_size,
++				    ps2cdvd_databuf,
++				    &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read() failed\n");
++	        res_state = ps2cdvd_enter(STAT_ERROR);
++	      } else {
++	        ps2cdvd_databuf_addr = CURRENT->sector/4;
++	      }
++            }
+ 	  } else {
+ 	  }
+ 	  break;
+@@ -643,16 +667,29 @@ ps2cdvd_enter_leave(int state, int enter
+ 	    DPRINT(DBG_READ, "REQ %p: sec=%ld  n=%ld  buf=%p (EOM retry)\n",
+ 		   CURRENT, CURRENT->sector,
+ 		   CURRENT->current_nr_sectors, CURRENT->buffer);
+-	    if (ps2cdvd_send_read(CURRENT->sector/4 - ps2cdvd_databuf_size + 1,
+-				  ps2cdvd_databuf_size,
+-				  ps2cdvd_databuf,
+-				  &DataMode) < 0) {
+-	      DPRINT(DBG_DIAG, "send_readdata() failed\n");
+-	      res_state = ps2cdvd_enter(STAT_ERROR);
+-	    } else {
+-	      ps2cdvd_databuf_addr =
+-		CURRENT->sector/4 - ps2cdvd_databuf_size + 1;
+-	    }
++            if (media_mode == SCECdDVDV) {
++	      if (ps2cdvd_send_read_dvd(CURRENT->sector/4 - ps2cdvd_databuf_size + 1,
++				    ps2cdvd_databuf_size,
++				    ps2cdvd_databuf,
++				    &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read_dvd() failed\n");
++	        res_state = ps2cdvd_enter(STAT_ERROR);
++	      } else {
++	        ps2cdvd_databuf_addr =
++		  CURRENT->sector/4 - ps2cdvd_databuf_size + 1;
++	      }
++            } else {
++	      if (ps2cdvd_send_read(CURRENT->sector/4 - ps2cdvd_databuf_size + 1,
++				    ps2cdvd_databuf_size,
++				    ps2cdvd_databuf,
++				    &DataMode) < 0) {
++	        DPRINT(DBG_DIAG, "ps2cdvd_send_read() failed\n");
++	        res_state = ps2cdvd_enter(STAT_ERROR);
++	      } else {
++	        ps2cdvd_databuf_addr =
++		  CURRENT->sector/4 - ps2cdvd_databuf_size + 1;
++	      }
++            }
+ 	  } else {
+ 	  }
+ 	  break;
+@@ -813,10 +850,13 @@ ps2cdvd_state_machine(struct ps2cdvd_eve
+ 		media_mode = SCECdCD;
+ 		break;
+ 	      case SCECdPS2DVD:		/* PS2 DVD */
+-	      case SCECdDVDV:		/* DVD video */
+ 		new_state = STAT_SET_MMODE;
+ 		media_mode = SCECdDVD;
+ 		break;
++	      case SCECdDVDV:		/* DVD video */
++		new_state = STAT_SET_MMODE;
++		media_mode = SCECdDVDV;
++		break;
+ 	      default:
+ 		printk(KERN_CRIT "ps2cdvd: internal error at %s(%d)\n",
+ 		       __FILE__, __LINE__);
+@@ -1087,9 +1127,15 @@ ps2cdvd_state_machine(struct ps2cdvd_eve
+ 	      while (CURRENT != NULL &&
+ 		     ps2cdvd_databuf_addr <= CURRENT->sector/4 &&
+ 		     CURRENT->sector/4 < ps2cdvd_databuf_addr + ps2cdvd_databuf_size) {
+-		memcpy(CURRENT->buffer,
+-		       ps2cdvd_databuf + DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd_databuf_addr),
+-		       DATA_SECT_SIZE);
++                if (media_mode == SCECdDVDV) {
++                  memcpy(CURRENT->buffer,
++                         ps2cdvd_databuf + DVD_DATA_OFFSET + DVD_DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd_databuf_addr),
++                         DATA_SECT_SIZE);
++	        } else {
++                  memcpy(CURRENT->buffer,
++		         ps2cdvd_databuf + DATA_SECT_SIZE * (CURRENT->sector/4 - ps2cdvd_databuf_addr),
++		         DATA_SECT_SIZE);
++	        }
+ 		end_request(1);
+ 	      }
+ 	      if (!ps2sif_iswaiting(ps2cdvd_lock) && CURRENT != NULL) {
+@@ -1209,6 +1255,7 @@ ps2cdvd_state_machine(struct ps2cdvd_eve
+ __initfunc(int ps2cdvd_init(void))
+ {
+ 	int res;
++	unsigned long flags;
+ 
+ 	DPRINT(DBG_VERBOSE, "init: get lock\n");
+ 	if ((ps2cdvd_lock = ps2sif_getlock(PS2LOCK_CDVD)) == NULL) {
+@@ -1225,7 +1272,7 @@ __initfunc(int ps2cdvd_init(void))
+ 	ps2cdvd_state = STAT_WAIT_DISC;
+ 
+ 	DPRINT(DBG_VERBOSE, "init: allocate diaklabel buffer\n");
+-	labelbuf = kmalloc(2048, GFP_KERNEL);
++	labelbuf = kmalloc(DVD_DATA_SECT_SIZE, GFP_KERNEL);
+ 	if (labelbuf == NULL) {
+ 		printk(KERN_ERR "ps2cdvd: Can't allocate buffer\n");
+ 		ps2cdvd_cleanup();
+@@ -1284,10 +1331,13 @@ __initfunc(int ps2cdvd_init(void))
+ 
+ 	printk(KERN_INFO "PS2 CD/DVD-ROM driver\n");
+ 
++	save_flags(flags);
++	cli();
+ 	if (ps2cdvd_lowlevel_lock() == 0)
+ 	  ps2cdvd_state = ps2cdvd_enter(STAT_INIT_TRAYSTAT);
+ 	else
+ 	  ps2cdvd_state = ps2cdvd_enter(STAT_WAIT_DISC);
++	restore_flags(flags);
+ 
+ 	return 0;
+ }
+diff -urp linux-2.2.1-orig/drivers/ps2/cdvd.h linux/drivers/ps2/cdvd.h
+--- linux-2.2.1-orig/drivers/ps2/cdvd.h	Wed Nov 14 10:17:43 2001
++++ linux/drivers/ps2/cdvd.h	Sat Mar  5 20:51:18 2011
+@@ -70,6 +70,7 @@ void ps2cdvd_intr(void*, int);
+ 
+ int ps2cdvd_send_ready(int);
+ int ps2cdvd_send_read(u_int, u_int, void *, struct sceCdRMode *);
++int ps2cdvd_send_read_dvd(u_int, u_int, void *, struct sceCdRMode *);
+ int ps2cdvd_send_stop(void);
+ int ps2cdvd_send_gettoc(u_char *, int);
+ int ps2cdvd_send_mmode(int media);
+diff -urp linux-2.2.1-orig/drivers/ps2/cdvdcall.h linux/drivers/ps2/cdvdcall.h
+--- linux-2.2.1-orig/drivers/ps2/cdvdcall.h	Wed Nov 14 10:17:43 2001
++++ linux/drivers/ps2/cdvdcall.h	Sat Mar  5 20:37:21 2011
+@@ -70,6 +70,23 @@ static __inline__ int ps2cdvdcall_read(u
+ 	return (res);
+ }
+ 
++static __inline__ int ps2cdvdcall_read_dvd(u_int lbn, u_int sectors, void *buf,
++				       struct sceCdRMode *rmode)
++{
++	struct sbr_cdvd_read_arg arg;
++	int res;
++
++	arg.lbn = lbn;
++	arg.sectors = sectors;
++	arg.buf = buf;
++	arg.rmode = rmode;
++
++	if (sbios_rpc(SBR_CDVD_READ_DVD, &arg, &res) < 0)
++		return (-1);
++
++	return (res);
++}
++
+ static __inline__ int ps2cdvdcall_stop(void)
+ {
+ 	int res;
+diff -urp linux-2.2.1-orig/drivers/ps2/cdvdiop.c linux/drivers/ps2/cdvdiop.c
+--- linux-2.2.1-orig/drivers/ps2/cdvdiop.c	Wed Nov 14 10:17:43 2001
++++ linux/drivers/ps2/cdvdiop.c	Sat Mar  5 20:50:51 2011
+@@ -63,6 +63,24 @@ int ps2cdvd_send_read(u_int lbn, u_int s
+ 	return (res);
+ }
+ 
++int ps2cdvd_send_read_dvd(u_int lbn, u_int sectors, void *buf, 
++		      struct sceCdRMode *rmode)
++{
++	int res;
++	static struct sbr_cdvd_read_arg arg;
++
++	arg.lbn = lbn;
++	arg.sectors = sectors;
++	arg.buf = buf;
++	arg.rmode = rmode;
++	carg.arg = &arg;
++
++	while ((res = sbios(SBR_CDVD_READ_DVD, &carg)) == -SIF_RPCE_SENDP)
++		/* busy wait */;
++
++	return (res);
++}
++
+ int ps2cdvd_send_stop(void)
+ {
+ 	int res;
+diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sbcall.h linux/include/asm-mips/ps2/sbcall.h
+--- linux-2.2.1-orig/include/asm-mips/ps2/sbcall.h	Wed Nov 14 10:18:12 2001
++++ linux/include/asm-mips/ps2/sbcall.h	Sat Mar  5 20:18:44 2011
+@@ -39,6 +39,9 @@ struct sb_setgscrt_arg {
+     int *dx1, *dy1, *dx2, *dy2;
+ };
+ 
++/** Debug output in TGE (not supported by RTE). */
++#define SB_SET_PRINTS_CALLBACK 15
++
+ /*
+  *  SIF DMA services
+  */
+@@ -498,5 +501,8 @@ struct sb_cdvd_powerhook_arg {
+   void (*func)(void *);
+   void *arg;
+ };
++
++/* Uses sbr_cdvd_read_arg */
++#define SBR_CDVD_READ_DVD		196
+ 
+ #endif /* __ASM_PS2_SBCALL_H */
+diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sifdefs.h linux/include/asm-mips/ps2/sifdefs.h
+--- linux-2.2.1-orig/include/asm-mips/ps2/sifdefs.h	Wed Nov 14 10:18:13 2001
++++ linux/include/asm-mips/ps2/sifdefs.h	Sat Mar  5 20:19:37 2011
+@@ -103,6 +103,7 @@ typedef struct _sif_queue_data {
+ /* calling error */
+ #define SIF_RPCE_GETP	1	/* fail to get packet data */
+ #define SIF_RPCE_SENDP	2	/* fail to send dma packet */
++#define E_SIF_PKT_ALLOC 0xd610	/* Can't allocate SIF packet. */
+ 
+ /* functions */
+ 
+diff -urp linux-2.2.1-orig/init/main.c linux/init/main.c
+--- linux-2.2.1-orig/init/main.c	Fri Dec  8 09:48:43 2000
++++ linux/init/main.c	Sat Mar  5 20:27:44 2011
+@@ -46,6 +46,10 @@
+ #include <linux/apm_bios.h>
+ #endif
+ 
++#ifdef CONFIG_PS2
++#include <asm/ps2/powerbutton.h>
++#endif
++
+ /*
+  * Versions of gcc older than that listed below may actually compile
+  * and link okay, but the end product can have subtle run time bugs.
+@@ -1360,6 +1364,11 @@ static void __init do_basic_setup(void)
+ 
+ 	/* .. filesystems .. */
+ 	filesystem_setup();
++
++#ifdef CONFIG_PS2
++	/* Disable auto shutdown, because file system could be damged. */
++	ps2_powerbutton_enable_auto_shutoff(0);
++#endif
+ 
+ 	/* Mount the root filesystem.. */
+ 	mount_root();
+diff -urp linux-2.2.1-orig/kernel/panic.c linux/kernel/panic.c
+--- linux-2.2.1-orig/kernel/panic.c	Tue Dec  5 08:55:43 2000
++++ linux/kernel/panic.c	Sat Mar  5 20:24:54 2011
+@@ -20,6 +20,10 @@
+ #include <asm/machvec.h>
+ #endif
+ 
++#ifdef CONFIG_PS2
++#include <asm/ps2/powerbutton.h>
++#endif
++
+ asmlinkage void sys_sync(void);	/* it's really int */
+ extern void unblank_console(void);
+ extern int C_A_D;
+@@ -57,6 +61,11 @@ NORET_TYPE void panic(const char * fmt, 
+ 	unblank_console();
+ 
+ 	notifier_call_chain(&panic_notifier_list, 0, NULL);
++
++#ifdef CONFIG_PS2
++	/* Enable power button, because init will not handle any signals. */
++	ps2_powerbutton_enable_auto_shutoff(-1);
++#endif
+ 
+ #ifdef __mips__
+ 	traceback_me();
