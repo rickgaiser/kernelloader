@@ -651,3 +651,13 @@ diff -urp linux-2.2.1-orig/kernel/panic.c linux/kernel/panic.c
  
  #ifdef __mips__
  	traceback_me();
+diff -Nurp linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h
+--- linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h	2010-08-24 16:02:41.000000000 +0200
+@@ -0,0 +1,6 @@
++#ifndef __ASM_PS2_POWERBTN_H
++#define __ASM_PS2_POWERBTN_H
++
++int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff);
++
++#endif
