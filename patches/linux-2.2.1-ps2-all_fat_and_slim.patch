@@ -3,12 +3,14 @@ This patch adds the following to the Linux 2.2 kernel:
 - USB support for slim PSTwo.
 - Handling of power button on fat PS2.
 - Fixes in CDVD driver (kernelloader 2.5 is needed).
+- Enable network driver for slim PSTwo
+- Additional files needed for network driver on slim PSTwo:
+  cp ../kernelloader/driver_slim_smaprpc/smaprpc.c drivers/ps2/
+  cp ../kernelloader/driver_slim_smaprpc/smaprpc.h drivers/ps2/
 
-This patch doesn't include the network driver for the slim PSTwo.
-
-diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/irq.c linux/arch/mips/ps2/kernel/irq.c
---- linux-2.2.1-orig/arch/mips/ps2/kernel/irq.c	Fri Mar  9 11:21:40 2001
-+++ linux/arch/mips/ps2/kernel/irq.c	Sat Mar  5 23:23:46 2011
+diff -Nurp linux/arch/mips/ps2/kernel/irq.c linux-2.2.1_ps2//arch/mips/ps2/kernel/irq.c
+--- linux/arch/mips/ps2/kernel/irq.c	2001-03-09 11:21:40.000000000 +0100
++++ linux-2.2.1_ps2//arch/mips/ps2/kernel/irq.c	2011-04-09 21:22:17.638917001 +0200
 @@ -507,6 +507,35 @@ static inline void irqdispatch_one(int i
  	}
  }
@@ -45,9 +47,9 @@ diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/irq.c linux/arch/mips/ps2/kernel
  asmlinkage void ps2_intc_irqdispatch(struct pt_regs *regs)
  {
  	int irq, cpu = smp_processor_id();
-diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c linux/arch/mips/ps2/kernel/powerbutton.c
---- linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c	Wed Nov 14 10:17:38 2001
-+++ linux/arch/mips/ps2/kernel/powerbutton.c	Sat Mar  5 23:08:47 2011
+diff -Nurp linux/arch/mips/ps2/kernel/powerbutton.c linux-2.2.1_ps2//arch/mips/ps2/kernel/powerbutton.c
+--- linux/arch/mips/ps2/kernel/powerbutton.c	2001-11-14 10:17:38.000000000 +0100
++++ linux-2.2.1_ps2//arch/mips/ps2/kernel/powerbutton.c	2011-04-09 21:22:17.638917001 +0200
 @@ -13,26 +13,48 @@
  #include <linux/types.h>
  #include <linux/kernel.h>
@@ -104,11 +106,10 @@ diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c linux/arch/mips/ps
  	 */
  
  	/* initialize CD/DVD */
-@@ -48,6 +70,108 @@ __initfunc(int ps2_powerbutton_init(void
- 
+@@ -49,6 +71,108 @@ __initfunc(int ps2_powerbutton_init(void
  	return (0);
  }
-+
+ 
 +/* Install powerhook with TGE (module poweroff.irx).
 + * This will not work with RTE.
 + */
@@ -210,13 +211,14 @@ diff -urp linux-2.2.1-orig/arch/mips/ps2/kernel/powerbutton.c linux/arch/mips/ps
 +		return -1;
 +	}
 + }
- 
++
  static void powerbutton_handler(void *arg)
  {
-diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/init.c linux/arch/mips/ps2/sbios/init.c
---- linux-2.2.1-orig/arch/mips/ps2/sbios/init.c	Wed Nov 14 10:17:39 2001
-+++ linux/arch/mips/ps2/sbios/init.c	Sat Mar  5 20:10:19 2011
-@@ -27,6 +27,11 @@ struct ps2_bootinfo *ps2_bootinfo = &ps2
+ 	kill_proc(1, SIGPWR, 1);
+diff -Nurp linux/arch/mips/ps2/sbios/init.c linux-2.2.1_ps2//arch/mips/ps2/sbios/init.c
+--- linux/arch/mips/ps2/sbios/init.c	2001-11-14 10:17:39.000000000 +0100
++++ linux-2.2.1_ps2//arch/mips/ps2/sbios/init.c	2011-04-09 23:31:11.068917001 +0200
+@@ -27,10 +27,16 @@ struct ps2_bootinfo *ps2_bootinfo = &ps2
  
  char arcs_cmdline[CL_SIZE] = "root=/dev/hda1";
  
@@ -228,19 +230,35 @@ diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/init.c linux/arch/mips/ps2/sbios/
  int __init prom_init(int argc, char **argv, char **envp)
  {
  	struct ps2_bootinfo *bootinfo;
-@@ -86,6 +91,9 @@ int __init prom_init(int argc, char **ar
- 	       bootinfo, oldbootinfo ? "(old style)" : "");
+ 	int oldbootinfo = 0;
++	int version;
+ 
+ 	/* default bootinfo */
+ 	memset(&ps2_bootinfox, 0, sizeof(struct ps2_bootinfo));
+@@ -87,6 +93,20 @@ int __init prom_init(int argc, char **ar
  	printk("boot option string at 0x%08x: %s\n",
  	       ps2_bootinfo->opt_string, arcs_cmdline);
+ 
++	version = sbios(SB_GETVER, 0);
++	printk("PlayStation 2 SIF BIOS: %04x\n", version);
 +
 +	/* Register Callback for debug output. */
 +	sbios(SB_SET_PRINTS_CALLBACK, sbios_prints);
- 
++
++	if (version == 0x200) {
++		/* Beta kit */
++		*(unsigned char *)0x80007c20 = 0;
++	} else if (version == 0x250) {
++		/* 1.0 kit */
++		*(unsigned char *)0x800081b0 = 0;
++	}
++
  	return 0;
  }
-diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/sbcall.c linux/arch/mips/ps2/sbios/sbcall.c
---- linux-2.2.1-orig/arch/mips/ps2/sbios/sbcall.c	Wed Nov 14 10:17:40 2001
-+++ linux/arch/mips/ps2/sbios/sbcall.c	Sat Mar  5 20:16:35 2011
+ 
+diff -Nurp linux/arch/mips/ps2/sbios/sbcall.c linux-2.2.1_ps2//arch/mips/ps2/sbios/sbcall.c
+--- linux/arch/mips/ps2/sbios/sbcall.c	2001-11-14 10:17:40.000000000 +0100
++++ linux-2.2.1_ps2//arch/mips/ps2/sbios/sbcall.c	2011-04-09 21:22:17.638917001 +0200
 @@ -20,6 +20,33 @@
  #include <asm/ps2/sifdefs.h>
  #include <asm/ps2/sbcall.h>
@@ -312,9 +330,9 @@ diff -urp linux-2.2.1-orig/arch/mips/ps2/sbios/sbcall.c linux/arch/mips/ps2/sbio
      if (sbios(SB_SIFINITRPC, 0) < 0)
  	return -1;
  
-diff -urp linux-2.2.1-orig/drivers/ps2/cdvd.c linux/drivers/ps2/cdvd.c
---- linux-2.2.1-orig/drivers/ps2/cdvd.c	Wed Nov 14 10:17:43 2001
-+++ linux/drivers/ps2/cdvd.c	Tue Apr  5 22:20:48 2011
+diff -Nurp linux/drivers/ps2/cdvd.c linux-2.2.1_ps2//drivers/ps2/cdvd.c
+--- linux/drivers/ps2/cdvd.c	2001-11-14 10:17:43.000000000 +0100
++++ linux-2.2.1_ps2//drivers/ps2/cdvd.c	2011-04-09 21:22:17.638917001 +0200
 @@ -94,6 +94,9 @@ struct ps2cdvd_event {
  	void *arg;
  };
@@ -500,20 +518,9 @@ diff -urp linux-2.2.1-orig/drivers/ps2/cdvd.c linux/drivers/ps2/cdvd.c
  
  	return 0;
  }
-diff -urp linux-2.2.1-orig/drivers/ps2/cdvd.h linux/drivers/ps2/cdvd.h
---- linux-2.2.1-orig/drivers/ps2/cdvd.h	Wed Nov 14 10:17:43 2001
-+++ linux/drivers/ps2/cdvd.h	Sat Mar  5 20:51:18 2011
-@@ -70,6 +70,7 @@ void ps2cdvd_intr(void*, int);
- 
- int ps2cdvd_send_ready(int);
- int ps2cdvd_send_read(u_int, u_int, void *, struct sceCdRMode *);
-+int ps2cdvd_send_read_dvd(u_int, u_int, void *, struct sceCdRMode *);
- int ps2cdvd_send_stop(void);
- int ps2cdvd_send_gettoc(u_char *, int);
- int ps2cdvd_send_mmode(int media);
-diff -urp linux-2.2.1-orig/drivers/ps2/cdvdcall.h linux/drivers/ps2/cdvdcall.h
---- linux-2.2.1-orig/drivers/ps2/cdvdcall.h	Wed Nov 14 10:17:43 2001
-+++ linux/drivers/ps2/cdvdcall.h	Sat Mar  5 20:37:21 2011
+diff -Nurp linux/drivers/ps2/cdvdcall.h linux-2.2.1_ps2//drivers/ps2/cdvdcall.h
+--- linux/drivers/ps2/cdvdcall.h	2001-11-14 10:17:43.000000000 +0100
++++ linux-2.2.1_ps2//drivers/ps2/cdvdcall.h	2011-04-09 21:22:17.638917001 +0200
 @@ -70,6 +70,23 @@ static __inline__ int ps2cdvdcall_read(u
  	return (res);
  }
@@ -538,9 +545,20 @@ diff -urp linux-2.2.1-orig/drivers/ps2/cdvdcall.h linux/drivers/ps2/cdvdcall.h
  static __inline__ int ps2cdvdcall_stop(void)
  {
  	int res;
-diff -urp linux-2.2.1-orig/drivers/ps2/cdvdiop.c linux/drivers/ps2/cdvdiop.c
---- linux-2.2.1-orig/drivers/ps2/cdvdiop.c	Wed Nov 14 10:17:43 2001
-+++ linux/drivers/ps2/cdvdiop.c	Sat Mar  5 20:50:51 2011
+diff -Nurp linux/drivers/ps2/cdvd.h linux-2.2.1_ps2//drivers/ps2/cdvd.h
+--- linux/drivers/ps2/cdvd.h	2001-11-14 10:17:43.000000000 +0100
++++ linux-2.2.1_ps2//drivers/ps2/cdvd.h	2011-04-09 21:22:17.638917001 +0200
+@@ -70,6 +70,7 @@ void ps2cdvd_intr(void*, int);
+ 
+ int ps2cdvd_send_ready(int);
+ int ps2cdvd_send_read(u_int, u_int, void *, struct sceCdRMode *);
++int ps2cdvd_send_read_dvd(u_int, u_int, void *, struct sceCdRMode *);
+ int ps2cdvd_send_stop(void);
+ int ps2cdvd_send_gettoc(u_char *, int);
+ int ps2cdvd_send_mmode(int media);
+diff -Nurp linux/drivers/ps2/cdvdiop.c linux-2.2.1_ps2//drivers/ps2/cdvdiop.c
+--- linux/drivers/ps2/cdvdiop.c	2001-11-14 10:17:43.000000000 +0100
++++ linux-2.2.1_ps2//drivers/ps2/cdvdiop.c	2011-04-09 21:22:17.638917001 +0200
 @@ -63,6 +63,24 @@ int ps2cdvd_send_read(u_int lbn, u_int s
  	return (res);
  }
@@ -566,9 +584,30 @@ diff -urp linux-2.2.1-orig/drivers/ps2/cdvdiop.c linux/drivers/ps2/cdvdiop.c
  int ps2cdvd_send_stop(void)
  {
  	int res;
-diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sbcall.h linux/include/asm-mips/ps2/sbcall.h
---- linux-2.2.1-orig/include/asm-mips/ps2/sbcall.h	Wed Nov 14 10:18:12 2001
-+++ linux/include/asm-mips/ps2/sbcall.h	Sat Mar  5 20:18:44 2011
+diff -Nurp linux/drivers/ps2/Makefile linux-2.2.1_ps2//drivers/ps2/Makefile
+--- linux/drivers/ps2/Makefile	2001-09-19 12:08:22.000000000 +0200
++++ linux-2.2.1_ps2//drivers/ps2/Makefile	2011-04-09 21:32:17.638917001 +0200
+@@ -79,6 +79,7 @@ endif
+ # PS2 ethernet
+ ifeq ($(CONFIG_PS2_ETHER_SMAP),m)
+   M_OBJS += smap.o
++  M_OBJS += smaprpc.o
+ endif
+ 
+ include $(TOPDIR)/Rules.make
+diff -Nurp linux/include/asm-mips/ps2/powerbutton.h linux-2.2.1_ps2//include/asm-mips/ps2/powerbutton.h
+--- linux/include/asm-mips/ps2/powerbutton.h	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.2.1_ps2//include/asm-mips/ps2/powerbutton.h	2011-04-09 21:22:17.638917001 +0200
+@@ -0,0 +1,6 @@
++#ifndef __ASM_PS2_POWERBTN_H
++#define __ASM_PS2_POWERBTN_H
++
++int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff);
++
++#endif
+diff -Nurp linux/include/asm-mips/ps2/sbcall.h linux-2.2.1_ps2//include/asm-mips/ps2/sbcall.h
+--- linux/include/asm-mips/ps2/sbcall.h	2001-11-14 10:18:12.000000000 +0100
++++ linux-2.2.1_ps2//include/asm-mips/ps2/sbcall.h	2011-04-09 21:22:17.638917001 +0200
 @@ -39,6 +39,9 @@ struct sb_setgscrt_arg {
      int *dx1, *dy1, *dx2, *dy2;
  };
@@ -579,18 +618,17 @@ diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sbcall.h linux/include/asm-mips/
  /*
   *  SIF DMA services
   */
-@@ -498,5 +501,8 @@ struct sb_cdvd_powerhook_arg {
-   void (*func)(void *);
+@@ -499,4 +502,7 @@ struct sb_cdvd_powerhook_arg {
    void *arg;
  };
-+
+ 
 +/* Uses sbr_cdvd_read_arg */
 +#define SBR_CDVD_READ_DVD		196
- 
++
  #endif /* __ASM_PS2_SBCALL_H */
-diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sifdefs.h linux/include/asm-mips/ps2/sifdefs.h
---- linux-2.2.1-orig/include/asm-mips/ps2/sifdefs.h	Wed Nov 14 10:18:13 2001
-+++ linux/include/asm-mips/ps2/sifdefs.h	Sat Mar  5 20:19:37 2011
+diff -Nurp linux/include/asm-mips/ps2/sifdefs.h linux-2.2.1_ps2//include/asm-mips/ps2/sifdefs.h
+--- linux/include/asm-mips/ps2/sifdefs.h	2001-11-14 10:18:13.000000000 +0100
++++ linux-2.2.1_ps2//include/asm-mips/ps2/sifdefs.h	2011-04-09 21:22:17.638917001 +0200
 @@ -103,6 +103,7 @@ typedef struct _sif_queue_data {
  /* calling error */
  #define SIF_RPCE_GETP	1	/* fail to get packet data */
@@ -599,9 +637,21 @@ diff -urp linux-2.2.1-orig/include/asm-mips/ps2/sifdefs.h linux/include/asm-mips
  
  /* functions */
  
-diff -urp linux-2.2.1-orig/init/main.c linux/init/main.c
---- linux-2.2.1-orig/init/main.c	Fri Dec  8 09:48:43 2000
-+++ linux/init/main.c	Sat Mar  5 20:27:44 2011
+diff -Nurp linux/include/linux/ps2/mcio.h linux-2.2.1_ps2//include/linux/ps2/mcio.h
+--- linux/include/linux/ps2/mcio.h	2001-11-14 10:18:16.000000000 +0100
++++ linux-2.2.1_ps2//include/linux/ps2/mcio.h	2011-04-09 21:25:09.458917001 +0200
+@@ -3,7 +3,7 @@
+ 
+ #define PS2MC_NAME_MAX	31
+ #define PS2MC_PATH_MAX	1023
+-#define PS2MC_BASEDIR	"BWLINUX"
++#define PS2MC_BASEDIR	""
+ 
+ #define PS2MC_INVALIDPORTSLOT	-1
+ #define PS2MC_TYPE_EMPTY	0
+diff -Nurp linux/init/main.c linux-2.2.1_ps2//init/main.c
+--- linux/init/main.c	2000-12-08 09:48:43.000000000 +0100
++++ linux-2.2.1_ps2//init/main.c	2011-04-09 21:22:17.638917001 +0200
 @@ -46,6 +46,10 @@
  #include <linux/apm_bios.h>
  #endif
@@ -613,21 +663,21 @@ diff -urp linux-2.2.1-orig/init/main.c linux/init/main.c
  /*
   * Versions of gcc older than that listed below may actually compile
   * and link okay, but the end product can have subtle run time bugs.
-@@ -1360,6 +1364,11 @@ static void __init do_basic_setup(void)
- 
+@@ -1361,6 +1365,11 @@ static void __init do_basic_setup(void)
  	/* .. filesystems .. */
  	filesystem_setup();
-+
+ 
 +#ifdef CONFIG_PS2
 +	/* Disable auto shutdown, because file system could be damged. */
 +	ps2_powerbutton_enable_auto_shutoff(0);
 +#endif
- 
++
  	/* Mount the root filesystem.. */
  	mount_root();
-diff -urp linux-2.2.1-orig/kernel/panic.c linux/kernel/panic.c
---- linux-2.2.1-orig/kernel/panic.c	Tue Dec  5 08:55:43 2000
-+++ linux/kernel/panic.c	Sat Mar  5 20:24:54 2011
+ 
+diff -Nurp linux/kernel/panic.c linux-2.2.1_ps2//kernel/panic.c
+--- linux/kernel/panic.c	2000-12-05 08:55:43.000000000 +0100
++++ linux-2.2.1_ps2//kernel/panic.c	2011-04-09 21:22:17.638917001 +0200
 @@ -20,6 +20,10 @@
  #include <asm/machvec.h>
  #endif
@@ -639,25 +689,15 @@ diff -urp linux-2.2.1-orig/kernel/panic.c linux/kernel/panic.c
  asmlinkage void sys_sync(void);	/* it's really int */
  extern void unblank_console(void);
  extern int C_A_D;
-@@ -57,6 +61,11 @@ NORET_TYPE void panic(const char * fmt, 
- 	unblank_console();
+@@ -58,6 +62,11 @@ NORET_TYPE void panic(const char * fmt,
  
  	notifier_call_chain(&panic_notifier_list, 0, NULL);
-+
+ 
 +#ifdef CONFIG_PS2
 +	/* Enable power button, because init will not handle any signals. */
 +	ps2_powerbutton_enable_auto_shutoff(-1);
 +#endif
- 
++
  #ifdef __mips__
  	traceback_me();
-diff -Nurp linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h
---- linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h	1970-01-01 01:00:00.000000000 +0100
-+++ linux-2.4.17_ps2-base/include/asm-mips/ps2/powerbutton.h	2010-08-24 16:02:41.000000000 +0200
-@@ -0,0 +1,6 @@
-+#ifndef __ASM_PS2_POWERBTN_H
-+#define __ASM_PS2_POWERBTN_H
-+
-+int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff);
-+
-+#endif
+ #endif

@@ -1,8 +1,9 @@
+
 /*
  *  smap.c -- PlayStation 2 Ethernet device driver
  *
  *	Copyright (C) 2001, 2002  Sony Computer Entertainment Inc.
- *	Copyright (C) 2009 Mega Man
+ *	Copyright (C) 2009 - 2011 Mega Man
  *
  *  This file is subject to the terms and conditions of the GNU General
  *  Public License Version 2. See the file "COPYING" in the main
@@ -28,8 +29,60 @@
 
 #define SIF_SMAP_RECEIVE 0x07
 
-typedef struct t_SifCmdHeader
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+struct completion {
+	unsigned int done;
+	wait_queue_head_t wait;
+};
+
+#define COMPLETION_INITIALIZER(work) \
+	{ 0, __WAIT_QUEUE_HEAD_INITIALIZER((work).wait) }
+
+#define DECLARE_COMPLETION(work) \
+	struct completion work = COMPLETION_INITIALIZER(work)
+
+static inline void init_completion(struct completion *x)
 {
+	x->done = 0;
+	init_waitqueue_head(&x->wait);
+}
+
+#define INIT_COMPLETION(x)	((x).done = 0)
+
+void complete(struct completion *x)
+{
+	unsigned long flags;
+
+	save_flags(flags);
+	cli();
+
+	x->done++;
+	wake_up(&x->wait);
+	restore_flags(flags);
+}
+
+void wait_for_completion(struct completion *x)
+{
+	unsigned long flags;
+
+	save_flags(flags);
+	cli();
+	if (!x->done) {
+		DECLARE_WAITQUEUE(wait, current);
+
+		add_wait_queue(&x->wait, &wait);
+		do {
+			set_current_state(TASK_UNINTERRUPTIBLE);
+			schedule();
+		} while (!x->done);
+		remove_wait_queue(&x->wait, &wait);
+	}
+	x->done--;
+	restore_flags(flags);
+}
+#endif
+
+typedef struct t_SifCmdHeader {
 	u32 size;
 	void *dest;
 	int cid;
@@ -37,56 +90,71 @@ typedef struct t_SifCmdHeader
 } SifCmdHeader_t;
 
 typedef struct {
-	struct t_SifCmdHeader    sifcmd;
+	struct t_SifCmdHeader sifcmd;
 	u32 payload;
-    u32 size;
+	u32 size;
 } iop_sifCmdSmapIrq_t;
 
 static struct smaprpc_chan *smaprpc_chan = NULL;
-static u32 smap_rpc_data[2048] __attribute__((aligned(16)));
+
+static u32 smap_rpc_data[2048] __attribute__ ((aligned(64)));
 
 /*--------------------------------------------------------------------------*/
 
-static int  smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev);
-static struct net_device_stats * smaprpc_get_stats(struct net_device *net_dev);
-static int  smaprpc_open(struct net_device *net_dev);
-static int  smaprpc_close(struct net_device *net_dev);
-static int  smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd);
+static int smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev);
+
+static struct net_device_stats *smaprpc_get_stats(struct net_device *net_dev);
+
+static int smaprpc_open(struct net_device *net_dev);
+
+static int smaprpc_close(struct net_device *net_dev);
+
+static int smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr,
+	int cmd);
 
 static void smaprpc_rpcend_notify(void *arg);
+
 static void smaprpc_rpc_setup(struct smaprpc_chan *smap);
 
 static int smaprpc_thread(void *arg);
-static void smaprpc_run(struct smaprpc_chan *smap);
-static void  smaprpc_start_xmit2(struct smaprpc_chan *smap);
 
-static void smaprpc_skb_queue_init(struct smaprpc_chan *smap, struct sk_buff_head *head);
-static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
-static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk);
+static void smaprpc_run(struct smaprpc_chan *smap);
+
+static void smaprpc_start_xmit2(struct smaprpc_chan *smap);
+
+static void smaprpc_skb_queue_init(struct smaprpc_chan *smap,
+	struct sk_buff_head *head);
+static void smaprpc_skb_enqueue(struct sk_buff_head *head,
+	struct sk_buff *newsk);
+static void smaprpc_skb_enqueue(struct sk_buff_head *head,
+	struct sk_buff *newsk);
 static struct sk_buff *smaprpc_skb_dequeue(struct sk_buff_head *head);
 
 /*--------------------------------------------------------------------------*/
 
-static void smaprpc_skb_queue_init(struct smaprpc_chan *smap, struct sk_buff_head *head)
+static void smaprpc_skb_queue_init(struct smaprpc_chan *smap,
+	struct sk_buff_head *head)
 {
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
-	(void)skb_queue_head_init(head);
+	(void) skb_queue_head_init(head);
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 
 	return;
 }
 
-static void smaprpc_skb_enqueue(struct sk_buff_head *head, struct sk_buff *newsk)
+static void smaprpc_skb_enqueue(struct sk_buff_head *head,
+	struct sk_buff *newsk)
 {
-	(void)skb_queue_tail(head, newsk);
+	(void) skb_queue_tail(head, newsk);
 	return;
 }
 
-static void smaprpc_skb_requeue(struct sk_buff_head *head, struct sk_buff *newsk)
+static void smaprpc_skb_requeue(struct sk_buff_head *head,
+	struct sk_buff *newsk)
 {
-	(void)skb_queue_head(head, newsk);
+	(void) skb_queue_head(head, newsk);
 	return;
 }
 
@@ -95,34 +163,33 @@ static struct sk_buff *smaprpc_skb_dequeue(struct sk_buff_head *head)
 	struct sk_buff *skb;
 
 	skb = skb_dequeue(head);
-	return(skb);
+	return (skb);
 }
 
 /*--------------------------------------------------------------------------*/
 
 /* return value: 0 if success, !0 if error */
-static int
-smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
+static int smaprpc_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
 {
 	struct smaprpc_chan *smap = net_dev->priv;
+
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
 
 	smaprpc_skb_enqueue(&smap->txqueue, skb);
-	wake_up_interruptible(&smap->wait_smaprun);
+	wake_up(&smap->wait_smaprun);
 	spin_unlock_irqrestore(&smap->spinlock, flags);
-	return(0);
+	return (0);
 }
 
 /*--------------------------------------------------------------------------*/
 
-static struct net_device_stats *
-smaprpc_get_stats(struct net_device *net_dev)
+static struct net_device_stats *smaprpc_get_stats(struct net_device *net_dev)
 {
 	struct smaprpc_chan *smap = net_dev->priv;
 
-	return(&smap->net_stats);
+	return (&smap->net_stats);
 }
 
 static void smaprpc_run(struct smaprpc_chan *smap)
@@ -142,8 +209,11 @@ static void smaprpc_run(struct smaprpc_chan *smap)
 static void smaprpc_start_xmit2(struct smaprpc_chan *smap)
 {
 	int rv;
+
 	struct completion compl;
+
 	struct sk_buff *skb;
+
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
@@ -161,11 +231,11 @@ static void smaprpc_start_xmit2(struct smaprpc_chan *smap)
 			SIF_RPCM_NOWAIT,
 			(void *) smap_rpc_data, skb->len,
 			smap_rpc_data, sizeof(smap_rpc_data),
-			(ps2sif_endfunc_t)smaprpc_rpcend_notify,
-			(void *)&compl);
+			(ps2sif_endfunc_t) smaprpc_rpcend_notify, (void *) &compl);
 	} while (rv == -E_SIF_PKT_ALLOC);
 	if (rv != 0) {
-		printk("%s: smaprpc_start_xmit2: callrpc failed, (%d)\n", smap->net_dev->name, rv);
+		printk("%s: smaprpc_start_xmit2: callrpc failed, (%d)\n",
+			smap->net_dev->name, rv);
 
 		spin_lock_irqsave(&smap->spinlock, flags);
 		smaprpc_skb_requeue(&smap->txqueue, skb);
@@ -178,21 +248,20 @@ static void smaprpc_start_xmit2(struct smaprpc_chan *smap)
 	up(&smap->smap_rpc_sema);
 }
 
-static int
-smaprpc_open(struct net_device *net_dev)
+static int smaprpc_open(struct net_device *net_dev)
 {
 	struct smaprpc_chan *smap = net_dev->priv;
 
 	smap->flags |= SMAPRPC_F_OPENED;
 	smaprpc_skb_queue_init(smap, &smap->txqueue);
 
-	return(0);	/* success */
+	return (0);					/* success */
 }
 
-static int
-smaprpc_close(struct net_device *net_dev)
+static int smaprpc_close(struct net_device *net_dev)
 {
 	struct smaprpc_chan *smap = net_dev->priv;
+
 	unsigned long flags;
 
 	spin_lock_irqsave(&smap->spinlock, flags);
@@ -200,15 +269,13 @@ smaprpc_close(struct net_device *net_dev)
 
 	spin_unlock_irqrestore(&smap->spinlock, flags);
 
-	return(0);	/* success */
+	return (0);					/* success */
 }
 
 /*--------------------------------------------------------------------------*/
 
-static int
-smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
+static int smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
 {
-	struct smaprpc_chan *smap = net_dev->priv;
 	int retval = 0;
 
 	printk("%s: PlayStation 2 SMAP ioctl %d\n", net_dev->name, cmd);
@@ -219,14 +286,17 @@ smaprpc_ioctl(struct net_device *net_dev, struct ifreq *ifr, int cmd)
 		break;
 	}
 
-	return(retval);
+	return (retval);
 }
 
 static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 {
 	int loop;
+
 	int rv;
+
 	volatile int j;
+
 	struct completion compl;
 
 	if (smap->rpc_initialized) {
@@ -237,19 +307,21 @@ static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 	/* bind smaprpc.irx module */
 	for (loop = 100; loop; loop--) {
 		rv = ps2sif_bindrpc(&smap->cd_smap_rpc, SMAP_BIND_RPC_ID,
-			SIF_RPCM_NOWAIT, smaprpc_rpcend_notify, (void *)&compl);
+			SIF_RPCM_NOWAIT, smaprpc_rpcend_notify, (void *) &compl);
 		if (rv < 0) {
-			printk("%s: smap rpc setup: bind rv = %d.\n", smap->net_dev->name, rv);
+			printk("%s: smap rpc setup: bind rv = %d.\n", smap->net_dev->name,
+				rv);
 			break;
 		}
 		wait_for_completion(&compl);
 		if (smap->cd_smap_rpc.serve != 0)
 			break;
 		j = 0x010000;
-		while (j--) ;
+		while (j--);
 	}
 	if (smap->cd_smap_rpc.serve == 0) {
-		printk("%s: smap rpc setup: bind error 1, network will not work on slim PSTwo\n", smap->net_dev->name);
+		printk("%s: smap rpc setup: bind error 1, network will not work on slim PSTwo\n",
+			smap->net_dev->name);
 		return;
 	}
 
@@ -259,11 +331,11 @@ static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 			SIF_RPCM_NOWAIT,
 			(void *) smap_rpc_data, 32,
 			smap_rpc_data, sizeof(smap_rpc_data),
-			(ps2sif_endfunc_t)smaprpc_rpcend_notify,
-			(void *)&compl);
+			(ps2sif_endfunc_t) smaprpc_rpcend_notify, (void *) &compl);
 	} while (rv == -E_SIF_PKT_ALLOC);
 	if (rv != 0) {
-		printk("%s: SMAP_CMD_GET_MAC_ADDR failed, (%d)\n", smap->net_dev->name, rv);
+		printk("%s: SMAP_CMD_GET_MAC_ADDR failed, (%d)\n", smap->net_dev->name,
+			rv);
 	} else {
 		wait_for_completion(&compl);
 		memcpy(smap->net_dev->dev_addr, &smap_rpc_data[1], ETH_ALEN);
@@ -272,8 +344,7 @@ static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 			smap->net_dev->dev_addr[1],
 			smap->net_dev->dev_addr[2],
 			smap->net_dev->dev_addr[3],
-			smap->net_dev->dev_addr[4],
-			smap->net_dev->dev_addr[5]);
+			smap->net_dev->dev_addr[4], smap->net_dev->dev_addr[5]);
 	}
 
 	smap->shared_size = 32 * 1024;
@@ -286,31 +357,34 @@ static void smaprpc_rpc_setup(struct smaprpc_chan *smap)
 				SIF_RPCM_NOWAIT,
 				(void *) smap_rpc_data, 32,
 				smap_rpc_data, 4,
-				(ps2sif_endfunc_t)smaprpc_rpcend_notify,
-				(void *)&compl);
+				(ps2sif_endfunc_t) smaprpc_rpcend_notify, (void *) &compl);
 		} while (rv == -E_SIF_PKT_ALLOC);
 		if (rv != 0) {
-			printk("%s: SMAP_CMD_SET_BUFFER failed, (%d). Receive will not work.\n", smap->net_dev->name, rv);
+			printk("%s: SMAP_CMD_SET_BUFFER failed, (rv = %d). Receive will not work.\n",
+				smap->net_dev->name, rv);
 		} else {
 			wait_for_completion(&compl);
 			if (smap_rpc_data[0] != 0) {
-				printk("%s: SMAP_CMD_SET_BUFFER failed, (%d). Receive will not work.\n", smap->net_dev->name, smap_rpc_data[0]);
+				printk("%s: SMAP_CMD_SET_BUFFER failed, (0x%08x). Receive will not work.\n",
+					smap->net_dev->name, smap_rpc_data[0]);
 			}
 		}
 	} else {
-		printk("%s: Failed to allocate receive buffer. Receive will not work.\n", smap->net_dev->name);
+		printk("%s: Failed to allocate receive buffer. Receive will not work.\n",
+			smap->net_dev->name);
 	}
 	smap->rpc_initialized = -1;
 }
 
 static int smaprpc_thread(void *arg)
 {
-	struct smaprpc_chan *smap = (struct smaprpc_chan *)arg;
+	struct smaprpc_chan *smap = (struct smaprpc_chan *) arg;
+
 	unsigned long flags;
 
 	spin_lock_irqsave(&current->sigmask_lock, flags);
 	siginitsetinv(&current->blocked,
-			sigmask(SIGKILL)|sigmask(SIGINT)|sigmask(SIGTERM));
+		sigmask(SIGKILL) | sigmask(SIGINT) | sigmask(SIGTERM));
 	recalc_sigpending(current);
 	spin_unlock_irqrestore(&current->sigmask_lock, flags);
 
@@ -320,15 +394,15 @@ static int smaprpc_thread(void *arg)
 	daemonize();
 
 	/* Set the name of this process. */
-	sprintf(current->comm, "smaprpc");		/* up to 16B */
-        
+	sprintf(current->comm, "smaprpc");	/* up to 16B */
+
 	unlock_kernel();
 
 	smap->smaprun_task = current;
 
 	while (1) {
-		wait_queue_t wait;
-		init_waitqueue_entry(&wait, current);
+		DECLARE_WAITQUEUE(wait, current);
+
 		add_wait_queue(&smap->wait_smaprun, &wait);
 		set_current_state(TASK_INTERRUPTIBLE);
 
@@ -344,33 +418,33 @@ static int smaprpc_thread(void *arg)
 	if (smap->smaprun_compl != NULL)
 		complete(smap->smaprun_compl);	/* notify that we've exited */
 
-	return(0);
+	return (0);
 }
 
 static void smaprpc_rpcend_notify(void *arg)
 {
-	complete((struct completion *)arg);
+	complete((struct completion *) arg);
 	return;
 }
 
-static void handleSmapIRQ(iop_sifCmdSmapIrq_t *pkt, void *arg)
+static void handleSmapIRQ(iop_sifCmdSmapIrq_t * pkt, void *arg)
 {
 	struct smaprpc_chan *smap = (struct smaprpc_chan *) arg;
-	struct sk_buff *skb;
-	u8 *data;
-	int i;
 
-	dma_cache_inv(pkt, sizeof(*pkt));
+	struct sk_buff *skb;
+
+	u8 *data;
+
+	dma_cache_inv((unsigned long) pkt, sizeof(*pkt));
 	data = phys_to_virt(pkt->payload);
-	dma_cache_inv(data, pkt->size);
-	
+	dma_cache_inv((unsigned long) data, pkt->size);
+
 	skb = dev_alloc_skb(pkt->size + 2);
 	if (skb == NULL) {
-		printk("%s:handleSmapIRQ, skb alloc error\n",
-					smap->net_dev->name);
+		printk("%s:handleSmapIRQ, skb alloc error\n", smap->net_dev->name);
 		return;
 	}
-	skb_reserve(skb, 2);	/* 16 byte align the data fields */
+	skb_reserve(skb, 2);		/* 16 byte align the data fields */
 	eth_copy_and_sum(skb, data, pkt->size, 0);
 	skb_put(skb, pkt->size);
 	skb->dev = smap->net_dev;
@@ -381,16 +455,17 @@ static void handleSmapIRQ(iop_sifCmdSmapIrq_t *pkt, void *arg)
 
 extern int ps2_pccard_present;
 
-int
-smaprpc_probe(struct net_device *net_dev)
+int smaprpc_probe(struct net_device *net_dev)
 {
 	struct smaprpc_chan *smap = NULL;
+
 	int modflag = 0;
+
 	struct sb_sifaddcmdhandler_arg addcmdhandlerparam;
 
 	if (ps2_pccard_present != 0x0200) {
 		printk("PlayStation 2 HDD/Ethernet device NOT present (slim PSTwo).\n");
-		return(-ENODEV);
+		return (-ENODEV);
 	}
 
 	if (net_dev == NULL)
@@ -398,14 +473,14 @@ smaprpc_probe(struct net_device *net_dev)
 
 	if (smaprpc_chan != NULL) {
 		printk("PlayStation 2 SMAP: already used\n");
-		return(-ENODEV);
+		return (-ENODEV);
 	}
 
 	/* alloc & clear control structure */
 	smap = kmalloc(sizeof(struct smaprpc_chan), GFP_KERNEL);
 	if (smap == NULL) {
 		printk("PlayStation 2 SMAP: memory alloc error\n");
-		return(-ENOMEM);
+		return (-ENOMEM);
 	}
 	memset(smap, 0, sizeof(struct smaprpc_chan));
 
@@ -421,7 +496,9 @@ smaprpc_probe(struct net_device *net_dev)
 	}
 	smap->net_dev = net_dev;
 	net_dev->priv = smap;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 	SET_MODULE_OWNER(net_dev);
+#endif
 
 	net_dev->open = smaprpc_open;
 	net_dev->stop = smaprpc_close;
@@ -444,25 +521,29 @@ smaprpc_probe(struct net_device *net_dev)
 	smaprpc_rpc_setup(smap);
 
 	if (smap->rpc_initialized) {
-		kernel_thread(smaprpc_thread, (void *)smap, 0);
+		kernel_thread(smaprpc_thread, (void *) smap, 0);
 
 		printk("PlayStation 2 SMAP(Ethernet) device driver.\n");
 
-		return(0);	/* success */
+		return (0);				/* success */
 	}
-error:
+  error:
 	printk("PlayStation 2 SMAP(Ethernet) device not found.\n");
 	if (smap) {
 		kfree(smap);
 	}
 	smaprpc_chan = NULL;
-	return(-ENODEV);
+	return (-ENODEV);
 }
 
-void
-smaprpc_cleanup_module(void)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
+void smaprpc_cleanup_module(void)
+#else
+void cleanup_module(void)
+#endif
 {
 	struct smaprpc_chan *smap = smaprpc_chan;
+
 	struct net_device *net_dev;
 
 	if (smap == NULL) {
@@ -505,7 +586,7 @@ smaprpc_cleanup_module(void)
 
 	unregister_netdev(net_dev);
 
-end:
+  end:
 	if (smap) {
 		/* XXX: Disable device. */
 		kfree(smap);
@@ -514,18 +595,23 @@ end:
 	return;
 }
 
-int __init
-smaprpc_init_module(void)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
+int __init smaprpc_init_module(void)
+#else
+int init_module(void)
+#endif
 {
-	return(smaprpc_probe(NULL));
+	return (smaprpc_probe(NULL));
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 module_init(smaprpc_init_module);
 module_exit(smaprpc_cleanup_module);
 
 MODULE_AUTHOR("Mega Man");
 MODULE_DESCRIPTION("PlayStation 2 ethernet device driver");
 MODULE_LICENSE("GPL");
+#endif
 
 /*--------------------------------------------------------------------------*/
 

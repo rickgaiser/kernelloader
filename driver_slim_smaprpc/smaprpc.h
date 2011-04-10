@@ -1,8 +1,9 @@
+
 /*
  *  smap.h -- PlayStation 2 Ethernet device driver header file
  *
  *	Copyright (C) 2001, 2002  Sony Computer Entertainment Inc.
- *	Copyright (C) 2009 Mega Man
+ *	Copyright (C) 2009 - 2011 Mega Man
  *
  *  This file is subject to the terms and conditions of the GNU General
  *  Public License Version 2. See the file "COPYING" in the main
@@ -33,12 +34,19 @@
 #include <linux/skbuff.h>
 #include <linux/sched.h>
 #include <linux/types.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+#include <linux/kcomp.h>
+#endif
 
 #include <asm/smplock.h>
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/ps2/irq.h>
 #include <asm/ps2/sifdefs.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+#define net_device device
+#endif
 
 /*
  * SMAP control structure(smap channel)
@@ -67,4 +75,4 @@ struct smaprpc_chan {
 /* flags */
 #define	SMAPRPC_F_OPENED		(1<<0)
 
-#endif	/* __SMAP_H__ */
+#endif /* __SMAP_H__ */

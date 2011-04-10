@@ -34,8 +34,8 @@ The following patch and files are recommended to get around many problems:
 
 sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-all_fat_and_slim.patch
 sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-no-bwlinux-check.patch
-sh # cp ../kernelloader/driver_slim_smaprpc/smap.c drivers/ps2/smaprpc.c
-sh # cp ../kernelloader/driver_slim_smaprpc/smap.h drivers/ps2/smaprpc.h
+sh # cp ../kernelloader/driver_slim_smaprpc/smaprpc.c drivers/ps2/
+sh # cp ../kernelloader/driver_slim_smaprpc/smaprpc.h drivers/ps2/
 sh # cp -r ../kernelloader/driver_ps2fs/ps2fs fs/
 sh # cp -r ../kernelloader/driver_unionfs/unionfs fs/
 
