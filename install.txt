@@ -7,17 +7,17 @@ and the PS2SDK. You also need to get a mips cross compiler. You can
 download it here:
 
 Download linux-2.4.17_ps2.tar.bz2 from:
-http://sourceforge.net/projects/kernelloader/files
+http://sourceforge.net/projects/kernelloader/files/Linux%202.4/Linux%202.4.17%20Kernel%20Source/linux-2.4.17_ps2.tar.bz2/download
 
 Toolchain:
-https://playstation2-linux.com/files/ps2stuff/gcc-2.95.2-cross.tar.gz
-https://playstation2-linux.com/files/ps2stuff/binutils-2.9EE-cross.tar.gz
+http://sourceforge.net/projects/kernelloader/files/Sony%20Linux%20Toolkit/Package%20Update%20Files/ps2stuff/gcc-2.95.2-cross.tar.gz/download
+http://sourceforge.net/projects/kernelloader/files/Sony%20Linux%20Toolkit/Package%20Update%20Files/ps2stuff/binutils-2.9EE-cross.tar.gz/download
 
 initrd:
-http://playstation2-linux.com/files/diskless/ps2boot-1.tar.gz
+http://sourceforge.net/projects/kernelloader/files/Sony%20Linux%20Toolkit/Package%20Update%20Files/diskless/ps2boot-1.tar.gz/download
 
 You can also download the updated initrd at:
-http://sourceforge.net/projects/kernelloader/files
+http://sourceforge.net/projects/kernelloader/files/Initial%20RAM%20Disc/
 
 Install Linux toolchain:
 
