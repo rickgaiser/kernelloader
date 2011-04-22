@@ -536,11 +536,7 @@ int smaprpc_probe(struct net_device *net_dev)
 	return (-ENODEV);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 void smaprpc_cleanup_module(void)
-#else
-void cleanup_module(void)
-#endif
 {
 	struct smaprpc_chan *smap = smaprpc_chan;
 
@@ -595,19 +591,15 @@ void cleanup_module(void)
 	return;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 int __init smaprpc_init_module(void)
-#else
-int init_module(void)
-#endif
 {
 	return (smaprpc_probe(NULL));
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 module_init(smaprpc_init_module);
 module_exit(smaprpc_cleanup_module);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 MODULE_AUTHOR("Mega Man");
 MODULE_DESCRIPTION("PlayStation 2 ethernet device driver");
 MODULE_LICENSE("GPL");

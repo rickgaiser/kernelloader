@@ -150,7 +150,7 @@ You need to strip the kernel using program "ee-strip".
 PR#22
 Sound is not working.
 -
-Sound is only owkring with the modules from RTE. Put in the disc from RTE and go to
+Sound is only working with the modules from RTE. Put in the disc from RTE and go to
 the "Configuration Menu" -> "RTE Copy Menu" and select "Copy RTE modules". This
 will copy the RTE modules from the disc to the memory card.
 Then go up and select "Module List". You need to enable:
@@ -165,12 +165,14 @@ You need to enable the patch for libsd.
 Update no patch is needed. It should work always.
 
 PR#24
-USB is unstable with slim PSTwo (v15 and higher).
+USB is unstable with slim PSTwo (v14 and higher).
 -
 There is somewhere a deadlock. This is diffcult to debug.
 -
 Update: System is not crashing when using new modules, but wrong
 data may be written to USB.
+-
+Linux 2.6 doesn't have this issue.
 
 PR#25 - Solved for non v12/v13 PS2
 Region detection is not working. The result is that eromdrvloader.irx can't be
@@ -214,3 +216,25 @@ PR#31 - Solved
 Pink screen with component cable.
 -
 Solved in SBIOS since kernelloader 2.2.
+
+PR#32 - Solved
+Installation of Sony's Linux Toolkit doesn't work. IT freezes when
+DVD is accessed.
+-
+Solved in SBIOS since kernelloader 2.5. The patch
+linux-2.2.1-ps2-all_fat_and_slim.patch should be used.
+
+PR#33 - Solved
+USB and Network was not working with Linux 2.2 on slim PSTwo.
+-
+The patch linux-2.2.1-ps2-all_fat_and_slim.patch and the files
+in driver_slim_smaprpc fix this problem. New kernel is needed.
+
+PR#34
+USB mass storage not working with Linux kernel 2.2.
+Linux 2.2 doesn't have a working driver for USB memory sticks.
+
+PR#35
+Network driver for slim PSTwo is not working when loaded as module.
+At least on Linux 2.2 the driver need to be linked into the kernel
+to get it working.

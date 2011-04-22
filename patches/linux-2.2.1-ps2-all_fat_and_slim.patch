@@ -3,7 +3,8 @@ This patch adds the following to the Linux 2.2 kernel:
 - USB support for slim PSTwo.
 - Handling of power button on fat PS2.
 - Fixes in CDVD driver (kernelloader 2.5 is needed).
-- Enable network driver for slim PSTwo
+- Network driver for slim PSTwo. The driver can't be loaded
+  as module. It need to be linked into the kernel.
 - Additional files needed for network driver on slim PSTwo:
   cp ../kernelloader/driver_slim_smaprpc/smaprpc.c drivers/ps2/
   cp ../kernelloader/driver_slim_smaprpc/smaprpc.h drivers/ps2/
@@ -215,6 +216,29 @@ diff -Nurp linux/arch/mips/ps2/kernel/powerbutton.c linux-2.2.1_ps2//arch/mips/p
  static void powerbutton_handler(void *arg)
  {
  	kill_proc(1, SIGPWR, 1);
+diff -urp linux-2.2.1/arch/mips/ps2/kernel/setup.c linux-2.2.1_ps2/arch/mips/ps2/kernel/setup.c
+--- linux-2.2.1/arch/mips/ps2/kernel/setup.c	2001-11-14 10:17:39.000000000 +0100
++++ linux-2.2.1_ps2/arch/mips/ps2/kernel/setup.c	2011-04-22 19:40:08.027985011 +0200
+@@ -37,6 +37,8 @@ extern int prom_putchar(char c);
+ extern void ps2_ide_port_found(ide_ioreg_t base);
+ extern int ps2sif_init(void);
+ extern int ps2lock_init(void);
++extern int smaprpc_init_module(void);
++extern int smap_init_module(void);
+ 
+ extern struct ide_ops ps2_ide_ops;
+ extern struct rtc_ops ps2_rtc_ops;
+@@ -68,6 +70,10 @@ void ps2_dev_init(void)
+ #ifdef CONFIG_PS2_PAD
+ 	ps2pad_init();
+ #endif
++#ifdef CONFIG_PS2_ETHER_SMAP
++	smaprpc_init_module();
++	smap_init_module();
++#endif
+ }
+ 
+ #ifdef CONFIG_T10000_DEBUG_HOOK
 diff -Nurp linux/arch/mips/ps2/sbios/init.c linux-2.2.1_ps2//arch/mips/ps2/sbios/init.c
 --- linux/arch/mips/ps2/sbios/init.c	2001-11-14 10:17:39.000000000 +0100
 +++ linux-2.2.1_ps2//arch/mips/ps2/sbios/init.c	2011-04-09 23:31:11.068917001 +0200
@@ -701,3 +725,39 @@ diff -Nurp linux/kernel/panic.c linux-2.2.1_ps2//kernel/panic.c
  #ifdef __mips__
  	traceback_me();
  #endif
+diff -urp linux-2.2.1/drivers/ps2/Makefile linux-2.2.1_ps2/drivers/ps2/Makefile
+--- linux-2.2.1/drivers/ps2/Makefile	2001-09-19 12:08:22.000000000 +0200
++++ linux-2.2.1_ps2/drivers/ps2/Makefile	2011-04-22 19:39:37.087985005 +0200
+@@ -77,8 +77,14 @@ else
+ endif
+ 
+ # PS2 ethernet
+-ifeq ($(CONFIG_PS2_ETHER_SMAP),m)
+-  M_OBJS += smap.o
++ifeq ($(CONFIG_PS2_ETHER_SMAP),y)
++    L_OBJS += smap.o
++    L_OBJS += smaprpc.o
++else
++  ifeq ($(CONFIG_PS2_ETHER_SMAP),m)
++    M_OBJS += smap.o
++    M_OBJS += smaprpc.o
++  endif
+ endif
+ 
+ include $(TOPDIR)/Rules.make
+diff -urp linux-2.2.1/drivers/ps2/smap.c linux-2.2.1_ps2/drivers/ps2/smap.c
+--- linux-2.2.1/drivers/ps2/smap.c	2001-11-14 10:17:47.000000000 +0100
++++ linux-2.2.1_ps2/drivers/ps2/smap.c	2011-04-22 19:39:38.497985001 +0200
+@@ -2210,7 +2210,11 @@ end:
+ 	printk(" done\n");
+ 	return;
+ }
+-
++#else
++int smap_init_module(void)
++{
++	return(smap_probe());
++}
+ #endif /* MODULE */
+ 
+ /*--------------------------------------------------------------------------*/
