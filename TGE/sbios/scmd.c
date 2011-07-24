@@ -107,8 +107,8 @@ static void cdvdreadrtcStage2(void *rarg)
 
 	memcpy(arg, UNCACHED_SEG(sCmdRecvBuff + 4), 8);
 
-	CDVD_UNLOCKS();
 	carg->result = *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
+	CDVD_UNLOCKS();
 	carg->endfunc(carg->efarg, carg->result);
 }
 
@@ -154,8 +154,8 @@ int sbcall_cdvdwritertc(tge_sbcall_rpc_arg_t *carg)
 static void SCmdStage2(void *rarg)
 {
 	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
-	CDVD_UNLOCKS();
 	carg->result = *(s32 *) UNCACHED_SEG(sCmdRecvBuff);
+	CDVD_UNLOCKS();
 	carg->endfunc(carg->efarg, carg->result);
 }
 
@@ -197,8 +197,8 @@ static void cdvdtrayrequestStage2(void *rarg)
 
 	arg->traycount = *(u32 *) UNCACHED_SEG(sCmdRecvBuff + 4);
 
-	CDVD_UNLOCKS();
 	carg->result = ! (*(s32 *) UNCACHED_SEG(sCmdRecvBuff));
+	CDVD_UNLOCKS();
 
 	carg->endfunc(carg->efarg, carg->result);
 }
