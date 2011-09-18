@@ -86,6 +86,7 @@ name:	lui	$7, 0xffff;	\
 1:	sync;			\
 	cache	0x10, 0($6);	\
 	sync;			\
+	sync.p;			\
 	mfc0	$2, $28;	\
 	and	$2, $7;		\
 	addu	$2, $6;		\
@@ -101,6 +102,7 @@ name:	lui	$7, 0xffff;	\
 2:	sync;			\
 	cache	0x10, 1($6);	\
 	sync;			\
+	sync.p;			\
 	mfc0	$2, $28;	\
 	and	$2, $7;		\
 	addu	$2, $6;		\

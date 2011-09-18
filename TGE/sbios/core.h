@@ -32,8 +32,9 @@ static inline int core_in_interrupt(void)
 	u32 status;
 
 	 __asm__  __volatile__(
+		"sync.p\n"
 		"mfc0 %0, $12\n"
-		"sync.p\n":"=r" (status));
+		:"=r" (status));
 
 	if ((status & CORE_EIE) == 0) {
 		/* interrupts disabled, IE bit not used. */
@@ -57,6 +58,7 @@ static inline void core_save_disable(u32 *status)
 	".set	push\n\t"	\
 	".set	noreorder\n\t"	\
 	".set	noat\n\t"	\
+	"sync.p\n\t"		\
 	"mfc0	%0,$12\n\t"	\
 	"ori	$1,%0,1\n\t"	\
 	"xori	$1,1\n\t"	\
@@ -73,6 +75,7 @@ static inline void core_restore(u32 status)
 	".set	push\n\t"	\
 	".set	mips3\n\t"	\
 	".set	noreorder\n\t"	\
+	"sync.p\n\t"		\
 	"mfc0	$8,$12\n\t"	\
 	"li	$9,0xff00\n\t"	\
 	"and	$8,$9\n\t"	\
