@@ -25,7 +25,7 @@ NEW_ROM_MODULES = no
 # Press button "R1" to get a screenshot on "host:" or "mass0:".
 SCREENSHOT = yes
 
-# Activate debug for SBIOS (has only effect with shared memory debug).
+# Activate debug for SBIOS (has only effect with shared memory debug or callback debug).
 SBIOS_DEBUG = no
 
 # Activate printf callback in SBIOS
