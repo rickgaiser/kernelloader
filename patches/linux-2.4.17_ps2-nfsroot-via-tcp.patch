@@ -1,0 +1,104 @@
+diff -uri linux-2.4.17_ps2-megaman/fs/nfs/mount_clnt.c linux-2.4.17_ps2-test/fs/nfs/mount_clnt.c
+--- linux-2.4.17_ps2-megaman/fs/nfs/mount_clnt.c	2002-03-04 11:32:16.000000000 +0100
++++ linux-2.4.17_ps2-test/fs/nfs/mount_clnt.c	2010-04-16 22:48:29.000000000 +0200
+@@ -30,10 +30,8 @@
+ #define MOUNT_UMNT		3
+  */
+ 
+-static int			nfs_gen_mount(struct sockaddr_in *,
+-					      char *, struct nfs_fh *, int);
+-static struct rpc_clnt *	mnt_create(char *, struct sockaddr_in *, int);
+-extern struct rpc_program	mnt_program;
++static struct rpc_clnt *	mnt_create(char *, struct sockaddr_in *, int, int);
++struct rpc_program		mnt_program;
+ 
+ struct mnt_fhstatus {
+ 	unsigned int		status;
+@@ -44,19 +42,7 @@
+  * Obtain an NFS file handle for the given host and path
+  */
+ int
+-nfs_mount(struct sockaddr_in *addr, char *path, struct nfs_fh *fh)
+-{
+-	return nfs_gen_mount(addr, path, fh, NFS_MNT_VERSION);
+-}
+-
+-int
+-nfs3_mount(struct sockaddr_in *addr, char *path, struct nfs_fh *fh)
+-{
+-	return nfs_gen_mount(addr, path, fh, NFS_MNT3_VERSION);
+-}
+-
+-static int
+-nfs_gen_mount(struct sockaddr_in *addr, char *path, struct nfs_fh *fh, int version)
++nfsroot_mount(struct sockaddr_in *addr, char *path, struct nfs_fh *fh, int version, int protocol)
+ {
+ 	struct rpc_clnt		*mnt_clnt;
+ 	struct mnt_fhstatus	result = { 0, fh };
+@@ -68,21 +54,21 @@
+ 			(unsigned)ntohl(addr->sin_addr.s_addr), path);
+ 
+ 	strcpy(hostname, in_ntoa(addr->sin_addr.s_addr));
+-	if (!(mnt_clnt = mnt_create(hostname, addr, version)))
++	if (!(mnt_clnt = mnt_create(hostname, addr, version, protocol)))
+ 		return -EACCES;
+ 
+-	call = (version == 3) ? MOUNTPROC3_MNT : MNTPROC_MNT;
++	call = (version == NFS_MNT3_VERSION)? MOUNTPROC3_MNT : MNTPROC_MNT;
+ 	status = rpc_call(mnt_clnt, call, path, &result, 0);
+ 	return status < 0? status : (result.status? -EACCES : 0);
+ }
+ 
+ static struct rpc_clnt *
+-mnt_create(char *hostname, struct sockaddr_in *srvaddr, int version)
++mnt_create(char *hostname, struct sockaddr_in *srvaddr, int version, int protocol)
+ {
+ 	struct rpc_xprt	*xprt;
+ 	struct rpc_clnt	*clnt;
+ 
+-	if (!(xprt = xprt_create_proto(IPPROTO_UDP, srvaddr, NULL)))
++	if (!(xprt = xprt_create_proto(protocol, srvaddr, NULL)))
+ 		return NULL;
+ 
+ 	clnt = rpc_create_client(xprt, hostname,
+diff -uri linux-2.4.17_ps2-megaman/fs/nfs/nfsroot.c linux-2.4.17_ps2-test/fs/nfs/nfsroot.c
+--- linux-2.4.17_ps2-megaman/fs/nfs/nfsroot.c	2002-03-04 11:32:16.000000000 +0100
++++ linux-2.4.17_ps2-test/fs/nfs/nfsroot.c	2010-04-16 22:53:49.000000000 +0200
+@@ -64,6 +64,8 @@
+  *	Trond Myklebust :	Add in preliminary support for NFSv3 and TCP.
+  *				Fix bug in root_nfs_addr(). nfs_data.namlen
+  *				is NOT for the length of the hostname.
++ *	Hua Qin		:	Finish support for mounting root filesystem
++ *				via NFS over TCP.
+  */
+ 
+ #include <linux/config.h>
+@@ -438,12 +440,11 @@
+ {
+ 	struct sockaddr_in sin;
+ 	int status;
++	int protocol = (nfs_data.flags & NFS_MOUNT_TCP) ? IPPROTO_TCP : IPPROTO_UDP;
++	int version = (nfs_data.flags & NFS_MOUNT_VER3) ? NFS_MNT3_VERSION : NFS_MNT_VERSION;
+ 
+ 	set_sockaddr(&sin, servaddr, mount_port);
+-	if (nfs_data.flags & NFS_MOUNT_VER3)
+-		status = nfs3_mount(&sin, nfs_path, &nfs_data.root);
+-	else
+-		status = nfs_mount(&sin, nfs_path, &nfs_data.root);
++		status = nfsroot_mount(&sin, nfs_path, &nfs_data.root, version, protocol);
+ 	if (status < 0)
+ 		printk(KERN_ERR "Root-NFS: Server returned error %d "
+ 				"while mounting %s\n", status, nfs_path);
+diff -uri linux-2.4.17_ps2-megaman/include/linux/nfs_fs.h linux-2.4.17_ps2-test/include/linux/nfs_fs.h
+--- linux-2.4.17_ps2-megaman/include/linux/nfs_fs.h	2010-03-23 19:21:58.000000000 +0100
++++ linux-2.4.17_ps2-test/include/linux/nfs_fs.h	2010-04-16 22:55:15.000000000 +0200
+@@ -270,8 +270,7 @@
+  * linux/fs/mount_clnt.c
+  * (Used only by nfsroot module)
+  */
+-extern int  nfs_mount(struct sockaddr_in *, char *, struct nfs_fh *);
+-extern int  nfs3_mount(struct sockaddr_in *, char *, struct nfs_fh *);
++extern int  nfsroot_mount(struct sockaddr_in *, char *, struct nfs_fh *, int, int);
+ 
+ /*
+  * inline functions
