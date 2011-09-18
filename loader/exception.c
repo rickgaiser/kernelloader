@@ -69,12 +69,16 @@ void exception(int nr, uint32_t *regs)
 	error_epc = 0xFFFFFFFF;
 
 	iop_prints(U2K("Exception occured\n"));
-	__asm__ __volatile__("mfc0 %0,$14":"=r" (epc):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$14\n":"=r" (epc):);
 	iop_prints(U2K("epc 0x"));
 	iop_printx(epc);
 	iop_prints(U2K("\n"));
 
-	__asm__ __volatile__("mfc0 %0,$13":"=r" (cause):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$13\n":"=r" (cause):);
 	iop_prints(U2K("cause 0x"));
 	iop_printx(cause);
 	iop_prints(U2K("\n"));
@@ -93,15 +97,21 @@ void exception(int nr, uint32_t *regs)
 	iop_printf(U2K("regs 0x%08x\n"), regs);
 	iop_printf(U2K("epc 0x%08x\n"), epc);
 #endif
-	__asm__ __volatile__("mfc0 %0,$30":"=r" (error_epc):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$30\n":"=r" (error_epc):);
 	iop_prints(U2K("error epc 0x"));
 	iop_printx(error_epc);
 	iop_prints(U2K("\n"));
-	__asm__ __volatile__("mfc0 %0,$8":"=r" (badVAddr):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$8\n":"=r" (badVAddr):);
 	iop_prints(U2K("badVAddr 0x"));
 	iop_printx(badVAddr);
 	iop_prints(U2K("\n"));
-	__asm__ __volatile__("mfc0 %0,$23":"=r" (badPAddr):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$23\n":"=r" (badPAddr):);
 	iop_prints(U2K("badPAddr 0x"));
 	iop_printx(badPAddr);
 	iop_prints(U2K("\n"));

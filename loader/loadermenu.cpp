@@ -320,6 +320,7 @@ static char libsd_version[16] = "none";
 static unsigned int getStatusReg() {
 	register unsigned int rv;
 	asm volatile (
+		"sync.p\n"
 		"mfc0 %0, $12\n"
 		"nop\n" : "=r"
 	(rv) : );
@@ -329,6 +330,7 @@ static unsigned int getStatusReg() {
 static void setStatusReg(unsigned int v) {
 	asm volatile (
 		"mtc0 %0, $12\n"
+		"sync.p\n"
 		"nop\n"
 	: : "r" (v) );
 }

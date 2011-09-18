@@ -11,6 +11,7 @@ disable_interrupts:
 	.set noreorder
 	.set noat
 
+	sync.p
 	mfc0 at,$12
 	ori at,0x1f
 	xori at,0x1e
@@ -28,6 +29,7 @@ enable_interrupts:
 	.set noreorder
 	.set noat
 
+	sync.p
 	mfc0 at,$12
 	ori at,1
 	xori at,1

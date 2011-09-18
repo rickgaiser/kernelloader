@@ -39,7 +39,9 @@
 #include "modules.h"
 
 #define SET_PCCR(val) \
-	__asm__ __volatile__("mtc0 %0, $25"::"r" (val))
+	__asm__ __volatile__( \
+		"mtc0 %0, $25\n" \
+		"sync.p\n"::"r" (val))
 
 #define I_STAT 0xB000F000
 #define I_MASK 0xB000F010
@@ -1531,7 +1533,9 @@ void print_tlbs(void)
 	uint32_t wired;
 
 	/* Get wired. */
-	__asm__ __volatile__("mfc0 %0, $6":"=r" (wired):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0, $6\n":"=r" (wired):);
 
 	iop_printf(U2K("wired %d\n"), wired);
 	for (entry = 0; entry < 48; entry++) {
@@ -1568,15 +1572,25 @@ void print_tlbs(void)
 			".set pop\n"
 			:::"memory");
 		/* Get index. */
-		__asm__ __volatile__("mfc0 %0, $0":"=r" (index)::"memory");
+		__asm__ __volatile__(
+			"sync.p\n"
+			"mfc0 %0, $0\n":"=r" (index)::"memory");
 		/* Get entryhi. */
-		__asm__ __volatile__("mfc0 %0, $10":"=r" (entryhi)::"memory");
+		__asm__ __volatile__(
+			"sync.p\n"
+			"mfc0 %0, $10\n":"=r" (entryhi)::"memory");
 		/* Get page mask. */
-		__asm__ __volatile__("mfc0 %0, $5":"=r" (pagemask)::"memory");
+		__asm__ __volatile__(
+			"sync.p\n"
+			"mfc0 %0, $5\n":"=r" (pagemask)::"memory");
 		/* Get entrylo0. */
-		__asm__ __volatile__("mfc0 %0, $2":"=r" (entrylo0)::"memory");
+		__asm__ __volatile__(
+			"sync.p\n"
+			"mfc0 %0, $2\n":"=r" (entrylo0)::"memory");
 		/* Get entrylo1. */
-		__asm__ __volatile__("mfc0 %0, $3":"=r" (entrylo1)::"memory");
+		__asm__ __volatile__(
+			"sync.p\n"
+			"mfc0 %0, $3\n":"=r" (entrylo1)::"memory");
 		/* Barrier. */
 		__asm__ __volatile__("sync.p"::: "memory");
 
@@ -1605,20 +1619,32 @@ void flush_tlbs(void)
 	int entry;
 
 	/* Set wired to 0. */
-	__asm__ __volatile__("mtc0 %0, $6"::"r" (0));
+	__asm__ __volatile__(
+		"mtc0 %0, $6\n"
+		"sync.p\n"::"r" (0));
 	/* Set page mask to 4k. */
-	__asm__ __volatile__("mtc0 %0, $5"::"r" (0));
+	__asm__ __volatile__(
+		"mtc0 %0, $5\n"
+		"sync.p\n"::"r" (0));
 	/* Set entrylo0 to zero. */
-	__asm__ __volatile__("mtc0 %0, $2"::"r" (0));
+	__asm__ __volatile__(
+		"mtc0 %0, $2\n"
+		"sync.p\n"::"r" (0));
 	/* Set entrylo1 to zero. */
-	__asm__ __volatile__("mtc0 %0, $3"::"r" (0));
+	__asm__ __volatile__(
+		"mtc0 %0, $3\n"
+		"sync.p\n"::"r" (0));
 	/* Barrier. */
 	__asm__ __volatile__("sync.p"::);
 	for (entry = 0; entry < 48; entry++) {
 		/* Set entryhi. */
-		__asm__ __volatile__("mtc0 %0, $10"::"r" (KSEG0 + entry * 0x2000));
+		__asm__ __volatile__(
+			"mtc0 %0, $10\n"
+			"sync.p\n"::"r" (KSEG0 + entry * 0x2000));
 		/* Set index. */
-		__asm__ __volatile__("mtc0 %0, $0"::"r" (entry));
+		__asm__ __volatile__(
+			"mtc0 %0, $0\n"
+			"sync.p\n"::"r" (entry));
 		/* Barrier. */
 		__asm__ __volatile__("sync.p"::);
 		/* Write tlb entry. */
@@ -2097,7 +2123,9 @@ int real_loader(void)
 #endif
 
 		/* Be sure that all interrupts are disabled. */
-		__asm__ __volatile__("mtc0 %0, $12\nsync.p\n"::"r" (
+		__asm__ __volatile__(
+			"mtc0 %0, $12\n"
+			"sync.p\n"::"r" (
 			(0<<30) /* Deactivate COP2: VPU0 -> not used by loader */
 			| (1<<29) /* Activate COP1: FPU -> used by compiler and functions like printf. */
 			| (1<<28) /* Activate COP0: EE Core system control processor. */
@@ -2174,14 +2202,18 @@ int real_loader(void)
 		invalidateICacheAll();
 
 		/* Set status register. */
-		__asm__ __volatile__("mtc0 %0, $12\nsync.p\n"::"r" (
+		__asm__ __volatile__(
+			"mtc0 %0, $12\n"
+			"sync.p\n"::"r" (
 			(0<<30) /* Deactivate COP2: VPU0 -> not used by loader */
 			| (1<<29) /* Activate COP1: FPU -> used by compiler and functions like printf. */
 			| (1<<28) /* Activate COP0: EE Core system control processor. */
 			| (1<<16) /* eie */));
 
 		/* Set config register. */
-		__asm__ __volatile__("mtc0 %0, $16\nsync.p\n"::"r" ((3<<0) /* Kseg0 cache */
+		__asm__ __volatile__(
+			"mtc0 %0, $16\n"
+			"sync.p\n"::"r" ((3<<0) /* Kseg0 cache */
 						| (1<<12) /* Branch prediction */
 						| (1<<13) /* Non blocking loads */
 						| (1<<16) /* Data cache enable */
@@ -2189,13 +2221,19 @@ int real_loader(void)
 						| (1<<18) /* Enable pipeline */));
 
 		/* Disable all breakpoints. */
-		__asm__ __volatile__("mtc0 %0, $24\nsync.p\n"::"r" (0));
+		__asm__ __volatile__(
+			"mtc0 %0, $24\n"
+			"sync.p\n"::"r" (0));
 
 		/* Disable performance counter. */
 		__asm__ __volatile__("mtps %0, 0\nsync.p\n"::"r" (0));
 
-		__asm__ __volatile__("mtc0 %0, $28\nsync.p\n"::"r" (0x011c1020));
-		__asm__ __volatile__("mtc0 %0, $29\nsync.p\n"::"r" (0x40004190));
+		__asm__ __volatile__(
+			"mtc0 %0, $28\n"
+			"sync.p\n"::"r" (0x011c1020));
+		__asm__ __volatile__(
+			"mtc0 %0, $29\n"
+			"sync.p\n"::"r" (0x40004190));
 
 		/* Disable all INTC interrupts. */
 		*((volatile uint32_t *) I_MASK) = *((volatile uint32_t *) I_MASK);

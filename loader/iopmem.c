@@ -47,8 +47,8 @@ int isKernelMode(void)
 	__asm__ volatile (
 		".set push\n"
 		".set noreorder\n"
-		"mfc0 %0, $12\n"
 		"sync.p\n"
+		"mfc0 %0, $12\n"
 		".set pop\n" : "=r"(status));
 
 	return ((status & 0x18) == 0) || ((status & 0x6) != 0);
