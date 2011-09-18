@@ -114,6 +114,7 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 		SifRpcEndFunc_t endfunc, void *efarg)
 {
 	SifRpcBindPkt_t *bind;
+	u32 status;
 
 	bind = (SifRpcBindPkt_t *)_rpc_get_packet(&_sif_rpc_data);
 	if (!bind) {
@@ -121,6 +122,15 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 	}
 
 	/* Callback is required by linux. */
+	core_save_disable(&status);
+	if (cd->hdr.pkt_addr != NULL) {
+		core_restore(status);
+
+		rpc_packet_free(bind);
+
+		printf("SifBindRpc: Client 0x%x sid 0x%x is already in use.\n", (uint32_t) cd, sid);
+		return -E_SIF_PKT_ALLOC;
+	}
 	cd->end_function  = endfunc;
 	cd->end_param     = efarg;
 	cd->command      = 0;
@@ -128,6 +138,7 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 	cd->hdr.pkt_addr = bind;
 	cd->hdr.rpc_id   = bind->rpc_id;
 	cd->hdr.sema_id  = 0;
+	core_restore(status);
 
 	bind->sid        = sid;
 	bind->pkt_addr   = bind;
@@ -147,10 +158,17 @@ int SifBindRpc(SifRpcClientData_t *cd, int sid, int mode,
 		return -E_SIF_PKT_SEND;
 	}
 
+	core_save_disable(&status);
 	while(cd->hdr.sema_id == 0) {
 		/* Wait until something is received. */
+		core_restore(status);
+
+		/* Preemption point. */
+
+		core_save_disable(&status);
 	}
 	cd->hdr.sema_id--;
+	core_restore(status);
 
 	return 0;
 }
@@ -160,17 +178,27 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 		SifRpcEndFunc_t endfunc, void *efarg)
 {
 	SifRpcCallPkt_t *call;
+	u32 status;
 
 	call = (SifRpcCallPkt_t *)_rpc_get_packet(&_sif_rpc_data);
 	if (!call) {
 		return -E_SIF_PKT_ALLOC;
 	}
 
+	core_save_disable(&status);
+	if (cd->hdr.pkt_addr != 0) {
+		core_restore(status);
+		rpc_packet_free(call);
+
+		printf("SifCallRpc: Client 0x%x rpc_number 0x%x is already in use.\n", (uint32_t) cd, rpc_number);
+		return -E_SIF_PKT_ALLOC;
+	}
 	cd->end_function  = endfunc;
 	cd->end_param     = efarg;
 	cd->hdr.pkt_addr  = call;
 	cd->hdr.rpc_id    = call->rpc_id;
 	cd->hdr.sema_id   = 0;
+	core_restore(status);
 
 	call->rpc_number  = rpc_number;
 	call->send_size   = ssize;
@@ -213,10 +241,17 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 		return -E_SIF_PKT_SEND;
 	}
 
+	core_save_disable(&status);
 	while(cd->hdr.sema_id == 0) {
 		/* Wait until something is received. */
+		core_restore(status);
+
+		/* Preemption point. */
+
+		core_save_disable(&status);
 	}
 	cd->hdr.sema_id--;
+	core_restore(status);
 
 	return 0;
 }
@@ -302,6 +337,7 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	void *pkt_addr;
 	SifRpcEndFunc_t volatile end_function;
 	void * volatile end_param;
+	u32 status;
 
 	data = data;
 
@@ -310,17 +346,35 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	end_param = NULL;
 
 	pkt_addr = client->hdr.pkt_addr;
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-	printf("cid 0x%x pkt_addr 0x%x\n", (uint32_t) request->cid, (uint32_t) pkt_addr);
-#endif
-	/* Interrupts are disabled, so it is safe to increment it. */
+
+	/* Interrupts may not be disabled on Linux 2.6. */
+	core_save_disable(&status);
 	client->hdr.sema_id++;
 
+	/* Set client free for use by next calls. */
+	client->hdr.pkt_addr = NULL;
+	core_restore(status);
+
 	if (request->cid == 0x8000000a) {
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+		SifRpcCallPkt_t *call = pkt_addr;
+
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x rpc_number 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, call->rpc_number);
+#endif
+		core_save_disable(&status);
+
 		/* Response to RPC call. */
 		end_function = client->end_function;
 		end_param = client->end_param;
+		core_restore(status);
 	} else if (request->cid == 0x80000009) {
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+		SifRpcBindPkt_t *bind = pkt_addr;
+
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x sid 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, bind->sid);
+#endif
+
+		core_save_disable(&status);
 		client->server = request->server;
 		client->buff   = request->buff;
 		client->cbuff  = request->cbuff;
@@ -328,9 +382,12 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 		/* Callback is not part of PS2SDK, but is required for linux. */
 		end_function = client->end_function;
 		end_param = client->end_param;
+		core_restore(status);
+	} else {
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr);
+#endif
 	}
-	/* Mark RPC as finished, so that next RPC call in end_function will work. */
-	client->hdr.pkt_addr = NULL;
 
 	if (end_function != NULL) {
 #if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
@@ -340,6 +397,7 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	}
 
 	rpc_packet_free(pkt_addr);
+
 }
 
 static void *search_svdata(u32 sid, struct rpc_data *rpc_data)
