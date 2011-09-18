@@ -404,10 +404,6 @@ void setcrtc_old(int mode, int ffmd, int noreset)
     gs_dy[0] = gs_dy[1] = syncdata[mode].display.dy;
 }
 
-/* Syscalls: */
-
-#define GS_IMR (0x12001010 | KSEG1)
-
 // int_mode
 #define NON_INTERLACED	0
 #define INTERLACED	1
@@ -420,8 +416,8 @@ void setcrtc_old(int mode, int ffmd, int noreset)
 #define FRAME	1
 #define FIELD	2
 
-#define GS_CSR 0xb2001000
-#define GS_IMR 0xb2001010
+#define GS_CSR (0x12001000 | KSEG1)
+#define GS_IMR (0x12001010 | KSEG1)
 
 static volatile uint64_t *gs_csr = (unsigned long *) GS_CSR;
 static volatile uint64_t *gs_imr = (unsigned long *) GS_IMR;

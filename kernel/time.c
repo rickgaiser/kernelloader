@@ -5,10 +5,14 @@
 #define TICKS_PER_MICROSECOND 294
 
 #define GET_COUNT(x) \
-	__asm__ __volatile__("mfc0 %0,$9":"=r" (x):);
+	__asm__ __volatile__( \
+		"sync.p\n" \
+		"mfc0 %0,$9\n":"=r" (x):);
 
 #define SET_COUNT(x) \
-	__asm__ __volatile__("mtc0 %0,$9"::"r" (x):);
+	__asm__ __volatile__( \
+		"mtc0 %0,$9\n" \
+		"sync.p\n"::"r" (x):);
 
 void udelay(uint32_t time)
 {

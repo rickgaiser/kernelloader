@@ -7,7 +7,9 @@ uint32_t unknownSyscall(int nr)
 {
 	uint32_t epc;
 
-	__asm__ __volatile__("mfc0 %0,$14":"=r" (epc):);
+	__asm__ __volatile__(
+		"sync.p\n"
+		"mfc0 %0,$14\n":"=r" (epc):);
 	printf("Unknown syscall nr. %d called at 0x%x.\n", nr, epc);
 	return 0;
 }

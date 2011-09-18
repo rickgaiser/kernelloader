@@ -16,8 +16,8 @@ exceptionKernelStack:
 .set noreorder
 commonExceptionHandler:
 	/* Get exception cause. */
-	mfc0	k0, $13
 	sync.p
+	mfc0	k0, $13
 	srl	k0, k0, 2
 	andi	k0, k0, 0x1f
 	li	k1, 0x8
@@ -72,8 +72,8 @@ commonExceptionHandler:
 callSyscallHandler:
 	/* for debugging kernel exceptions. */
 #if 0
-	mfc0	k0, $12
 	sync.p
+	mfc0	k0, $12
 	/* Switch to kernel mode and disable EXL. */
 	ori		k0, k0, 0x1a
 	xori	k0, k0, 0x1a
@@ -88,8 +88,8 @@ negative_syscall:
 	addiu	sp, -0x10
 	sw	ra, 0(sp)
 	/* Save EPC. */
-	mfc0	k0, $14
 	sync.p
+	mfc0	k0, $14
 	addiu	k0, 4
 	sw	k0, 4(sp)
 	mtc0	k0, $14
@@ -185,8 +185,8 @@ reuseStack:
 	SAVE_REG(31)
 
 	/* Save EPC. */
-	mfc0	t5, $14
 	sync.p
+	mfc0	t5, $14
 	sw	t5, STATUS_OFFSET + 4 * 8(sp)
 
 	/* Save floating point status register. */
