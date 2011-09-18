@@ -288,7 +288,7 @@ void mcInitCallback(void *rarg)
 		if(mcType == MC_TYPE_XMC)
 		{
 			// check if old version of mcserv loaded
-			if(*(s32*)UNCACHED_SEG(rdata+4) < 0x205)
+			if(*(s32*)UNCACHED_SEG(rdata+4) < 0x200)
 			{
 #ifdef MC_DEBUG
 				printf("libmc: mcserv is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+4));
@@ -299,7 +299,7 @@ void mcInitCallback(void *rarg)
 			}
 		
 			// check if old version of mcman loaded
-			if(*(s32*)UNCACHED_SEG(rdata+8) < 0x206)
+			if(*(s32*)UNCACHED_SEG(rdata+8) < 0x200)
 			{
 #ifdef MC_DEBUG
 				printf("libmc: mcman is too old (%x)\n", *(s32*)UNCACHED_SEG(rdata+8));
