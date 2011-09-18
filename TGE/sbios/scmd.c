@@ -415,13 +415,22 @@ int sbcall_cdvdmmode(tge_sbcall_rpc_arg_t *carg)
 	}
 	return 0;
 #else
-	/* Function not supported, simulate by calling different function. */
-	if (CD_CHECK_SCMD(CD_SCMD_GETERROR) == 0)
-		return SCMD_EAGAIN;
+	/* Function not supported. */
+	if (core_in_interrupt()) {
+		/* Interrupts are disabled, need to call callback function when interrupts are enabled again. */
+		/* On Linux 2.2: Simulate by calling different RPC function. The state machine needs this emulation. */
+		if (CD_CHECK_SCMD(CD_SCMD_GETERROR) == 0)
+			return SCMD_EAGAIN;
 
-	if (SifCallRpc(&clientSCmd, CD_SCMD_GETERROR, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, MmodeStage2, carg) < 0) {
-		CDVD_UNLOCKS();
-		return -SIF_RPCE_SENDP;
+		if (SifCallRpc(&clientSCmd, CD_SCMD_GETERROR, SIF_RPC_M_NOWAIT, 0, 0, sCmdRecvBuff, 4, MmodeStage2, carg) < 0) {
+			CDVD_UNLOCKS();
+			return -SIF_RPCE_SENDP;
+		}
+	} else {
+		/* Interrupts are enabled. So caller must expect that callback is called before the function returns. */
+		/* On Linux 2.4: directly call callback function. */
+		carg->result = 1;
+		carg->endfunc(carg->efarg, carg->result);
 	}
 	return 0;
 #endif
