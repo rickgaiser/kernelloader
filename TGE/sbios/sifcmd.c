@@ -22,12 +22,11 @@
 #include "core.h"
 #include "iopmemdebug.h"
 #include "stdio.h"
+#include "ps2lib_err.h"
 
 /** Maximum packet data size when calling sif_cmd_send(). */
 #define CMD_PACKET_DATA_MAX 112
 
-/** MSB is set for system commands. */
-#define SYSTEM_CMD	0x80000000
 #define SIF_CMD_CHANGE_SADDR (SYSTEM_CMD | 0x00)
 /** Set software register. */
 #define SIF_CMD_SET_SREG (SYSTEM_CMD | 0x01)
@@ -127,7 +126,7 @@ u32 sif_cmd_send(u32 fid, u32 flags, void *packet, u32 packet_size, void *src, v
 	u32 count = 0;
 
 	if (packet_size > CMD_PACKET_DATA_MAX) {
-		return 0;
+		return -E_LIB_INVALID_ARG;
 	}
 	header = (tge_sifcmd_header_t *) packet;
 	header->fid = fid;
@@ -177,11 +176,14 @@ static void sif_cmd_interrupt()
 	packet = (void *) packet_aligned;
 	header = (tge_sifcmd_header_t *)cmd_data->pktbuf;
 
-	if (!(size = (header->size & 0xff)))
+	size = (header->size & 0xff);
+	if (size == 0) {
+		printf("Bad paket size in IRQ.\n");
 		goto out;
+	}
 
-	/* TODO: Don't copy anything extra */
-	pktquads = (size + 30) >> 4;
+	/* TBD: Don't copy anything extra */
+	pktquads = (size + 30) >> 4; // TBD: + 16 - 1 should be enough for alignment.
 	header->size = 0;
 	if (pktquads) {
 		pktbuf = (u128 *)cmd_data->pktbuf;
@@ -191,6 +193,7 @@ static void sif_cmd_interrupt()
 		}
 	}
 
+	/* DMA buffer has been copied. Restart DMA. */
 	sbcall_sifsetdchain();
 
 	header = (tge_sifcmd_header_t *)packet;
@@ -202,11 +205,11 @@ static void sif_cmd_interrupt()
 	id = header->fid & ~SYSTEM_CMD;
 
 	if (header->fid & SYSTEM_CMD) {
-		if (id < _sif_cmd_data.nr_sys_handlers) {
+		if (id < cmd_data->nr_sys_handlers) {
 			cmd_handlers = cmd_data->sys_cmd_handlers;
 		}
 	} else {
-		if (id < _sif_cmd_data.nr_usr_handlers) {
+		if (id < cmd_data->nr_usr_handlers) {
 			cmd_handlers = cmd_data->usr_cmd_handlers;
 		}
 	}
@@ -306,11 +309,11 @@ void SifInitCmd(void)
 
 #if 0
 	/* RTE does the following: */
-	SifSetReg(0x80000000, sbios_iopaddr);
+	SifSetReg(SIF_CMD_CHANGE_SADDR, sbios_iopaddr);
 	SifSetReg(0x80000001, sbios_iopaddr);
 #else
 	/* XXX: PS2SDK code looks better: */
-	SifSetReg(0x80000000, (uint32_t) _sif_cmd_data.iopbuf);
+	SifSetReg(SIF_CMD_CHANGE_SADDR, (uint32_t) _sif_cmd_data.iopbuf);
 	SifSetReg(0x80000001, (uint32_t) &_sif_cmd_data);
 #endif
 }
@@ -337,7 +340,7 @@ void SifExitCmd(void)
 /* Functions is same as RTE, but with error handling. */
 void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 {
-	if (((u32) fid) & 0x80000000)
+	if (((u32) fid) & SYSTEM_CMD)
 	{
 		if (_sif_cmd_data.sys_cmd_handlers != NULL) {
 			_sif_cmd_data.sys_cmd_handlers[((u32) fid) & 0x7FFFFFFFU].handler = handler;
@@ -360,7 +363,7 @@ void SifAddCmdHandler(int fid, void (* handler)(void *, void *), void *harg)
 /* Functions is same as RTE, but with error handling. */
 static void sif_cmd_del_handler(u32 fid)
 {
-	if (fid & 0x80000000)
+	if (fid & SYSTEM_CMD)
 	{
 		if (_sif_cmd_data.sys_cmd_handlers != NULL) {
 			_sif_cmd_data.sys_cmd_handlers[fid & 0x7FFFFFFF].handler = NULL;

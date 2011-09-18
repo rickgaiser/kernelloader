@@ -20,6 +20,9 @@
 extern "C" {
 #endif
 
+/** MSB is set for system commands. */
+#define SYSTEM_CMD	0x80000000
+
 #define SIF_DMA_INT_I	0x2
 #define SIF_DMA_INT_O	0x4
 

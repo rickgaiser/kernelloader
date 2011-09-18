@@ -19,9 +19,13 @@
 #include "hwreg.h"
 #include "core.h"
 
+#define NUM_SIFREGS 32
+#define QWC_SIZE 16
+#define QWC_PAYLOAD_FIRST_PKT 7
+
 static int initialized;
 
-static u32 sif_reg_table[32] __attribute__((aligned(64)));
+static u32 sif_reg_table[NUM_SIFREGS];
 /** Next/current dma tag that is used for transfer by software. */
 static u8 sif1_dmatag_index;
 static u16 sif1_dma_count;
@@ -36,8 +40,8 @@ typedef struct {
 	u32	addr;
 	u32	size;
 	u64	pad64;
-	u128	data[7];	/* 7 qwords of data.  */
-} iop_dmatag_t ALIGNED(16);
+	u128	data[QWC_PAYLOAD_FIRST_PKT];	/* 7 qwords of data.  */
+} iop_dmatag_t ALIGNED(QWC_SIZE);
 
 static iop_dmatag_t iop_dmatags[32] ALIGNED(64);
 
@@ -52,14 +56,8 @@ int sbcall_sifinit()
 		return 0;
 
 	initialized = 1;
-#if 0
-	/* Unknown code in RTE: */
-	for (i = 0; i < 32; i ++) {
-		*KSEG1ADDR(&sif_init_unknown_dma_table_8x4words[i]) = 0;
-	}
-#endif
 
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < NUM_SIFREGS; i++) {
 		sif_reg_table[i] = 0;
 	}
 
@@ -172,7 +170,7 @@ static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmata
 	ee_dmatag_t *tag;
 	iop_dmatag_t *dtag;
 	u128 *s128, *d128;
-	u32 data_qwc, i, qwc = (size + 15) / 16;
+	u32 data_qwc, i, qwc = (size + QWC_SIZE - 1) / QWC_SIZE;
 
 	/* Get address of next dma tag. */
 	SET_NEXT_DMATAG();
@@ -191,14 +189,14 @@ static void sif_dma_transfer(void *src, void *dest, u32 size, u32 attr, ee_dmata
 			tag->id_qwc = EE_DMATAG_ID_QWC(EE_DMATAG_ID_REF, 8);
 			dtag = KSEG1ADDR(&iop_dmatags[sif1_dmatag_index]);
 			tag->addr = PHYSADDR(dtag);
-			data_qwc = 7;
+			data_qwc = QWC_PAYLOAD_FIRST_PKT;
 
 			/* Get address of next dma tag. */
 			SET_NEXT_DMATAG();
 			tag = KSEG1ADDR(&sif1_dmatags[sif1_dmatag_index]);
-			tag->id_qwc = EE_DMATAG_ID_QWC(id, qwc - 7) |
+			tag->id_qwc = EE_DMATAG_ID_QWC(id, qwc - QWC_PAYLOAD_FIRST_PKT) |
 				((attr & TGE_SIFDMA_ATTR_INT_I) ? EE_DMATAG_IRQ : 0);
-			tag->addr = PHYSADDR((u32)src + 112);
+			tag->addr = PHYSADDR((u32)src + QWC_PAYLOAD_FIRST_PKT * QWC_SIZE);
 		} else {
 			tag->id_qwc = EE_DMATAG_ID_QWC(id, qwc + 1) |
 				((attr & TGE_SIFDMA_ATTR_INT_I) ? EE_DMATAG_IRQ : 0);
@@ -309,7 +307,7 @@ u32 SifSetDma(tge_sifdma_transfer_t *transfer, s32 tcount)
 
 	/* Find out how many tags we'll need for the transfer.  */
 	for (i = tcount, t = transfer, ntags = 0; i; i--, t++) {
-		if ((t->attr & TGE_SIFDMA_ATTR_DMATAG) || t->size <= 112)
+		if ((t->attr & TGE_SIFDMA_ATTR_DMATAG) || t->size <= (QWC_PAYLOAD_FIRST_PKT * QWC_SIZE))
 			ntags++;
 		else
 			ntags += 2;
@@ -318,7 +316,7 @@ u32 SifSetDma(tge_sifdma_transfer_t *transfer, s32 tcount)
 	/* We can only transfer if we have enough tags free.  */
 	if (ntags <= freetags) {
 		/* Same as RTE until this line 0x800022d8. */
-		/* XXX: (((sif1_dmatag_index + 1) % 31) & 0xff) + 16 * (sif1_dmatag_index + 1); */
+		/* XXX: (((sif1_dmatag_index + 1) % 31) & 0xff) + QWC_SIZE * (sif1_dmatag_index + 1); */
 		start = ((sif1_dmatag_index + 1) % 31) & 0xff;
 		count = start ? sif1_dma_count : sif1_dma_count + 1;
 		id = (count << 16) | (start << 8) | (ntags & 0xff);
@@ -459,10 +457,11 @@ u32 SifSetReg(u32 reg, u32 val)
 	}
 
 	/* Is bit 31 set? */
-	if ((int)reg < 0) {
-		reg &= 0x7fffffff;
-		if (reg < 32)
+	if (reg & SYSTEM_CMD) {
+		reg &= ~SYSTEM_CMD;
+		if (reg < NUM_SIFREGS) {
 			sif_reg_table[reg] = val;
+		}
 	}
 
 	return 0;
@@ -482,10 +481,11 @@ u32 SifGetReg(u32 reg)
 	}
 
 	/* Is bit 31 set? */
-	if ((int)reg < 0) {
-		reg &= 0x7fffffff;
-		if (reg < 32)
+	if (reg & SYSTEM_CMD) {
+		reg &= ~SYSTEM_CMD;
+		if (reg < NUM_SIFREGS) {
 			return sif_reg_table[reg];
+		}
 	}
 
 	return 0;
