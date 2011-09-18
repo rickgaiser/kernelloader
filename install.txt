@@ -19,7 +19,7 @@ http://sourceforge.net/projects/kernelloader/files/Sony%20Linux%20Toolkit/Packag
 You can also download the updated initrd at:
 http://sourceforge.net/projects/kernelloader/files/Initial%20RAM%20Disc/
 
-Install Linux toolchain:
+Install Linux toolchain (start a bash and type the commands behind "sh #"):
 
 sh # sudo tar -xzf gcc-2.95.2-cross.tar.gz -C /usr/local
 sh # sudo tar -xzf binutils-2.9EE-cross.tar.gz -C /usr/local
@@ -34,6 +34,7 @@ The following patch and files are recommended to get around many problems:
 
 sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-all_fat_and_slim.patch
 sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-no-bwlinux-check.patch
+sh # patch -p1 <../kernelloader/patches/linux-2.4.17_ps2-nfsroot-via-tcp.patch
 sh # cp ../kernelloader/driver_slim_smaprpc/smaprpc.c drivers/ps2/
 sh # cp ../kernelloader/driver_slim_smaprpc/smaprpc.h drivers/ps2/
 sh # cp -r ../kernelloader/driver_ps2fs/ps2fs fs/
@@ -234,6 +235,7 @@ Activate "Machine selection"  ---> "Support for PS2 Memory Card File System" (ch
 Activate "Block devices" ---> "RAM disk support" (choose "*" and not "M")
 Activate "Block devices" ---> "Initial RAM disk (initrd) support"
 Activate "File systems" ---> "ISO 9660 CDROM file system support" (choose "*" and not "M")
+Activate "File systems" ---> "Microsoft Joilet CROM extensions" (choose "*" and not "M")
 Activate "File systems" ---> "Second extended fs support" (choose "*" and not "M")
 
 Slim PSTwo needs access to USB devices:
@@ -247,7 +249,13 @@ Activate "File Systems" ---> "VFAT (Windows-95) fs support" (choose "*" and not 
 Recommended:
 Activate "Console drivers" ---> "Frame-buffer support" ---> "Console scrollback support"
 Activate "File systems" ---> "PS2 file system support" (choose "*" and not "M")
-Activate "Union filesystem support" ---> "PS2 file system support" (choose "M" and not "*")
+Activate "File systems" ---> "Union filesystem support" (choose "M" and not "*")
+Activate "File systems" ---> "UDF file system support" (choose "M" and not "*")
+Activate "File systems" ---> "Ext3 journalling file system support" (choose "M" and not "*")
+Activate "File systems" ---> "Network File Systems" ---> "NFS file system support" (choose "*" and not "M")
+Activate "File systems" ---> "Network File Systems" ---> "Provide NFSv3 client support" (choose "*")
+Activate "File systems" ---> "Network File Systems" ---> "SMB file system support" (choose "M" and not "*")
+Activate "Block devices" ---> "Loopback device support" (choose "*" and not "M")
 
 DHCP support:
 Activate "Networking Options" ---> "Socket Filtering"
@@ -327,3 +335,40 @@ kernel exceptions.
 Files with prefix "host:" a first searched in a kloader.elf embedded
 files system.
 
+Compiling on 64 bit Ubuntu 10.10:
+#################################
+
+The PS2SDK is working on 64 bit. The compiler from PS2SDK is also working,
+but the compiler for Linux is not working. The compiler produces the
+following code in vmlinux:
+
+0000000080010490 <kernel_entry>:
+    80010490:   3c1c8001        lui     $gp,0x8001
+    80010494:   279c6000        addiu   $gp,$gp,24576
+    80010498:   27881fe0        addiu   $t0,$gp,8160
+    8001049c:   251dfff0        addiu   $sp,$t0,-16
+    800104a0:   ac288048        sw      $t0,-32696($at)
+    800104a4:   ac28a6d0        sw      $t0,-22832($at)
+
+The opcode at address 800104a0 is wrong. The compiler binary was build
+for 32 bit x86. The GCC seems to be incompatible with the 32 bit libraries
+of Ubuntu 10.10. The same error is at many places in vmlinux. The result
+is that the vmlinux will crash at 800104a0. This one of the first
+instructions. This looks like kernelloader is hanging at starting kernel.
+Currently the only way to compile it, is using a 32 bit system (PS2 or x86).
+
+The correct code would be (compiled on 32 bit x86):
+
+0000000080010490 <kernel_entry>:
+    80010490:   3c1c8001        lui     $gp,0x8001
+    80010494:   279c6000        addiu   $gp,$gp,24576
+    80010498:   27881fe0        addiu   $t0,$gp,8160
+    8001049c:   251dfff0        addiu   $sp,$t0,-16
+    800104a0:   3c018048        lui     $at,0x8048
+    800104a4:   ac28a6d0        sw      $t0,-22832($at)
+
+To avoid the problem you need a 32 bit Linux distribution. You can
+use dchroot and debootstrap to run it in your existing Linux
+installation.
+I used karmic, Ubuntu 9.10, 32 bit.
+See https://wiki.ubuntu.com/DebootstrapChroot for more information.
