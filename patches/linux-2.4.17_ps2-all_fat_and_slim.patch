@@ -608,3 +608,21 @@ diff -Nurp linux-2.4.17_ps2/include/asm-mips/ps2/powerbutton.h linux-2.4.17_ps2-
 +int ps2_powerbutton_enable_auto_shutoff(int enable_auto_shutoff);
 +
 +#endif
+--- linux-2.4.17_ps2/drivers/ps2/cdvd.c	2011-09-18 23:07:50.883706993 +0200
++++ linux-2.4.17_ps2/drivers/ps2/cdvd.c	2011-09-18 23:09:04.363706989 +0200
+@@ -745,6 +745,7 @@ checkdisc()
+ #endif
+     }
+ 
++#if 0 /* TBD: This seems not to be needed and may lead to hang at startup (no RPC response). */
+     /*
+      *  check tray count
+      */
+@@ -758,6 +759,7 @@ checkdisc()
+ 	res = DISC_RETRY;
+ 	goto error_out;
+     }
++#endif
+ 
+     return (DISC_OK);
+ 
