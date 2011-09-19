@@ -608,17 +608,6 @@ diff -Nurp linux/drivers/ps2/cdvdiop.c linux-2.2.1_ps2//drivers/ps2/cdvdiop.c
  int ps2cdvd_send_stop(void)
  {
  	int res;
-diff -Nurp linux/drivers/ps2/Makefile linux-2.2.1_ps2//drivers/ps2/Makefile
---- linux/drivers/ps2/Makefile	2001-09-19 12:08:22.000000000 +0200
-+++ linux-2.2.1_ps2//drivers/ps2/Makefile	2011-04-09 21:32:17.638917001 +0200
-@@ -79,6 +79,7 @@ endif
- # PS2 ethernet
- ifeq ($(CONFIG_PS2_ETHER_SMAP),m)
-   M_OBJS += smap.o
-+  M_OBJS += smaprpc.o
- endif
- 
- include $(TOPDIR)/Rules.make
 diff -Nurp linux/include/asm-mips/ps2/powerbutton.h linux-2.2.1_ps2//include/asm-mips/ps2/powerbutton.h
 --- linux/include/asm-mips/ps2/powerbutton.h	1970-01-01 01:00:00.000000000 +0100
 +++ linux-2.2.1_ps2//include/asm-mips/ps2/powerbutton.h	2011-04-09 21:22:17.638917001 +0200
