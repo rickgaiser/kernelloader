@@ -157,5 +157,53 @@ The correct code would be (compiled on 32 bit x86):
 To avoid the problem you need a 32 bit Linux distribution. You can
 use dchroot and debootstrap to run it in your existing Linux
 installation.
-I used karmic, Ubuntu 9.10, 32 bit.
+I used karmic, Ubuntu 9.10, 32 bit and installed it as follows:
+sudo apt-get install schroot dchroot
+wget http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap/debootstrap_1.0.23ubuntu1~karmic1_all.deb
+sudo dpkg --install debootstrap_1.0.23ubuntu1~karmic1_all.deb
+Add the following to /etc/schroot/schroot.conf:
+[karmic]
+description=Karmic (karmic32)
+directory=/chroot
+priority=3
+groups=$USER,root
+root-groups=root
+aliases=default,stable,ia32
+personality=linux32
+
+Note: You need to replace $USER by your user name.
+
+sudo debootstrap --variant=buildd --arch i386 karmic /chroot/ http://archive.ubuntu.com/ubuntu/
+Add the following to /etc/fstab
+/home           /chroot/home            none bind 0 0
+/tmp            /chroot/tmp             none bind 0 0
+/dev            /chroot/dev             none bind 0 0
+tmpfs           /chroot/dev/shm         tmpfs defaults 0 0
+proc            /chroot/proc            proc    defaults        0       0
+
+sudo mount /chroot/home
+sudo mount /chroot/tmp
+sudo mount /chroot/dev
+sudo mount /chroot/dev/shm
+sudo mount /chroot/proc
+
+sudo dchroot -d
+apt-get update
+apt-get --no-install-recommends install wget debconf devscripts gnupg nano
+apt-get update
+apt-get install locales
+locale-gen de_DE.UTF-8
+apt-get install sudo
+exit
+
+sudo cp /etc/timezone /chroot/etc/timezone
+sudo cp /etc/localtime /chroot/etc/localtime
+sudo cp /etc/passwd /chroot/etc/passwd
+sudo cp /etc/shadow /chroot/etc/shadow
+sudo cp -a /etc/sudoers /chroot/etc/sudoers
+sudo cp /etc/hosts /chroot/etc/hosts
+sudo cp /etc/group /chroot/etc/group
+
+./buildlinux.sh
+
 See https://wiki.ubuntu.com/DebootstrapChroot for more information.

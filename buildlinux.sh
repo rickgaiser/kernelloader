@@ -74,7 +74,11 @@ ask_remove()
 	echo "The path at $DIR must be deleted. Enter "yes" and press return to continue."
 	read answer
 	if [ "$answer" = "yes" ]; then
-		sudo rm -r "$DIR" || error_exit
+		if [ "$SYSTEMTYPE" = "x86_64" ]; then
+			dchroot -d "sudo rm -r \"$DIR\"" || error_exit
+		else
+			sudo rm -r "$DIR" || error_exit
+		fi
 	fi
 }
 
@@ -93,13 +97,25 @@ download_file binutils-2.9EE-cross.tar.gz http://sourceforge.net/projects/kernel
 download_file gcc-2.95.2-cross.tar.gz http://sourceforge.net/projects/kernelloader/files/Sony%20Linux%20Toolkit/Package%20Update%20Files/ps2stuff/gcc-2.95.2-cross.tar.gz/download
 download_file linux-2.4.17_ps2.tar.bz2 http://sourceforge.net/projects/kernelloader/files/Linux%202.4/Linux%202.4.17%20Kernel%20Source/linux-2.4.17_ps2.tar.bz2/download
 
-if [ -d "$PS2LINUXDIR" ]; then
+
+if [ "$SYSTEMTYPE" = "x86_64" ]; then
+	dchroot -d "test -d \"$PS2LINUXDIR\"; exit $?"
+else
+	test -d "$PS2LINUXDIR"
+fi
+if [ $? -ne 0 ]; then
 	ask_remove "$PS2LINUXDIR"
 fi
 if [ ! -d "$PS2LINUXDIR" ]; then
-	sudo mkdir -p "$PS2LINUXPREFIX" || error_exit
-	sudo tar -C "$PS2LINUXPREFIX" -xzf "$SRCDIR/binutils-2.9EE-cross.tar.gz" || error_exit
-	sudo tar -C "$PS2LINUXPREFIX" -xzf "$SRCDIR/gcc-2.95.2-cross.tar.gz" || error_exit
+	if [ "$SYSTEMTYPE" = "x86_64" ]; then
+		dchroot -d "sudo mkdir -p \"$PS2LINUXPREFIX\"" || error_exit
+		dchroot -d "sudo tar -C \"$PS2LINUXPREFIX\" -xzf \"$SRCDIR/binutils-2.9EE-cross.tar.gz\"" || error_exit
+		dchroot -d "sudo tar -C \"$PS2LINUXPREFIX\" -xzf \"$SRCDIR/gcc-2.95.2-cross.tar.gz\"" || error_exit
+	else
+		sudo mkdir -p "$PS2LINUXPREFIX" || error_exit
+		sudo tar -C "$PS2LINUXPREFIX" -xzf "$SRCDIR/binutils-2.9EE-cross.tar.gz" || error_exit
+		sudo tar -C "$PS2LINUXPREFIX" -xzf "$SRCDIR/gcc-2.95.2-cross.tar.gz" || error_exit
+	fi
 fi
 
 # Configure Linux 2.4 source code
@@ -122,7 +138,7 @@ if [ "$SYSTEMTYPE" = "x86_64" ]; then
 	# Need to build with 32 bit Linux system (dchroot):
 	dchroot -d "make oldconfig" || error_exit
 	dchroot -d "make dep" || error_exit
-	dchroot -d "make -j $NUM_CPUS vmlinux" || error_Exit
+	dchroot -d "make -j $NUM_CPUS vmlinux" || error_exit
 else
 	make oldconfig || error_exit
 	make dep || error_exit
