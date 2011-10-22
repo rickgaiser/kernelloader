@@ -10,6 +10,17 @@ You can control the kernelloader software with the first game pad or
 a USB keyboard (UP, DOWN, CROSS or RETURN).
 To enter texts (e.g. kernel parameter) you need the USB keyboard.
 
+The easiest way for testing is using the PS2 Linux Live DVD at:
+http://sourceforge.net/projects/kernelloader/files/BlackRhino%20Linux%20Distribution/Live%20Linux%20DVD/
+The Linux DVD doesn't work on v12/v13 PS2 consoles from some regions.
+
+Otherwise you will need a Linux kernel and a initrd for testing:
+http://sourceforge.net/projects/kernelloader/files/Linux%202.4/Linux%202.4.17%20Kernel/
+http://sourceforge.net/projects/kernelloader/files/Initial%20RAM%20Disc/
+
+You can copy the files to an USB stick and then select the files in the
+menu ("Select Kernel" -> vmlinux, "Select RAM disc" -> initrd).
+
 Video Mode
 ##########
 The application use the default video mode configured for your PS2. The
