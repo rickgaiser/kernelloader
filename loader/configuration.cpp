@@ -4,6 +4,7 @@
 #include "configuration.h"
 #include "graphic.h"
 #include "fileXio_rpc.h"
+#include "rom.h"
 
 #define MAXIMUM_CONFIG_LENGTH 2048
 
@@ -133,14 +134,96 @@ extern "C" {
 		}
 	}
 
-	void saveConfiguration(const char *configfile) {
+	void saveMcIcons(const char *config_dir)
+	{
 		FILE *fd;
 
-		fd = fopen(configfile, "wt");
-		if (fd == NULL) {
-			fileXioMkdir(CONFIG_DIR, 0777);
-			fd = fopen(configfile, "wt");
+		const char *mcicons[] = {
+			"icon.sys",
+			"kloader.bmp",
+			"kloader.icn",
+		};
+		rom_entry_t *romfile;
+		char path[40];
+		unsigned int n;
+
+		/* Copy icons to memory card. */
+		for (n = 0; n < (sizeof(mcicons)/sizeof(mcicons[0])); n++) {
+			snprintf(path, sizeof(path), "mcicons/%s", mcicons[n]);
+			romfile = rom_getFile(path);
+			if (romfile != NULL) {
+				snprintf(path, sizeof(path), "%s/%s", config_dir, mcicons[n]);
+				fd = fopen(path, "rb");
+				if (fd == NULL) {
+					/* Create memory card directory. */
+					fileXioMkdir(config_dir, 0777);
+					fd = fopen(path, "rb");
+				}
+				if (fd == NULL) {
+					fd = fopen(path, "wb");
+					if (fd != NULL) {
+						const unsigned char *buffer;
+						int rv;
+						unsigned int size;
+
+						buffer = (const unsigned char *)romfile->start;
+						size = romfile->size;
+						do {
+							rv = fwrite(buffer, 1, size, fd);
+							if (rv < 0) {
+								error_printf("Failed to create icons on MC0.");
+								break;
+							}
+							size -= rv;
+							buffer += rv;
+						} while(size > 0);
+						fclose(fd);
+						if (rv < 0) {
+							break;
+						}
+					}
+				} else {
+					/* Icon is alreadystored on the memory card. */
+					fclose(fd);
+				}
+			} else {
+				error_printf("ROM-File %s is missing.", path);
+			}
 		}
+	}
+
+	void saveConfiguration(const char *configfile) {
+		FILE *fd;
+		int n;
+
+		n = strlen(configfile);
+		if (n > 4) {
+			/* Check if configuration is saved on memory card. */
+			if (((configfile[0] == 'm') || (configfile[0] == 'M'))
+				&& ((configfile[1] == 'c') || (configfile[1] == 'C'))
+				&& ((configfile[2] == '0') || (configfile[2] == '1'))
+				&& (configfile[3] == ':')) {
+				/* Configuration is saved on memory card. */
+				n = 4;
+				while(configfile[n] != 0) {
+					if (configfile[n] != '/') {
+						break;
+					}
+					n++;
+				}
+				if (strncasecmp(configfile + n, "kloader/", 8) == 0) {
+					/* Configuration is saved in kloader directory. */
+					if (configfile[2] == '0') {
+						/* First memory card. */
+						saveMcIcons(CONFIG_DIR);
+					} else if (configfile[2] == '1') {
+						/* Second memory card. */
+						saveMcIcons(CONFIG_DIR2);
+					}
+				}
+			}
+		}
+		fd = fopen(configfile, "wt");
 		if (fd != NULL) {
 			vector < ConfigurationItem * >::iterator i;
 

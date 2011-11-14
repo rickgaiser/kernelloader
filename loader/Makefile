@@ -99,6 +99,9 @@ ROM_FILES += $(MODULES) \
 	TGE/sbios_old.elf \
 	TGE/sbios_new.elf \
 	kernel.elf \
+	mcicons/icon.sys \
+	mcicons/kloader.bmp \
+	mcicons/kloader.icn \
 	$(RGB_FILES)
 
 RGB_FILES = \
@@ -160,6 +163,7 @@ clean:
 	rm -f $(addsuffix .o,$(subst .,_,$(ROM_FILES)))
 	rm -rf .depend
 	rm -rf TGE RTE
+	rm -rf mcicons
 
 romfilelist.h: $(RGB_HEADERS) $(RGB_FILES)
 	rm -f romfilelist.h
@@ -215,6 +219,39 @@ rominitialize.h: $(RGB_FILES)
 
 %.rgb %.h: %.png ../png2rgb/png2rgb
 	../png2rgb/png2rgb $*.png $*.rgb $*.h $*
+
+%_bmp.s: %.bmp
+	rm -f $@.tmp
+	rm -f $@
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_bmp
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
+	rm -f $@.tmp
+
+%_sys.s: %.sys
+	rm -f $@.tmp
+	rm -f $@
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_sys
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
+	rm -f $@.tmp
+
+%_icn.s: %.icn
+	rm -f $@.tmp
+	rm -f $@
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_icn
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
+	rm -f $@.tmp
+
+mcicons/%.icn: ../mcicons/%.icn
+	mkdir -p mcicons
+	cp $^ $@
+
+mcicons/%.sys: ../mcicons/%.sys
+	mkdir -p mcicons
+	cp $^ $@
+
+mcicons/%.bmp: ../mcicons/%.bmp
+	mkdir -p mcicons
+	cp $^ $@
 
 .depend/%.d: %.c
 	mkdir -p .depend

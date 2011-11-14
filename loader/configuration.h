@@ -6,6 +6,8 @@
 #define CONFIG_FILE CONFIG_DIR "/config.txt"
 /** Directory where configuration is stored. */
 #define CONFIG_DIR "mc0:kloader"
+/** Directory where configuration is stored on second mc. */
+#define CONFIG_DIR2 "mc1:kloader"
 /** Config file used for DVDs. */
 #define DVD_CONFIG_FILE "cdfs:config.txt"
 
@@ -13,6 +15,7 @@
 extern "C" {
 #endif
 int loadConfiguration(const char *configfile);
+void saveMcIcons(const char *config_dir);
 void saveConfiguration(const char *configfile);
 #ifdef __cplusplus
 }
