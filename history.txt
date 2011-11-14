@@ -2,7 +2,8 @@
 - Fixed CDVD problems in Linux 2.2. This allows to install
   Sony's Linux Toolkit with kernelloader.
 - Automatically create save game icon when saving configuration
-  file in mc0:kloader/ or mc1:kloader/.
+  file in mc0:kloader/ or mc1:kloader/. Linux mascot created by
+  Larry Ewing.
 
 2.4
 - Add support for 64 bit kernels.
