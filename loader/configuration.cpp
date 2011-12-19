@@ -140,7 +140,6 @@ extern "C" {
 
 		const char *mcicons[] = {
 			"icon.sys",
-			"kloader.bmp",
 			"kloader.icn",
 		};
 		rom_entry_t *romfile;

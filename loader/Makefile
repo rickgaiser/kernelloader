@@ -100,7 +100,6 @@ ROM_FILES += $(MODULES) \
 	TGE/sbios_new.elf \
 	kernel.elf \
 	mcicons/icon.sys \
-	mcicons/kloader.bmp \
 	mcicons/kloader.icn \
 	$(RGB_FILES)
 
