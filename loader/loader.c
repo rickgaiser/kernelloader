@@ -1893,8 +1893,13 @@ static int real_loader(void)
 	strcpy(commandline, getKernelParameter());
 
 	bootinfo->size = sizeof(struct ps2_bootinfo);
-	bootinfo->maxmem = 32 * 1024 * 1024 - 4096;
-	bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
+	if (IsT10K()) {
+		bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_T10K;
+		bootinfo->maxmem = 128 * 1024 * 1024;
+	} else {
+		bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
+		bootinfo->maxmem = 32 * 1024 * 1024 - 4096;
+	}
 	bootinfo->opt_string = (char *) (((unsigned int) commandline) | KSEG0_MASK); /* Command line parameters. */
 
 	SetSysConf(&bootinfo->sysconf);
