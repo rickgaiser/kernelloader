@@ -8,6 +8,7 @@
 #include <sifrpc.h>
 #include <iopcontrol.h>
 #include <debug.h>
+#include <osd_config.h>
 #include "libkbd.h"
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
@@ -37,6 +38,7 @@
 #include "ps2dev9.h"
 #include "hdd.h"
 #include "modules.h"
+#include "nvram.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__( \
@@ -1836,11 +1838,33 @@ void disableTimers(void)
 	*tm3_mode = 0;
 }
 
+static void SetSysConf(struct ps2_sysconf *sysconf)
+{
+	ConfigParam osdconfig;
+	GetOsdConfigParam(&osdconfig);
+	sysconf->timezone = osdconfig.timezoneOffset;
+	sysconf->aspect = osdconfig.screenType;
+	sysconf->language = osdconfig.language;
+	sysconf->spdif = osdconfig.spdifMode;
+	sysconf->video = osdconfig.videoOutput;
+
+	/* Check if it is an early Japan console. */
+	if (osdconfig.region != 0) {
+		Config2Param osdconfig2;
+
+		/* Later models support osdconfig2. */
+		GetOsdConfigParam2(&osdconfig2, 1, 1);
+		sysconf->timenotation = osdconfig2.timeFormat;
+		sysconf->datenotation = osdconfig2.dateFormat;
+		sysconf->summertime = osdconfig2.daylightSaving;
+	}
+}
+
 /**
  * Load kernel, initrd and required modules. Then start kernel.
  * @param mode Graphic mode that should be used.
  */
-int real_loader(void)
+static int real_loader(void)
 {
 	entry_t *entry;
 	int ret;
@@ -1872,6 +1896,8 @@ int real_loader(void)
 	bootinfo->maxmem = 32 * 1024 * 1024 - 4096;
 	bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
 	bootinfo->opt_string = (char *) (((unsigned int) commandline) | KSEG0_MASK); /* Command line parameters. */
+
+	SetSysConf(&bootinfo->sysconf);
 
 	printf("Started loader\n");
 
@@ -1944,6 +1970,17 @@ int real_loader(void)
 			disableSBIOSCalls(SBIOSCallTable);
 			graphic_setStatusMessage(NULL);
 		}
+
+		/* Check if there is free memory for the console type. */
+		if (sbios_size < (0x10000 - strlen(ps2_console_type) - 1)) {
+			/* Add PS2 console type behind SBIOS. */
+			bootinfo->ver_model = ((void *) sbios) + sbios_size;
+			strcpy(bootinfo->ver_model, ps2_console_type);
+
+			/* Access data from kernel space, because this will be accessed by the Linux kernel. */
+			bootinfo->ver_model = ((unsigned int) bootinfo->ver_model) | KSEG0_MASK;
+		}
+
 		/* Access data from kernel space, because TLB misses can't be handled here. */
 		sbios = (char *) (((unsigned int) sbios) | KSEG0_MASK);
 	}
