@@ -180,6 +180,13 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 	SifRpcCallPkt_t *call;
 	u32 status;
 
+	if ((((u32) recvbuf) & 0x0f) != 0) {
+		/* This is fatal and will lead to write accesses on wrong memory addresses. */
+		printf("SifCallRpc 0x%x is not aligned (cd 0x%08x rpc nr 0x%x).\n", (uint32_t) recvbuf, (uint32_t) cd, rpc_number);
+		return -E_LIB_INVALID_ARG;
+	}
+
+
 	call = (SifRpcCallPkt_t *)_rpc_get_packet(&_sif_rpc_data);
 	if (!call) {
 		return -E_SIF_PKT_ALLOC;
@@ -208,11 +215,6 @@ int SifCallRpc(SifRpcClientData_t *cd, int rpc_number, int mode,
 	call->pkt_addr    = call;
 	call->client      = cd;
 	call->server      = cd->server;
-
-	if ((((u32) recvbuf) & 0x0f) != 0) {
-		/* This is fatal and will lead to write accesses on wrong memory addresses. */
-		printf("SifCallRpc 0x%x is not aligned (fid 0x%x rpc nr 0x%x).\n", (uint32_t) recvbuf, (cd->server != NULL) ? cd->server->sid : 0, rpc_number);
-	}
 
 	if (!(mode & SIF_RPC_M_NOWBDC)) {
 		if (ssize > 0)
