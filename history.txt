@@ -4,6 +4,8 @@
 - Automatically create save game icon when saving configuration
   file in mc0:kloader/ or mc1:kloader/. Linux mascot created by
   Larry Ewing.
+- Fixed bug in SBIOS when pointer is not aligned in RPC call.
+  This error normally never happens.
 
 2.4
 - Add support for 64 bit kernels.
