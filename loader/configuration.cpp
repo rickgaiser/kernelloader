@@ -5,12 +5,14 @@
 #include "graphic.h"
 #include "fileXio_rpc.h"
 #include "rom.h"
+#include "loadermenu.h"
 
 #define MAXIMUM_CONFIG_LENGTH 2048
 
 typedef enum {
 	CLASS_CONFIG_CHECK,
-	CLASS_CONFIG_TEXT
+	CLASS_CONFIG_TEXT,
+	CLASS_CONFIG_VIDEO,
 } configuration_class_type_t;
 
 class ConfigurationItem {
@@ -35,9 +37,10 @@ class ConfigurationCheckItem:ConfigurationItem {
 	int *value;
 
 	public:
-	  ConfigurationCheckItem(const char *name,
+	ConfigurationCheckItem(const char *name,
 		int *value):ConfigurationItem(name, CLASS_CONFIG_CHECK), value(value) {
-	} int writeData(FILE * fd) {
+	}
+	int writeData(FILE * fd) {
 		static char text[MAXIMUM_CONFIG_LENGTH];
 		int len;
 
@@ -49,6 +52,30 @@ class ConfigurationCheckItem:ConfigurationItem {
 	void readData(const char *buffer) {
 		//printf("read: %s=%s 0x%x\n", name, buffer, value);
 		*value = atoi(buffer);
+	}
+};
+
+class ConfigurationVideoModeItem:ConfigurationItem {
+	protected:
+	int *value;
+
+	public:
+	ConfigurationVideoModeItem(const char *name,
+		int *value):ConfigurationItem(name, CLASS_CONFIG_VIDEO), value(value) {
+	}
+	int writeData(FILE * fd) {
+		static char text[MAXIMUM_CONFIG_LENGTH];
+		int len;
+
+		//printf("write: %s=%d 0x%x\n", name, *value, value);
+		len = snprintf(text, MAXIMUM_CONFIG_LENGTH, "%s=%d\n", name, *value);
+		return fwrite(text, 1, len, fd);
+	}
+
+	void readData(const char *buffer) {
+		//printf("read: %s=%s 0x%x\n", name, buffer, value);
+		*value = atoi(buffer);
+		configureVideoParameter();
 	}
 };
 
@@ -116,6 +143,14 @@ extern "C" {
 									ConfigurationTextItem *item;
 
 									item = (ConfigurationTextItem *) * i;
+									item->readData(val);
+								}
+								break;
+							case CLASS_CONFIG_VIDEO:
+								{
+									ConfigurationVideoModeItem *item;
+
+									item = (ConfigurationVideoModeItem *) * i;
 									item->readData(val);
 								}
 								break;
@@ -245,6 +280,14 @@ extern "C" {
 						item->writeData(fd);
 					}
 					break;
+				case CLASS_CONFIG_VIDEO:
+					{
+						ConfigurationVideoModeItem *item;
+
+						item = (ConfigurationVideoModeItem *) * i;
+						item->writeData(fd);
+					}
+					break;
 				default:
 					error_printf("Unsupported configuration type.");
 					break;
@@ -268,6 +311,16 @@ void addConfigCheckItem(const char *name, int *value)
 	ConfigurationCheckItem *item;
 
 	item = new ConfigurationCheckItem(name, value);
+	//printf("name %s value 0x%x\n", name, value);
+
+	addConfigurationItem((ConfigurationItem *) item);
+}
+
+void addConfigVideoItem(const char *name, int *value)
+{
+	ConfigurationVideoModeItem *item;
+
+	item = new ConfigurationVideoModeItem(name, value);
 	//printf("name %s value 0x%x\n", name, value);
 
 	addConfigurationItem((ConfigurationItem *) item);

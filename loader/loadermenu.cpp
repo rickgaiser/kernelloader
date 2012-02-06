@@ -42,6 +42,12 @@ typedef struct {
 	char name[MAX_FILE_LEN];
 } fsDirParam_t;
 
+typedef struct {
+	const char *commandline;
+	char *text;
+	int size;
+	const char *param;
+} kernel_param_t;
 
 static fsDirParam_t fsDirParam[MAX_ENTRIES];
 
@@ -275,18 +281,22 @@ static const char *sbiosDescription[] = {
 int numberOfSbiosCalls = sizeof(sbiosDescription) / sizeof(const char *);
 
 /** Default Linux parameter for PAL mode. */
-const char commandline_pal[] = "crtmode=pal xmode=PAL ramdisk_size=16384";
+const char commandline_pal[] = "crtmode=pal xmode=PAL video=ps2fb:pal,640x480-32";
 /** Default Linux parameter for NTSC mode. */
-const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC ramdisk_size=16384";
+const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC video=ps2fb:ntsc,640x448-32";
 /** Default Linux parameter for VGA mode. */
-const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 ramdisk_size=16384";
-const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 ramdisk_size=16384";
-const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 ramdisk_size=16384";
-const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 ramdisk_size=16384";
+const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@60";
+const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@72";
+const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@75";
+const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@85";
 /** Default Linux parameter for HDTV mode. */
-const char commandline_dtv[] = "crtmode=dtv0 xmode=dtv,480p ramdisk_size=16384";
+const char commandline_dtv[] = "crtmode=dtv0 xmode=dtv,480p video=ps2fb:dtv,720x480-32";
+/** Default kernel parameter for ramdisk. */
+const char commandline_ramdisk[] = "ramdisk_size=16384";
 
 char kernelParameter[MAX_INPUT_LEN];
+char videoParameter[MAX_INPUT_LEN];
+char fullKernelParameter[sizeof(kernelParameter) + sizeof(videoParameter)];
 
 char pcicType[MAX_INPUT_LEN];
 
@@ -295,6 +305,34 @@ static char myIP[MAX_INPUT_LEN];
 static char netmask[MAX_INPUT_LEN];
 static char gatewayIP[MAX_INPUT_LEN];
 static char dnsIP[MAX_INPUT_LEN];
+
+static kernel_param_t hda1Config = {
+	"root=/dev/hda1",
+	kernelParameter,
+	sizeof(kernelParameter),
+	NULL,
+};
+
+static kernel_param_t hda2Config = {
+	"root=/dev/hda2",
+	kernelParameter,
+	sizeof(kernelParameter),
+	NULL,
+};
+
+static kernel_param_t hda3Config = {
+	"root=/dev/hda2",
+	kernelParameter,
+	sizeof(kernelParameter),
+	NULL,
+};
+
+static kernel_param_t nfsConfig = {
+	"ip=dhcp root=/dev/nfs nfsroot=%s:/ps2root,tcp",
+	kernelParameter,
+	sizeof(kernelParameter),
+	gatewayIP,
+};
 
 /** Parameter for IOP reset. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
@@ -691,7 +729,7 @@ int editString(void *arg)
 	return 0;
 }
 
-void setDefaultKernelParameter(char *text)
+void setDefaultVideoParameter(char *text)
 {
 	switch(getCurrentMode()) {
 	case GS_MODE_VGA_640_60:
@@ -728,11 +766,43 @@ void setDefaultKernelParameter(char *text)
 	}
 }
 
+extern "C" {
+	void configureVideoParameter(void)
+	{
+		setDefaultVideoParameter(videoParameter);
+	}
+}
+
+void setDefaultKernelParameter(char *text)
+{
+	strcpy(text, commandline_ramdisk);
+}
+
 int setDefaultKernelParameterMenu(void *arg)
 {
 	char *text = (char *) arg;
 
 	setDefaultKernelParameter(text);
+	editString(text);
+
+	return 0;
+}
+
+int setParameterMenu(void *arg)
+{
+	kernel_param_t *param = (kernel_param_t *) arg;
+
+	snprintf(param->text, param->size, param->commandline, param->param);
+	editString(param->text);
+
+	return 0;
+}
+
+int setDefaultVideoParameterMenu(void *arg)
+{
+	char *text = (char *) arg;
+
+	setDefaultVideoParameter(text);
 	editString(text);
 
 	return 0;
@@ -749,7 +819,7 @@ int setDefaultConfiguration(void *arg)
 
 	(void) arg;
 
-	setDefaultKernelParameter(kernelParameter);
+	setDefaultVideoParameter(videoParameter);
 	strcpy(myIP, "192.168.0.10");
 	strcpy(netmask, "255.255.255.0");
 	strcpy(gatewayIP, "192.168.0.1");
@@ -859,8 +929,10 @@ void initMenu(Menu *menu)
 	int i;
 
 	setDefaultConfiguration(NULL);
+	setDefaultKernelParameter(kernelParameter);
 
 	addConfigTextItem("KernelParameter", kernelParameter, MAX_INPUT_LEN);
+	addConfigTextItem("VideoParameter", videoParameter, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkMyIP", myIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkNetmask", netmask, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkGatewayIP", gatewayIP, MAX_INPUT_LEN);
@@ -1065,10 +1137,15 @@ void initMenu(Menu *menu)
 
 	/* Config menu */
 	Menu *configMenu = menu->addSubMenu("Configuration Menu");
-
 	configMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	configMenu->addItem("Edit Kernel Parameter", editString, kernelParameter);
-	configMenu->addItem("Default Kernel Parameter", setDefaultKernelParameterMenu, kernelParameter);
+	configMenu->addItem(" Set to initrd", setDefaultKernelParameterMenu, kernelParameter);
+	configMenu->addItem(" Set to hda1", setParameterMenu, &hda1Config);
+	configMenu->addItem(" Set to hda2", setParameterMenu, &hda2Config);
+	configMenu->addItem(" Set to hda3", setParameterMenu, &hda3Config);
+	configMenu->addItem(" Set to nfs", setParameterMenu, &nfsConfig);
+	configMenu->addItem("Edit Video Parameter", editString, videoParameter);
+	configMenu->addItem(" Set to current mode", setDefaultVideoParameterMenu, videoParameter);
 	configMenu->addItem("Edit PCIC Type", editString, pcicType);
 
 	/* Module Menu */
@@ -1234,7 +1311,13 @@ extern "C" {
 
 	char *getKernelParameter(void)
 	{
-		return kernelParameter;
+		int n;
+		strcpy(fullKernelParameter, kernelParameter);
+		n = strlen(fullKernelParameter);
+		fullKernelParameter[n] = ' ';
+		n++;
+		strcpy(&fullKernelParameter[n], videoParameter);
+		return fullKernelParameter;
 	}
 
 	const char *getPS2MAPParameter(int *len) {

@@ -22,5 +22,6 @@ void saveConfiguration(const char *configfile);
 #endif
 void addConfigTextItem(const char *name, char *value, int maxlen);
 void addConfigCheckItem(const char *name, int *value);
+void addConfigVideoItem(const char *name, int *value);
 
 #endif

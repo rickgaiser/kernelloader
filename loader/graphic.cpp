@@ -584,7 +584,11 @@ bool isNTSCMode(void)
 
 int getCurrentMode(void)
 {
+#if 0
 	return gsGlobal->Mode;
+#else
+	return modeList[currentMode];
+#endif
 }
 
 /**
@@ -595,7 +599,7 @@ Menu *graphic_main(void)
 	int i;
 	int numberOfMenuItems;
 
-	addConfigCheckItem("videomode", &currentMode);
+	addConfigVideoItem("videomode", &currentMode);
 
 	gsGlobal = gsKit_init_global();
 

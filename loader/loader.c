@@ -1872,7 +1872,7 @@ static int real_loader(void)
 	char *sbios = NULL;
 	struct ps2_bootinfo *bootinfo = (struct ps2_bootinfo *) PS2_BOOTINFO_OLDADDR;
 	register int sp asm("sp");
-	static char commandline[MAX_INPUT_LEN] = "";
+	static char commandline[2 * MAX_INPUT_LEN] = "";
 	uint32_t *patch;
 	uint32_t iopaddr;
 	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;

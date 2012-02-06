@@ -12,6 +12,7 @@ void initMenu(Menu *menu);
 extern "C" {
 #endif
 int setDefaultConfiguration(void *arg);
+void configureVideoParameter(void);
 #ifdef __cplusplus
 }
 #endif
