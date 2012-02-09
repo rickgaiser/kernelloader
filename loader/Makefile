@@ -48,6 +48,9 @@ endif
 ifeq ($(SBIOS_DEBUG),yes)
 EE_CFLAGS += -DSBIOS_DEBUG
 endif
+ifeq ($(PAD_MOVE_SCREEN),yes)
+EE_CFLAGS += -DPAD_MOVE_SCREEN
+endif
 EE_OBJS += $(addsuffix .o, $(subst .,_,$(ROM_FILES)))
 EE_LIBS += -lz
 

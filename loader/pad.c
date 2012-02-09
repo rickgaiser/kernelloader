@@ -229,6 +229,7 @@ int readPad(int port)
 
 		paddata = 0xffff ^ buttons.btns;
 
+#ifdef PAD_MOVE_SCREEN
 		/* Change screen position with left analog stick. */
 		if (buttons.ljoy_h >= 0xbf) {
 			d = (buttons.ljoy_h - 0xbf) / 0x10;
@@ -250,6 +251,7 @@ int readPad(int port)
 			d--;
 			moveScreen(0, d);
 		}
+#endif
 
 		return paddata;
 	} else

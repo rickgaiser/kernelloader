@@ -29,6 +29,8 @@ SCREENSHOT = yes
 # Activate debug for SBIOS (has only effect with shared memory debug or callback debug).
 SBIOS_DEBUG = no
 
+# Activate to be able to move the screen with the analog stick.
+PAD_MOVE_SCREEN = yes
 
 ### Don't change the following part, change DEBUG_OUTPUT_TYPE instead.
 
