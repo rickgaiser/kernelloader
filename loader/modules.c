@@ -19,6 +19,7 @@
 #include "SMS_CDDA.h"
 #include "graphic.h"
 #include "loadermenu.h"
+#include "nvram.h"
 
 #ifdef NEW_ROM_MODULES
 #define MODPREFIX "X"
@@ -55,6 +56,8 @@ typedef struct
 	int network;
 } moduleLoaderEntry_t;
 
+
+static char eromdrvpath[] = "rom1:EROMDRVE";
 
 static moduleLoaderEntry_t moduleList[] = {
 #if defined(IOP_RESET) && !defined(PS2LINK)
@@ -416,6 +419,33 @@ int loadLoaderModules(void)
 		}
 		if (rv < 0) {
 			if ((moduleList[i].sms_mod == 0) || (isDVDVSupported())) {
+				if (moduleList[i].eromdrv != 0) {
+					rv = open("rom1:EROMDRV", O_RDONLY);
+					if (rv >=0 ) {
+						eromdrvpath[12] = 0;
+
+						/* This is an old fat PS2 (working with SCPH-50004 and SCPH-39004). */
+						close(rv);
+					} else {
+						const u8 *nvm;
+
+						nvm = get_nvram();
+						if (nvm[NVM_FAKE_REGION] == version[4]) {
+							/* NVM layout seems to be correct. */
+							eromdrvpath[12] = nvm[NVM_REAL_REGION];
+							rv = open(eromdrvpath, O_RDONLY);
+							if (rv >=0 ) {
+								/* Region code seems to be correct. */
+								close(rv);
+							} else {
+								error_printf("Can't find driver for DVD video: \"%s\".", eromdrvpath);
+								continue;
+							}
+						}
+					}
+					moduleList[i].args = get_eromdrvpath();
+					moduleList[i].argLen = strlen(moduleList[i].args) + 1;
+				}
 				romfile = rom_getFile(moduleList[i].path);
 				if (romfile != NULL) {
 					int ret;
@@ -428,11 +458,19 @@ int loadLoaderModules(void)
 					rv = SifLoadModule(moduleList[i].path, moduleList[i].argLen, moduleList[i].args);
 				}
 				if (rv < 0) {
-					printf("Failed to load module \"%s\".", moduleList[i].path);
+					if (moduleList[i].eromdrv != 0) {
+						printf("Failed to load module \"%s\".\n", get_eromdrvpath());
+					} else {
+						printf("Failed to load module \"%s\".\n", moduleList[i].path);
+					}
 					if (moduleList[i].ps2smap && !isSlimPSTwo()) {
 						network_support = 0;
 					} else {
-						error_printf("Failed to load module \"%s\".", moduleList[i].path);
+						if (moduleList[i].eromdrv != 0) {
+							error_printf("Failed to load module \"%s\".", get_eromdrvpath());
+						} else {
+							error_printf("Failed to load module \"%s\".", moduleList[i].path);
+						}
 					}
 				} else {
 					if (moduleList[i].eromdrv != 0) {
@@ -492,3 +530,9 @@ int loadLoaderModules(void)
 
 	return 0;
 }
+
+const char *get_eromdrvpath(void)
+{
+	return eromdrvpath;
+}
+

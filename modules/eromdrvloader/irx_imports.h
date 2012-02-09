@@ -13,7 +13,6 @@
 
 /* Please keep these in alphabetical order!  */
 #include "modload_ext.h"
-#include "cdvdman_ext.h"
 
 
 #endif /* IOP_IRX_IMPORTS_H */

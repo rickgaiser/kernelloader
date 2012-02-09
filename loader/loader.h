@@ -43,6 +43,8 @@ extern "C" {
 		int sound;
 		/** -1, if module needs network, 0 otherwise. */
 		int network;
+		/** True, if module is responsible eromdrv. */
+		int eromdrv;
 	} moduleEntry_t;
 
 	typedef struct {

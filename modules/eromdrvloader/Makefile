@@ -7,7 +7,7 @@ all: $(IOP_BIN)
 	cp $(IOP_BIN) ../../loader
 
 test: all
-	ps2client -h 192.168.0.23 execiop host:$(IOP_BIN)
+	ps2client -h 192.168.0.23 execiop host:$(IOP_BIN) rom1:EROMDRV
 
 reset:
 	ps2client -h 192.168.0.23 reset

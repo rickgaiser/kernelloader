@@ -80,3 +80,8 @@ void nvram_init(void)
 	printf("PS2 Console type: %s\n", ps2_console_type);
 	snprintf(ps2_region_type, sizeof(ps2_region_type), "0x%02x 0x%02x (%d NVM errors)", nvm[off->fake_region], nvm[off->real_region], errors);
 }
+
+u8 *get_nvram(void)
+{
+	return nvm;
+}

@@ -120,6 +120,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.eromdrv = 1,
 	},
 	{
 #ifdef RTE
@@ -1413,6 +1414,10 @@ void startModules(struct ps2_bootinfo *bootinfo)
 	for (i = 0; i < getNumberOfModules(); i++)
 	{
 		if (modules[i].load) {
+			if (modules[i].eromdrv) {
+				modules[i].args = get_eromdrvpath();
+				modules[i].argLen = strlen(modules[i].args) + 1;
+			}
 			if (modules[i].network) {
 				if (!hasNetworkSupport()) {
 					/* Network not working. */

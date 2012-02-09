@@ -9,6 +9,9 @@
 - Devided kernel parameters into video parameters and other
   kernel parameters in menu.
 - Support video parameters for framebuffer driver of Linux2.6
+- Fix detecting of console region on v12/v13 SCPH-7000x. This
+  should fix DVD video support on these consoles. This is
+  needed to get the Live DVD working.
 
 2.4
 - Add support for 64 bit kernels.
