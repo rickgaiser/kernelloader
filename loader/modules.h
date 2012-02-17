@@ -5,7 +5,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int loadLoaderModules(void);
+int loadLoaderModules(int debug_mode);
 int isSlimPSTwo(void);
 int isDVDVSupported(void);
 void checkROMVersion(void);

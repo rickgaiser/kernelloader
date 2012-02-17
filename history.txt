@@ -26,6 +26,8 @@
   and switching can confuse the user.
 - The screen was scrolling away in loader when there was no game pad
   connected to port 0. Fixed detecting of game pads.
+- Add parameter "-d" for kernelloader. This enables loading of
+  ps2link for debugging purpose.
 
 2.4
 - Add support for 64 bit kernels.

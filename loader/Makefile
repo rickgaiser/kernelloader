@@ -19,13 +19,6 @@ ifeq ($(SHARED_MEM_DEBUG),yes)
 EE_FLAGS += -DSHARED_MEM_DEBUG -DUSER_SPACE_SUPPORT=1
 EE_OBJS += iopmem.o
 endif
-ifeq ($(LOAD_PS2LINK),yes)
-EE_FLAGS += -DPS2LINK
-endif
-ifeq ($(LOAD_NAPLINK),yes)
-EE_FLAGS += -DNAPLINK
-ROM_FILES += $(NAPLINK_MODULES)
-endif
 ifeq ($(RESET_IOP),yes)
 EE_FLAGS += -DRESET_IOP
 endif
@@ -86,10 +79,6 @@ MODULES = \
 	smaprpc.irx \
 	dev9init.irx
 
-NAPLINK_MODULES += \
-	npm-usbd.irx \
-	npm-2301.irx
-
 ROM_FILES += $(MODULES) \
 	SMSUTILS.irx \
 	SMSCDVD.irx \
@@ -142,14 +131,14 @@ $(PACKEDFILE): $(EE_BIN)
 $(MODULES):
 	for file in $@; do install -m 644 $(PS2SDK)/iop/irx/$$file $$file; done
 
-$(NAPLINK_MODULES):
-	for file in $(NAPLINK_MODULES); do cp $(NAPLINK_PATH)/$$file .; done
-
 rom.o: rom.c romfilelist.h romdefinitions.h rominitialize.h
 
 test: all
-	#ps2client -h $(TARGET_IP) execee host:$(PROGRAM).elf
+ifeq ($(LOAD_PS2LINK),yes)
+	ps2client -h $(TARGET_IP) execee host:$(PACKEDFILE) -d
+else
 	ps2client -h $(TARGET_IP) execee host:$(PACKEDFILE)
+endif
 
 reset: $(PROGRAM).elf
 	ps2client -h $(TARGET_IP) reset

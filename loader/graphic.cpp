@@ -333,12 +333,6 @@ void graphic_common(void)
 #ifdef RESET_IOP
 		"R"
 #endif
-#ifdef PS2LINK
-		"P"
-#endif
-#ifdef NAPLINK
-		"N"
-#endif
 #ifdef SCREENSHOT
 		"S"
 #endif

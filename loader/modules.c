@@ -54,17 +54,20 @@ typedef struct
 	int dns;
 	/** True, if module needs network. */
 	int network;
+	/** 1, if debug mode. 0, load always. -1, no debug mode */
+	int debug_mode;
 } moduleLoaderEntry_t;
 
 
 static char eromdrvpath[] = "rom1:EROMDRVE";
 
 static moduleLoaderEntry_t moduleList[] = {
-#if defined(IOP_RESET) && !defined(PS2LINK)
+#if defined(IOP_RESET)
 	{
 		.path = "eedebug.irx",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.debug_mode = -1,
 	},
 #endif
 	{
@@ -168,15 +171,14 @@ static moduleLoaderEntry_t moduleList[] = {
 		.ps2smap = 1,
 		.network = -1,
 	},
-#ifdef PS2LINK
 	{
 		.path = "ps2link.irx",
 		.argLen = 0,
 		.args = NULL,
 		.checkMc = -1,
 		.network = -1,
+		.debug_mode = 1,
 	},
-#endif
 #endif
 	{
 		.path = "dns.irx",
@@ -193,27 +195,12 @@ static moduleLoaderEntry_t moduleList[] = {
 		.checkMc = -1,
 		.network = -1,
 	},
-#ifdef NAPLINK
-	{
-		.path = "npm-usbd.irx",
-		.argLen = 0,
-		.args = NULL,
-		.checkMc = -1
-	},
-	{
-		.path = "npm-2301.irx",
-		.argLen = 0,
-		.args = NULL,
-		.checkMc = -1
-	},
-#else
 	{
 		.path = "usbd.irx",
 		.argLen = 0,
 		.args = NULL,
 		.checkMc = -1
 	},
-#endif
 	{
 		.path = "usb_mass.irx",
 		.argLen = 0,
@@ -342,7 +329,7 @@ void checkForMusicSupport(void)
 	}
 }
 
-int loadLoaderModules(void)
+int loadLoaderModules(int debug_mode)
 {
 	static int load_dvd_config = -1;
 	int i;
@@ -379,6 +366,12 @@ int loadLoaderModules(void)
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {
 		rom_entry_t *romfile;
+
+		if (moduleList[i].debug_mode != 0) {
+			if (moduleList[i].debug_mode != debug_mode) {
+				continue;
+			}
+		}
 
 		/* Load configuration when necessary modules are loaded. */
 		if (moduleList[i].loadCfg) {

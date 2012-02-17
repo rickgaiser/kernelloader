@@ -14,11 +14,7 @@ RESET_IOP = yes
 
 # Activate ps2link debug modules in kernelloader (has only effect when IOP
 # reset is done):
-LOAD_PS2LINK = no
-
-# Activate if started by naplink
-LOAD_NAPLINK = no
-NAPLINK_PATH = ../../naplink-ps2-v1.0.1a/cd/
+LOAD_PS2LINK = yes
 
 # Use new ROM modules in loader.
 NEW_ROM_MODULES = no

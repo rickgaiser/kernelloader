@@ -898,6 +898,8 @@ int setDefaultConfiguration(void *arg)
 
 int reloadModules(void *arg)
 {
+	extern int debug_mode;
+
 	(void) arg;
 
 	if (isDVDVSupported()) {
@@ -914,7 +916,7 @@ int reloadModules(void *arg)
 	/* Show disc symbol while start up. */
 	setEnableDisc(true);
 
-	loadLoaderModules();
+	loadLoaderModules(debug_mode);
 
 	setEnableDisc(false);
 
@@ -983,7 +985,7 @@ void initMenu(Menu *menu)
 		""
 	};
 	configFileMenu->addItem(cmc1Param.menuName, fsroot, (void *) &cmc1Param);
-#if !defined(RESET_IOP) || defined(PS2LINK) || defined(NAPLINK)
+#if !defined(RESET_IOP)
 	static fsRootParam_t chostParam = {
 		configfile,
 		fileMenu,
@@ -1047,7 +1049,7 @@ void initMenu(Menu *menu)
 		""
 	};
 	linuxMenu->addItem(kmc1Param.menuName, fsroot, (void *) &kmc1Param);
-#if !defined(RESET_IOP) || defined(PS2LINK) || defined(NAPLINK)
+#if !defined(RESET_IOP)
 	static fsRootParam_t khostParam = {
 		kernelFilename,
 		menu,
@@ -1111,7 +1113,7 @@ void initMenu(Menu *menu)
 		""
 	};
 	initrdMenu->addItem(mc1Param.menuName, fsroot, (void *) &mc1Param);
-#if !defined(RESET_IOP) || defined(PS2LINK)
+#if !defined(RESET_IOP)
 	static fsRootParam_t hostParam = {
 		initrdFilename,
 		menu,
@@ -1229,12 +1231,6 @@ void initMenu(Menu *menu)
 	static char kloader_version[] = LOADER_VERSION
 #ifdef RESET_IOP
 		" RESET_IOP"
-#endif
-#ifdef PS2LINK
-		" PS2LINK"
-#endif
-#ifdef NAPLINK
-		" NAPLINK"
 #endif
 #ifdef SCREENSHOT
 		" SCREENSHOT"

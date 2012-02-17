@@ -379,20 +379,6 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.network = -1,
 	},
-#ifdef NAPLINK
-	{
-		.path = "host:npm-usbd.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL,
-	},
-	{
-		.path = "host:npm-2301.irx",
-		.buffered = -1,
-		.argLen = 0,
-		.args = NULL,
-	},
-#endif
 	{
 		.path = "host:sharedmem.irx",
 		.buffered = -1,

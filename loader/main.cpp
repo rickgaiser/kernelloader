@@ -15,6 +15,8 @@
 #include "SMS_CDDA.h"
 #include "nvram.h"
 
+int debug_mode;
+
 /**
  * Entry point for loader.
  * @param argc unused.
@@ -32,8 +34,13 @@ int main(int argc, char **argv)
 	int i;
 	int refreshesPerSecond;
 
-	argc = argc;
-	argv = argv;
+	debug_mode = -1;
+	for (i = 0; i < argc; i++) {
+		if (strcmp(argv[i], "-d") == 0) {
+			/* Enter debug mode, activate ps2link. */
+			debug_mode = 1;
+		}
+	}
 
 	/* Disable debug output at startup. */
 	loaderConfig.enableEEDebug = 0;
@@ -55,7 +62,7 @@ int main(int argc, char **argv)
 
 	nvram_init();
 
-	loadLoaderModules();
+	loadLoaderModules(debug_mode);
 
 	setEnableDisc(false);
 
@@ -69,6 +76,10 @@ int main(int argc, char **argv)
 	old_pad = 0;
 
 	refreshesPerSecond = getModeFrequenzy();
+	printf("argc %d\n", argc);
+	for (i = 0; i < argc; i++) {
+		printf("argv[%d] = %s\n", i, argv[i]);
+	}
 
 	if (loaderConfig.autoBootTime > 0) {
 		int refreshCounter = 0;
