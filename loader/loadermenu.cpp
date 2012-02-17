@@ -285,10 +285,10 @@ const char commandline_pal[] = "crtmode=pal xmode=PAL video=ps2fb:pal,640x480-32
 /** Default Linux parameter for NTSC mode. */
 const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC video=ps2fb:ntsc,640x448-32";
 /** Default Linux parameter for VGA mode. */
-const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@60";
-const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@72";
-const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@75";
-const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-32@85";
+const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@60";
+const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@72";
+const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@75";
+const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@85";
 /** Default Linux parameter for HDTV mode. */
 const char commandline_dtv[] = "crtmode=dtv0 xmode=dtv,480p video=ps2fb:dtv,720x480-32";
 /** Default kernel parameter for ramdisk. */
