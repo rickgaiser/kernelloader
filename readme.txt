@@ -31,6 +31,17 @@ is started, you can switch the video mode using the L2 and R2 buttons
 on the first pad. After a mode change, you should go to the file menu
 and restore defaults, because this will automatically set the kernel
 parameter accordingly.
+The "+" and "-" keys on the keyboard also switch the video mode when
+the focus is not in a input field.
+The following function keys switch the screen mode:
+  F1: Auto detect
+  F2: VGA 640x480 60Hz
+  F3: VGA 640x480 72Hz
+  F4: VGA 640x480 75Hz
+  F5: VGA 640x480 85Hz
+  F6: DTV 480P
+  F7: NTSC
+  F8: PAL
 
 Auto-Boot
 #########

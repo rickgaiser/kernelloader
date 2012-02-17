@@ -12,6 +12,18 @@
 - Fix detecting of console region on v12/v13 SCPH-7000x. This
   should fix DVD video support on these consoles. This is
   needed to get the Live DVD working.
+- Added mode setting by function keys:
+  F1: Auto detect
+  F2: VGA 640x480 60Hz
+  F3: VGA 640x480 72Hz
+  F4: VGA 640x480 75Hz
+  F5: VGA 640x480 85Hz
+  F6: DTV 480P
+  F7: NTSC
+  F8: PAL
+- Disabled switching of screen mode with keys "+" and "-" in
+  input fields, because the keys can be used as kernel parameters
+  and switching can confuse the user.
 
 2.4
 - Add support for 64 bit kernels.

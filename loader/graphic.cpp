@@ -699,6 +699,13 @@ void decrementMode(void)
 	}
 }
 
+void setMode(int mode)
+{
+	if (mode < (sizeof(modeList)/sizeof(modeList[0]))) {
+		currentMode = mode;
+	}
+}
+
 int getModeFrequenzy(void)
 {
 	return frequenzy[currentMode];

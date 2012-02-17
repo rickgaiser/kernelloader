@@ -11,6 +11,7 @@
 Menu *graphic_main(void);
 void incrementMode(void);
 void decrementMode(void);
+void setMode(int mode);
 int getModeFrequenzy(void);
 void graphic_paint(void);
 void graphic_auto_boot_paint(int time);

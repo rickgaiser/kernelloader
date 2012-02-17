@@ -115,17 +115,31 @@ int main(int argc, char **argv)
 	}
 	do {
 		char key;
+		int written;
 
 		graphic_paint();
 		paddata = readPad(0);
 		new_pad = paddata & ~old_pad;
 		old_pad = paddata;
+		written = 0;
 
 		if (PS2KbdRead(&key) > 0) {
 			switch(key) {
 				case 27:
 					if (PS2KbdRead(&key) > 0) {
 						switch(key) {
+							case 1:
+							case 2:
+							case 3:
+							case 4:
+							case 5:
+							case 6:
+							case 7:
+							case 8:
+								setMode(key - 1);
+								changeMode();
+								refreshesPerSecond = getModeFrequenzy();
+								break;
 							case 41:
 								new_pad |= PAD_RIGHT;
 								break;
@@ -147,12 +161,6 @@ int main(int argc, char **argv)
 					break;
 				case 10:
 					new_pad |= PAD_CROSS;
-					break;
-				case '+':
-					new_pad |= PAD_R2;
-					break;
-				case '-':
-					new_pad |= PAD_L2;
 					break;
 				default:
 					//info_printf("Key %d \"%c\"\n", key, key);
@@ -208,6 +216,8 @@ int main(int argc, char **argv)
 					} else {
 						if (isWriteable()) {
 							int pos;
+
+							written = 1;
 							pos = strlen(buffer);
 							if (key == 7) {
 								pos--;
@@ -261,6 +271,18 @@ int main(int argc, char **argv)
 				}
 			}
 		}
+		if (!written) {
+			if (key == '+') {
+				incrementMode();
+				changeMode();
+				refreshesPerSecond = getModeFrequenzy();
+			} else if (key == '-') {
+				decrementMode();
+				changeMode();
+				refreshesPerSecond = getModeFrequenzy();
+			}
+		}
+
 	} while (1);
 
 	/* not reached! */
