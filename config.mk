@@ -14,7 +14,7 @@ RESET_IOP = yes
 
 # Activate ps2link debug modules in kernelloader (has only effect when IOP
 # reset is done):
-LOAD_PS2LINK = yes
+LOAD_PS2LINK = no
 
 # Use new ROM modules in loader.
 NEW_ROM_MODULES = no
