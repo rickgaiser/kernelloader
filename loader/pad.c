@@ -131,8 +131,7 @@ int initializePad(int port, int slot)
 	// (it has no actuator engines)
 	if (modes == 0) {
 		printf("This is a digital controller?\n");
-		padInitialized[port] = -1;
-		return 1;
+		return 0;
 	}
 	// Verify that the controller has a DUAL SHOCK mode
 	i = 0;

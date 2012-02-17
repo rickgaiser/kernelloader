@@ -24,6 +24,8 @@
 - Disabled switching of screen mode with keys "+" and "-" in
   input fields, because the keys can be used as kernel parameters
   and switching can confuse the user.
+- The screen was scrolling away in loader when there was no game pad
+  connected to port 0. Fixed detecting of game pads.
 
 2.4
 - Add support for 64 bit kernels.
