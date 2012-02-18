@@ -28,6 +28,8 @@
   connected to port 0. Fixed detecting of game pads.
 - Add parameter "-d" for kernelloader. This enables loading of
   ps2link for debugging purpose.
+- Show blinking cursor in input fields.
+- Set scroll position to 0 when input field is opened.
 
 2.4
 - Add support for 64 bit kernels.

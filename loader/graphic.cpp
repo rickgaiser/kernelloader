@@ -246,10 +246,11 @@ static int infoBufferPos = 0;
 
 static char *inputBuffer = NULL;
 static int writeable = 0;
+static int cursor_counter = 0;
 
-int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const char *msg, int scrollPos)
+int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const char *msg, int scrollPos, int cursor)
 {
-	char lineBuffer[maxCharsPerLine];
+	char lineBuffer[maxCharsPerLine + 1]; /* + 1 for cursor */
 	int i;
 	int pos;
 	int lastSpace;
@@ -260,22 +261,14 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 	lineNo = 0;
 	do {
 		i = 0;
-		lastSpace = 0;
+		lastSpace = -1;
 		lastSpacePos = 0;
 		while (i < maxCharsPerLine) {
 			lineBuffer[i] = msg[pos];
 			if (msg[pos] == 0) {
 				lastSpace = i;
 				lastSpacePos = pos;
-				i++;
 				break;
-			}
-			if (msg[pos] == ' ') {
-				lastSpace = i;
-				lastSpacePos = pos + 1;
-				if (i != 0) {
-					i++;
-				}
 			} else if (msg[pos] == '\r') {
 				lineBuffer[i] = 0;
 				lastSpace = i;
@@ -286,17 +279,40 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 				lastSpacePos = pos + 1;
 				pos++;
 				break;
+			}
+			if (i >= (maxCharsPerLine - 1)) {
+				if (msg[pos] == ' ') {
+					/* Last character is a space, show it at the beginning of the next line. */
+					lastSpace = i;
+					lastSpacePos = pos;
+				}
+				break;
+			}
+			if (msg[pos] == ' ') {
+				/* Current character is a space. */
+				lastSpace = i;
+				lastSpacePos = pos + 1;
+				i++;
+			} else if (msg[pos] == '\r') {
+				/* ignore */
 			} else {
 				i++;
 			}
 			pos++;
 		}
-		if (lastSpace != 0) {
+		if (lastSpace >= 0) {
 			pos = lastSpacePos;
 		} else {
+			/* No whitespace in current line, cut off at last character in line. */
 			lastSpace = i;
 		}
 		lineBuffer[lastSpace] = 0;
+		if (msg[pos] == 0) {
+			if (cursor) {
+				lineBuffer[lastSpace] = '_';
+				lineBuffer[lastSpace + 1] = 0;
+			}
+		}
 
 		if (lineNo >= scrollPos) {
 #if 0
@@ -406,13 +422,13 @@ void graphic_paint(void)
 	if (msg != NULL) {
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 170, 3, scale, TexRed,
 			"Error Message:");
-		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0);
+		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0, 0);
 	} else {
 		if (!isInfoBufferEmpty()) {
-			scrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos);
+			scrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos, 0);
 		} else {
 			if (inputBuffer != NULL) {
-				inputScrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos);
+				inputScrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos, writeable && (cursor_counter < (getModeFrequenzy()/2)));
 			} else if (menu != NULL) {
 				menu->paint();
 			}
@@ -460,6 +476,11 @@ void graphic_paint(void)
 	}
 	gsKit_queue_exec(gsGlobal);
 	gsKit_sync_flip(gsGlobal);
+
+	cursor_counter++;
+	if (cursor_counter >= getModeFrequenzy()) {
+		cursor_counter = 0;
+	}
 }
 
 extern "C" {
@@ -928,6 +949,8 @@ extern "C" {
 
 	void setInputBuffer(char *buffer, int w)
 	{
+		scrollPos = 0;
+		inputScrollPos = 0;
 		inputBuffer = buffer;
 		writeable = w;
 	}
