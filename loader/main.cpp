@@ -15,6 +15,31 @@
 #include "SMS_CDDA.h"
 #include "nvram.h"
 
+#define KEY_F1 1
+#define KEY_F2 2
+#define KEY_F3 3
+#define KEY_F4 4
+#define KEY_F5 5
+#define KEY_F6 6
+#define KEY_F7 7
+#define KEY_F8 8
+#define KEY_F9 9
+#define KEY_F10 10
+#define KEY_F11 11
+#define KEY_F12 12
+#define KEY_PRINT_SCREEN 32
+#define KEY_PAGE_UP 37
+#define KEY_PAGE_DOWN 40
+#define KEY_DELETE 38
+#define KEY_HOME 36
+#define KEY_END 39
+#define KEY_BREAK 34
+#define KEY_ESCAPE 27
+#define KEY_RIGHT 41
+#define KEY_LEFT 42
+#define KEY_DOWN 43
+#define KEY_UP 44
+
 int debug_mode;
 
 /**
@@ -33,6 +58,7 @@ int main(int argc, char **argv)
 	const char *errorMessage = NULL;
 	int i;
 	int refreshesPerSecond;
+	int emulatedKey;
 
 	debug_mode = -1;
 	for (i = 0; i < argc; i++) {
@@ -124,47 +150,51 @@ int main(int argc, char **argv)
 		} while (true);
 		old_pad = paddata;
 	}
+	emulatedKey = ' ';
 	do {
 		char key;
 		int written;
+		int functionKey;
 
 		graphic_paint();
 		paddata = readPad(0);
 		new_pad = paddata & ~old_pad;
 		old_pad = paddata;
 		written = 0;
+		functionKey = -1;
 
 		if (PS2KbdRead(&key) > 0) {
 			switch(key) {
 				case 27:
 					if (PS2KbdRead(&key) > 0) {
-						switch(key) {
-							case 1:
-							case 2:
-							case 3:
-							case 4:
-							case 5:
-							case 6:
-							case 7:
-							case 8:
-								setMode(key - 1);
+						functionKey = key;
+						switch(functionKey) {
+							case KEY_F1:
+							case KEY_F2:
+							case KEY_F3:
+							case KEY_F4:
+							case KEY_F5:
+							case KEY_F6:
+							case KEY_F7:
+							case KEY_F8:
+								setMode(functionKey - KEY_F1);
 								changeMode();
 								refreshesPerSecond = getModeFrequenzy();
 								break;
-							case 41:
+							case KEY_RIGHT:
 								new_pad |= PAD_RIGHT;
 								break;
-							case 42:
+							case KEY_LEFT:
 								new_pad |= PAD_LEFT;
 								break;
-							case 43:
+							case KEY_DOWN:
 								new_pad |= PAD_DOWN;
 								break;
-							case 44:
+							case KEY_UP:
 								new_pad |= PAD_UP;
 								break;
 							default:
-								//info_printf("ESC Key %d \"%c\"\n", key, key);
+								//info_printf("ESC Key %d \"%c\"\n", functionKey, functionKey);
 								break;
 						}
 					}
@@ -181,7 +211,7 @@ int main(int argc, char **argv)
 			key = 0;
 		}
 #ifdef SCREENSHOT
-		if (new_pad & PAD_R1) {
+		if ((new_pad & PAD_R3) || (functionKey == KEY_PRINT_SCREEN)) {
 			graphic_screenshot();
 		}
 #endif
@@ -218,8 +248,20 @@ int main(int argc, char **argv)
 					} else if (new_pad & PAD_UP) {
 						scrollUp();
 					} else if (new_pad & PAD_LEFT) {
-						scrollUpFast();
+						if (isWriteable()) {
+							decCursorPos();
+						} else {
+							scrollUpFast();
+						}
 					} else if (new_pad & PAD_RIGHT) {
+						if (isWriteable()) {
+							incCursorPos();
+						} else {
+							scrollDownFast();
+						}
+					} else if (functionKey == KEY_PAGE_UP) {
+						scrollUpFast();
+					} else if (functionKey == KEY_PAGE_DOWN) {
 						scrollDownFast();
 					}
 					if (new_pad & PAD_CROSS) {
@@ -227,18 +269,60 @@ int main(int argc, char **argv)
 					} else {
 						if (isWriteable()) {
 							int pos;
+							int len;
+							char *c;
 
 							written = 1;
-							pos = strlen(buffer);
-							if (key == 7) {
-								pos--;
-								if (pos >= 0) {
-									buffer[pos] = 0;
+							len = strlen(buffer);
+							pos = getCursorPos();
+							if (new_pad & PAD_TRIANGLE) {
+								key = emulatedKey;
+							} else if (new_pad & PAD_R1) {
+								emulatedKey++;
+								if (emulatedKey > 0x7E) {
+									emulatedKey = 0x20;
 								}
+								setEmulatedKey(emulatedKey);
+							} else if (new_pad & PAD_L1) {
+								emulatedKey--;
+								if (emulatedKey < 0x20) {
+									emulatedKey = 0x7E;
+								}
+								setEmulatedKey(emulatedKey);
+							} else if (new_pad & PAD_CIRCLE) {
+								emulatedKey += 0x10;
+								if (emulatedKey > 0x7E) {
+									emulatedKey -= 0x7E - 0x20;
+								}
+								setEmulatedKey(emulatedKey);
+							}
+							if ((new_pad & PAD_SQUARE) || (key == 7)) {
+								/* Delete character left to cursor. */
+								if (pos > 0) {
+									for (c = &buffer[pos - 1]; c[0] != 0; c++) {
+										c[0] = c[1];
+									}
+									decCursorPos();
+								}
+							} else if (functionKey == KEY_DELETE) {
+								/* Delete character right to cursor. */
+								if (pos >= 0) {
+									for (c = &buffer[pos]; c[0] != 0; c++) {
+										c[0] = c[1];
+									}
+								}
+							} else if ((functionKey == KEY_HOME) || (new_pad & PAD_START)) {
+								homeCursorPos();
+							} else if ((functionKey == KEY_END) || (new_pad & PAD_SELECT)) {
+								endCursorPos();
 							} else if (key != 0) {
-								if (pos < (MAX_INPUT_LEN - 1)) {
+								/* Get input from keyboard. */
+								if (len < (MAX_INPUT_LEN - 1)) {
+									for (c = &buffer[len + 1]; c >= &buffer[pos]; c--) {
+										c[1] = c[0];
+									}
 									buffer[pos] = key;
-									buffer[pos + 1] = 0;
+									incCursorPos();
 								}
 							}
 						}
@@ -273,9 +357,9 @@ int main(int argc, char **argv)
 					scrollDown();
 				} else if (new_pad & PAD_UP) {
 					scrollUp();
-				} else if (new_pad & PAD_LEFT) {
+				} else if ((new_pad & PAD_LEFT) || (functionKey == KEY_PAGE_UP)) {
 					scrollUpFast();
-				} else if (new_pad & PAD_RIGHT) {
+				} else if ((new_pad & PAD_RIGHT) || (functionKey == KEY_PAGE_DOWN)) {
 					scrollDownFast();
 				} else if (new_pad & PAD_CROSS) {
 					clearInfoBuffer();

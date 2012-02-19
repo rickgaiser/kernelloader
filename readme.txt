@@ -21,6 +21,26 @@ http://sourceforge.net/projects/kernelloader/files/Initial%20RAM%20Disc/
 You can copy the files to an USB stick and then select the files in the
 menu ("Select Kernel" -> vmlinux, "Select RAM disc" -> initrd).
 
+Virtual Keyboard
+################
+The input fields in kernelloader supports a virtual keyboard. The virtual
+keyboard is controlled by the game pad. This allows to enter kernel
+parameter with the game pad without an USB keyboard.
+The cursor is blinking. When it blinks it shows for a short time an
+underline sign and for the remaining time the character which will
+be inserted when pressing triangle. The default is the invisible
+space character. The buttons have the following functions:
+- The character is selected with R1 and L1.
+- The triangle button inserts the character. It can be inserted multiple
+  times.
+- Left and right moves the cursor left and right.
+- The square button deletes the character which is left to the cursor.
+- The circle button is for fast jumping in the character selection. This
+  is the same as pressing R1 for 16 times. You get from a capital letter
+  to lower case by pressing circle 2 times.
+- The start button jumps to the beginning of the text.
+- The select button jumps to the end of the string.
+
 Video Mode
 ##########
 The application use the default video mode configured for your PS2. The

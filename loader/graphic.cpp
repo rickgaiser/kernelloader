@@ -110,6 +110,8 @@ static int reservedEndOfDisplayY = 42;
 
 static bool usePad = false;
 
+static int emulatedKey = ' ';
+
 int scrollPos = 0;
 
 int inputScrollPos = 0;
@@ -247,8 +249,9 @@ static int infoBufferPos = 0;
 static char *inputBuffer = NULL;
 static int writeable = 0;
 static int cursor_counter = 0;
+static int cursorpos = 0;
 
-int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const char *msg, int scrollPos, int cursor)
+int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const char *msg, int scrollPos, int cursorpos, int cursor)
 {
 	char lineBuffer[maxCharsPerLine + 1]; /* + 1 for cursor */
 	int i;
@@ -256,6 +259,7 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 	int lastSpace;
 	int lastSpacePos;
 	int lineNo;
+	int insertCursorPos;
 
 	pos = 0;
 	lineNo = 0;
@@ -263,6 +267,12 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 		i = 0;
 		lastSpace = -1;
 		lastSpacePos = 0;
+		insertCursorPos = -1;
+		if (pos == cursorpos) {
+			if (pos == 0) {
+				insertCursorPos = i;
+			}
+		}
 		while (i < maxCharsPerLine) {
 			lineBuffer[i] = msg[pos];
 			if (msg[pos] == 0) {
@@ -299,6 +309,9 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 				i++;
 			}
 			pos++;
+			if (pos == cursorpos) {
+				insertCursorPos = i;
+			}
 		}
 		if (lastSpace >= 0) {
 			pos = lastSpacePos;
@@ -307,10 +320,19 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 			lastSpace = i;
 		}
 		lineBuffer[lastSpace] = 0;
-		if (msg[pos] == 0) {
+		if ((insertCursorPos >= 0) && (lastSpace >= insertCursorPos)) {
+			char *a;
+			char *c;
+
+			a = &lineBuffer[insertCursorPos + 1], 
+			c = &lineBuffer[lastSpace];
+			for (c = &lineBuffer[lastSpace]; c >= &lineBuffer[insertCursorPos]; c--) {
+				c[1] = c[0];
+			}
 			if (cursor) {
-				lineBuffer[lastSpace] = '_';
-				lineBuffer[lastSpace + 1] = 0;
+				lineBuffer[insertCursorPos] = '_';
+			} else {
+				lineBuffer[insertCursorPos] = emulatedKey;
 			}
 		}
 
@@ -422,13 +444,13 @@ void graphic_paint(void)
 	if (msg != NULL) {
 		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 170, 3, scale, TexRed,
 			"Error Message:");
-		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0, 0);
+		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0, -1, 0);
 	} else {
 		if (!isInfoBufferEmpty()) {
-			scrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos, 0);
+			scrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos, -1, 0);
 		} else {
 			if (inputBuffer != NULL) {
-				inputScrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos, writeable && (cursor_counter < (getModeFrequenzy()/2)));
+				inputScrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos, writeable ? cursorpos : -1, writeable && (cursor_counter < (getModeFrequenzy()/2)));
 			} else if (menu != NULL) {
 				menu->paint();
 			}
@@ -701,7 +723,7 @@ Menu *graphic_main(void)
 void incrementMode(void)
 {
 	currentMode++;
-	if (currentMode >= (sizeof(modeList)/sizeof(modeList[0]))) {
+	if (currentMode >= (int) (sizeof(modeList)/sizeof(modeList[0]))) {
 		currentMode = 0;
 	}
 }
@@ -716,7 +738,7 @@ void decrementMode(void)
 
 void setMode(int mode)
 {
-	if (mode < (sizeof(modeList)/sizeof(modeList[0]))) {
+	if (mode < (int) (sizeof(modeList)/sizeof(modeList[0]))) {
 		currentMode = mode;
 	}
 }
@@ -953,6 +975,11 @@ extern "C" {
 		inputScrollPos = 0;
 		inputBuffer = buffer;
 		writeable = w;
+		if (writeable) {
+			cursorpos = strlen(inputBuffer);
+		} else {
+			cursorpos = 0;
+		}
 	}
 
 	char *getInputBuffer(void)
@@ -1105,4 +1132,36 @@ extern "C" {
 
 }
 
+int getCursorPos(void)
+{
+	return cursorpos;
+}
 
+void incCursorPos(void)
+{
+	if (cursorpos < (int) strlen(inputBuffer)) {
+		cursorpos++;
+	}
+}
+
+void decCursorPos(void)
+{
+	if (cursorpos > 0) {
+		cursorpos--;
+	}
+}
+
+void homeCursorPos(void)
+{
+	cursorpos = 0;
+}
+
+void endCursorPos(void)
+{
+	cursorpos = strlen(inputBuffer);
+}
+
+void setEmulatedKey(int key)
+{
+	emulatedKey = key;
+}

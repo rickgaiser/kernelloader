@@ -52,6 +52,12 @@ extern "C" {
 	void graphic_screenshot(void);
 	void moveScreen(int dx, int dy);
 	void changeMode(void);
+	int getCursorPos(void);
+	void incCursorPos(void);
+	void decCursorPos(void);
+	void homeCursorPos(void);
+	void endCursorPos(void);
+	void setEmulatedKey(int key);
 #ifdef __cplusplus
 }
 #endif

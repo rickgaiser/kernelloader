@@ -28,8 +28,16 @@
   connected to port 0. Fixed detecting of game pads.
 - Add parameter "-d" for kernelloader. This enables loading of
   ps2link for debugging purpose.
-- Show blinking cursor in input fields.
+- Show blinking cursor in input fields. Add possibilty to navigate
+  the cursor with the cursor keys.
 - Set scroll position to 0 when input field is opened.
+- Changed screenshot button to R3.
+- Added virtual keyboard. The key is selected with R1 and L1.
+  The triangle button inserts the key. Left and right moves the
+  cursor left and right. The square button deletes a character
+  and the circle button is for fast jumping in key selection.
+  The start button jumps to the beginning and the select button
+  to the end of the string.
 
 2.4
 - Add support for 64 bit kernels.
