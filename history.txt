@@ -38,6 +38,8 @@
   and the circle button is for fast jumping in key selection.
   The start button jumps to the beginning and the select button
   to the end of the string.
+- Fixed screen drawing problem in VGA mode (flickering penguin when
+  loading data with http).
 
 2.4
 - Add support for 64 bit kernels.

@@ -411,6 +411,7 @@ void graphic_auto_boot_paint(int time)
 		msg);
 
 	gsKit_queue_exec(gsGlobal);
+	gsKit_finish(); /* Ensure that DMA has been finished before switching screen buffer. */
 	gsKit_sync_flip(gsGlobal);
 }
 
@@ -497,6 +498,7 @@ void graphic_paint(void)
 		}
 	}
 	gsKit_queue_exec(gsGlobal);
+	gsKit_finish(); /* Ensure that DMA has been finished before switching screen buffer. */
 	gsKit_sync_flip(gsGlobal);
 
 	cursor_counter++;
