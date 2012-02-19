@@ -173,7 +173,7 @@ personality=linux32
 
 Note: You need to replace $USER by your user name.
 
-sudo debootstrap --variant=buildd --arch i386 karmic /chroot/ http://archive.ubuntu.com/ubuntu/
+sudo debootstrap --variant=buildd --arch i386 karmic /chroot/ http://old-releases.ubuntu.com/ubuntu/
 Add the following to /etc/fstab
 /home           /chroot/home            none bind 0 0
 /tmp            /chroot/tmp             none bind 0 0
