@@ -194,6 +194,7 @@ apt-get update
 apt-get install locales
 locale-gen de_DE.UTF-8
 apt-get install sudo
+apt-get install kbd
 exit
 
 sudo cp /etc/timezone /chroot/etc/timezone
