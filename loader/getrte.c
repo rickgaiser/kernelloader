@@ -10,7 +10,7 @@
 #include "modules.h"
 
 static char copybuffer[1024];
-char rtePath[1024] = "cdfs:modules/mod203";
+char rtePath[MAX_INPUT_LEN] = "cdfs:modules/mod203";
 const char *moduleList[] = {
 	"iopintr.irx",
 	"dmarelay.irx",

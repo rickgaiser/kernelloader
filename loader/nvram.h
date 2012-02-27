@@ -13,6 +13,7 @@ extern char ps2_region_type[];
 
 void nvram_init(void);
 u8 *get_nvram(void);
+extern int nvm_errors;
 
 #ifdef __cplusplus
 }

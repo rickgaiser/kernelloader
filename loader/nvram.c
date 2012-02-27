@@ -33,10 +33,10 @@ static u8 nvm[0x400];
 
 char ps2_console_type[32] = "CDVD error";
 char ps2_region_type[32] = "CDVD error";
+int nvm_errors;
 
 void nvram_init(void)
 {
-	int errors;
 	int rv;
 	u32 addr;
 	u16 data;
@@ -58,13 +58,13 @@ void nvram_init(void)
 		return;
 	}
 
-	errors = 0;
+	nvm_errors = 0;
 	memset(nvm, 0, sizeof(nvm));
 	for (addr = 0; addr < sizeof(nvm)/2; addr++) {
 		rv = cdReadNVM(addr, &data, &stat);
 		if (rv != 1) {
 			printf("sceCdReadNVM Error: rv = %d, addr = 0x%04x data = 0x%04x, stat = 0x%02x\n", rv, 2 * addr, data, stat);
-			errors++;
+			nvm_errors++;
 		} else {
 			nvm[addr * 2] = data & 0xFF;
 			nvm[addr * 2 + 1] = (data >> 8) & 0xFF;
@@ -78,7 +78,7 @@ void nvram_init(void)
 	memcpy(ps2_console_type, &nvm[off->console_type], sizeof(ps2_console_type));
 	ps2_console_type[sizeof(ps2_console_type) - 1] = 0;
 	printf("PS2 Console type: %s\n", ps2_console_type);
-	snprintf(ps2_region_type, sizeof(ps2_region_type), "0x%02x 0x%02x (%d NVM errors)", nvm[off->fake_region], nvm[off->real_region], errors);
+	snprintf(ps2_region_type, sizeof(ps2_region_type), "0x%02x 0x%02x (%d NVM errors)", nvm[off->fake_region], nvm[off->real_region], nvm_errors);
 }
 
 u8 *get_nvram(void)

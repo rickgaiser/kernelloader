@@ -14,8 +14,8 @@
 #include "configuration.h"
 #include "modules.h"
 
-char rteElf[1024] = "cdfs:pbpx_955.09";
-char rteElfOffset[1024] = "16773120";
+char rteElf[MAX_INPUT_LEN] = "cdfs:pbpx_955.09";
+char rteElfOffset[MAX_INPUT_LEN] = "16773120";
 static char magic_string[] __attribute__((aligned(4))) = "PS2b";
 
 static int real_copyRTESBIOS(void *arg)

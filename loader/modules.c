@@ -59,7 +59,7 @@ typedef struct
 } moduleLoaderEntry_t;
 
 
-static char eromdrvpath[] = "rom1:EROMDRVE";
+static char eromdrvpath[MAX_INPUT_LEN] = "rom1:EROMDRVE";
 
 static moduleLoaderEntry_t moduleList[] = {
 #if defined(IOP_RESET)
@@ -360,6 +360,8 @@ int loadLoaderModules(int debug_mode)
 	SifInitRpc(0);
 #endif
 
+	eromdrvSupport = 0;
+
 	graphic_setStatusMessage("Add eedebug handler");
 	addEEDebugHandler();
 
@@ -412,7 +414,10 @@ int loadLoaderModules(int debug_mode)
 		}
 		if (rv < 0) {
 			if ((moduleList[i].sms_mod == 0) || (isDVDVSupported())) {
-				if (moduleList[i].eromdrv != 0) {
+				if (moduleList[i].eromdrv < 0) {
+					/* Try to detect EROM driver only the first time. */
+					moduleList[i].eromdrv = 1;
+
 					rv = open("rom1:EROMDRV", O_RDONLY);
 					if (rv >=0 ) {
 						eromdrvpath[12] = 0;
@@ -423,7 +428,7 @@ int loadLoaderModules(int debug_mode)
 						const u8 *nvm;
 
 						nvm = get_nvram();
-						if (nvm[NVM_FAKE_REGION] == version[4]) {
+						if (nvm[NVM_FAKE_REGION] == ps2_rom_version[4]) {
 							/* NVM layout seems to be correct. */
 							eromdrvpath[12] = nvm[NVM_REAL_REGION];
 							rv = open(eromdrvpath, O_RDONLY);
@@ -434,8 +439,21 @@ int loadLoaderModules(int debug_mode)
 								error_printf("Can't find driver for DVD video: \"%s\".", eromdrvpath);
 								continue;
 							}
+						} else {
+							if (nvm_errors > 0) {
+								error_printf("%d errors when reading NVRAM. Please set path "
+									"to EROMDRV and reload modules.", nvm_errors);
+							} else {
+								error_printf("The region code stored in the NVRAM 0x%02x "
+									"doesn't match 0x%02x from the PS2 version string.",
+									nvm[NVM_FAKE_REGION],
+									ps2_rom_version[4]);
+							}
+							continue;
 						}
 					}
+				}
+				if (moduleList[i].eromdrv != 0) {
 					moduleList[i].args = get_eromdrvpath();
 					moduleList[i].argLen = strlen(moduleList[i].args) + 1;
 				}

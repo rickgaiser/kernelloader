@@ -24,7 +24,7 @@
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
-#define MAX_PATH_LEN 1024
+#define MAX_PATH_LEN MAX_INPUT_LEN
 #define EXAMPLE_KERNEL "host:kernel.elf"
 
 typedef struct {
@@ -761,7 +761,11 @@ void setDefaultVideoParameter(char *text)
 		break;
 
 	default:
-		strcpy(text, commandline_pal);
+		if (ps2_rom_version[4] != 'E') {
+			strcpy(text, commandline_ntsc);
+		} else {
+			strcpy(text, commandline_pal);
+		}
 		break;
 	}
 }
@@ -1263,6 +1267,7 @@ void initMenu(Menu *menu)
 	versionMenu->addItem("PS2 ROM Version", showText, (void *) ps2_rom_version);
 	versionMenu->addItem("LIBSD Version", showText, (void *) libsd_version);
 	versionMenu->addItem("Hardware Information", showText, (void *) hardware_information);
+	versionMenu->addItem("EROMDRV Path", editString, (void *) get_eromdrvpath());
 }
 
 extern "C" {

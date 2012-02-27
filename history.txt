@@ -1,3 +1,9 @@
+2.6
+- Fixed auto detection of video parameters on NTSC consoles.
+  This error was introduced by version 2.5.
+- Fixed detection of DVD region. Version 2.5 was only working
+  on european slim PSTwo or fat PS2 (all regions).
+
 2.5
 - Fixed CDVD problems in Linux 2.2. This allows to install
   Sony's Linux Toolkit with kernelloader.

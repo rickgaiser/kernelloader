@@ -1449,7 +1449,11 @@ void startModules(struct ps2_bootinfo *bootinfo)
 				rv = SifLoadModule(modules[i].path, modules[i].argLen, modules[i].args);
 			}
 			if (rv < 0) {
-				error_printf("Failed to start module \"%s\" (rv = %d).", modules[i].path, rv);
+				if (modules[i].eromdrv) {
+					error_printf("Failed to start module \"%s\" (rv = %d).", modules[i].args, rv);
+				} else {
+					error_printf("Failed to start module \"%s\" (rv = %d).", modules[i].path, rv);
+				}
 			}
 		}
 	}
