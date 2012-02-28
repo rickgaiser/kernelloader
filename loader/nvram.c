@@ -33,7 +33,7 @@ static u8 nvm[0x400];
 
 char ps2_console_type[32] = "CDVD error";
 char ps2_region_type[32] = "CDVD error";
-int nvm_errors;
+int nvm_errors = -1;
 
 void nvram_init(void)
 {
@@ -44,6 +44,11 @@ void nvram_init(void)
 	int version;
 	unsigned int type;
 	nvm_offsets_t *off = &nvmOff[0];
+
+	if (nvm_errors >= 0) {
+		/* NVRAM was already loaded. */
+		return;
+	}
 
 	version = getBiosVersion();
 	for (type = 0; type < (sizeof(nvmOff)/sizeof(nvmOff[0])); type++) {

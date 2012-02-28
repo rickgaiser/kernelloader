@@ -224,7 +224,14 @@ static moduleLoaderEntry_t moduleList[] = {
 static int moduleLoaderNumberOfModules = sizeof(moduleList) / sizeof(moduleLoaderEntry_t);
 
 /** Parameter for IOP reset. */
+#ifdef NEW_ROM_MODULES
+/* XXX: This will load the newer CDVDMAN module which doesn't support reading of NVRAM. */
 static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
+#endif
+#ifdef OLD_ROM_MODULES
+/* This will load the old CDVDMAN module which supports reading of NVRAM. */
+static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL";
+#endif
 
 char ps2_rom_version[256] = "unknown";
 static char version[256];
@@ -359,6 +366,10 @@ int loadLoaderModules(int debug_mode)
 #else
 	SifInitRpc(0);
 #endif
+
+	/* CDVDMAN is loaded by IopReset and NVRAM can be read. */
+	graphic_setStatusMessage("Read NVRAM from CDVD");
+	nvram_init();
 
 	eromdrvSupport = 0;
 

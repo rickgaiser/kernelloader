@@ -72,6 +72,8 @@ extern "C" {
 	void printAllModules(void);
 	void DelayThread(int delay);
 	const char *getPcicType(void);
+
+	extern char iop_reset_param[];
 #ifdef __cplusplus
 }
 #endif

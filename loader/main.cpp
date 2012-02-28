@@ -86,8 +86,6 @@ int main(int argc, char **argv)
 
 	initMenu(menu);
 
-	nvram_init();
-
 	loadLoaderModules(debug_mode);
 
 	setEnableDisc(false);

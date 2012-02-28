@@ -91,7 +91,7 @@
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 
 /** Parameter for IOP reset. */
-static char s_pUDNL   [] __attribute__(   (  section( ".data" ), aligned( 1 )  )   ) = "rom0:UDNL rom0:EELOADCNF";
+char iop_reset_param[MAX_INPUT_LEN] = "rom0:UDNL rom0:EELOADCNF";
 
 /** Modules that should be loaded. */
 moduleEntry_t modules[] = {
@@ -2101,7 +2101,7 @@ static int real_loader(void)
 		SifExitRpc();
 		SifStopDma();
 
-		SifIopReset(s_pUDNL, 0);
+		SifIopReset(iop_reset_param, 0);
 
 		while (SifIopSync());
 

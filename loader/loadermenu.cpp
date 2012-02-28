@@ -851,10 +851,14 @@ int setDefaultConfiguration(void *arg)
 		slim = 1;
 		/* New modules seems to be more stable on slim on heavy USB use. */
 		loaderConfig.newModulesInTGE = 1;
+		/* Load newer CDVDMAN module on IOP reset. */
+		strcpy(iop_reset_param, "rom0:UDNL rom0:EELOADCNF");
 	} else {
 		/* Value for fat PS2. */
 		slim = -1;
 		loaderConfig.newModulesInTGE = 0;
+		/* Load old CDVDMAN module on IOP reset. */
+		strcpy(iop_reset_param, "rom0:UDNL");
 	}
 
 	for (i = 0; i < getNumberOfModules(); i++) {
@@ -943,6 +947,7 @@ void initMenu(Menu *menu)
 	addConfigTextItem("ps2linkNetmask", netmask, MAX_INPUT_LEN);
 	addConfigTextItem("ps2linkGatewayIP", gatewayIP, MAX_INPUT_LEN);
 	addConfigTextItem("ps2DNSIP", dnsIP, MAX_INPUT_LEN);
+	addConfigTextItem("IOPResetParameter", iop_reset_param, MAX_INPUT_LEN);
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, NULL);
@@ -1178,6 +1183,7 @@ void initMenu(Menu *menu)
 	configMenu->addCheckItem("Patch libsd (enable USB)",
 		&loaderConfig.patchLibsd);
 	configMenu->addCheckItem("Enable IOP debug output", &loaderConfig.enableEEDebug);
+	configMenu->addItem("IOP Reset Param", editString, iop_reset_param);
 
 	/* SBIOS Calls Menu */
 	Menu *sbiosCallsMenu;
