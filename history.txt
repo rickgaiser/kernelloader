@@ -3,6 +3,9 @@
   This error was introduced by version 2.5.
 - Fixed detection of DVD region. Version 2.5 was only working
   on european slim PSTwo or fat PS2 (all regions).
+- Add entry in Versions menu for changing path to EROMDRV.
+  The modules need to be reloaded in the menu Configuration->
+  Net Options.
 
 2.5
 - Fixed CDVD problems in Linux 2.2. This allows to install
