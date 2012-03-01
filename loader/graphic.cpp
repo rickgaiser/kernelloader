@@ -389,7 +389,7 @@ void graphic_common(void)
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
 	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
-		"TODAY"
+		"UNSTABLE"
 #ifdef RTE
 		" RTE"
 #endif
