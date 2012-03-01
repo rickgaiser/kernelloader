@@ -6,6 +6,10 @@
 - Add entry in Versions menu for changing path to EROMDRV.
   The modules need to be reloaded in the menu Configuration->
   Net Options.
+- Live DVD has been successfully tested with SCPH-70012 (v12).
+- Added commandline parameter "--no-cdvd" to disable CD/DVD
+  access. This can be used with ps2link, e.g.:
+  ps2client -h 192.168.0.23 execee host:kloader2.6.elf -d --no-cdvd
 
 2.5
 - Fixed CDVD problems in Linux 2.2. This allows to install
@@ -21,6 +25,7 @@
 - Fix detecting of console region on v12/v13 SCPH-7000x. This
   should fix DVD video support on these consoles. This is
   needed to get the Live DVD working.
+  UPDATE: The detection is worse. The problem is fixed in 2.6.
 - Added mode setting by function keys:
   F1: Auto detect
   F2: VGA 640x480 60Hz

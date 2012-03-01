@@ -906,8 +906,6 @@ int setDefaultConfiguration(void *arg)
 
 int reloadModules(void *arg)
 {
-	extern int debug_mode;
-
 	(void) arg;
 
 	if (isDVDVSupported()) {
@@ -924,7 +922,7 @@ int reloadModules(void *arg)
 	/* Show disc symbol while start up. */
 	setEnableDisc(true);
 
-	loadLoaderModules(debug_mode);
+	loadLoaderModules(debug_mode, disable_cdrom);
 
 	setEnableDisc(false);
 

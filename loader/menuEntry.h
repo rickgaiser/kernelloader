@@ -103,11 +103,10 @@ class MenuEntry {
 
 	int execute(void);
 
-	bool switchItem()
+	void switchItem()
 	{
 		if (checkItem) {
 			*checkValue = !(*checkValue);
-			return *checkValue;
 		} else {
 			if (multiItem) {
 				(*multiValue)++;
@@ -115,8 +114,6 @@ class MenuEntry {
 					*multiValue = 0;
 				}
 				name = valueList[*multiValue];
-			} else {
-				return false;
 			}
 		}
 	}

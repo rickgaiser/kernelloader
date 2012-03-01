@@ -26,6 +26,8 @@ static int real_copyRTESBIOS(void *arg)
 	uint32_t offset = 0;
 	uint32_t sbiosSize = 0xf000;
 
+	(void) arg;
+
 	filename = rteElf;
 	printf("Search for sbios in \"%s\".\n", filename);
 
@@ -39,7 +41,6 @@ static int real_copyRTESBIOS(void *arg)
 		char *buffer;
 		uint32_t size;
 
-		free(filename);
 		filename = NULL;
 		fseek(fin, 0, SEEK_END);
 		size = ftell(fin);
@@ -83,7 +84,7 @@ static int real_copyRTESBIOS(void *arg)
 					search = addr - buffer;
 					search += offset;
 					printf("Search 0x%08x\n", search);
-					for (code = buffer; code < endaddr; code += 4) {
+					for (code = buffer; code < ((void *) endaddr); code += 4) {
 						uint32_t value;
 
 						value = *((uint32_t *)code);
@@ -194,7 +195,6 @@ static int real_copyRTESBIOS(void *arg)
 	else
 	{
 		error_printf("Failed to open file \"%s\"", filename);
-		free(filename);
 	}
 	
 	return 0;

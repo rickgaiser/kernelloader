@@ -53,6 +53,9 @@ EE_FLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
 EE_FLAGS += -I$(PS2SDK)/ports/include
 
 EE_CFLAGS += $(EE_FLAGS) -Wimplicit-int -Werror-implicit-function-declaration
+ifneq ($(SHARED_MEM_DEBUG),yes)
+EE_FLAGS += -Werror
+endif
 
 EE_CXXFLAGS = $(EE_FLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
 

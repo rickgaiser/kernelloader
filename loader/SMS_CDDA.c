@@ -37,29 +37,37 @@
 #define CD_CMD_MMODE       0x22
 
 static int s_Sema;
+#if 0
 static int s_SyncFlag;
 static int s_Size;
 static void *s_pBuf;
+#endif
 static SifRpcClientData_t s_ClientInit
 	__attribute__ ((aligned(64), section(".bss")));
 static SifRpcClientData_t s_ClientNCmd __attribute__ ((aligned(64)));
 static SifRpcClientData_t s_ClientSCmd __attribute__ ((aligned(64)));
 static SifRpcClientData_t s_ClientDiskReady __attribute__ ((aligned(64)));
+#if 0
 static unsigned char s_NCmdRecvBuff[48] __attribute__ ((aligned(64)));
+#endif
 static unsigned char s_SCmdRecvBuff[48] __attribute__ ((aligned(64)));
 static unsigned int s_InitMode __attribute__ ((aligned(64)));
+#if 0
 static unsigned int s_GetTOCmd[3] __attribute__ ((aligned(64)));
 static unsigned int s_ReadData[6] __attribute__ ((aligned(64)));
 static unsigned int s_ReadResp[64] __attribute__ ((aligned(64)));
+#endif
 
 int g_CDDASpeed;
 
+#if 0
 static void _cd_callback(void *apParam)
 {
-
+	(void) apParam;
 	iSignalSema(s_Sema);
 
 }								/* end _cd_callback */
+#endif
 
 int CDDA_Init(void)
 {

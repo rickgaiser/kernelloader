@@ -41,6 +41,7 @@
 #define KEY_UP 44
 
 int debug_mode;
+int disable_cdrom;
 
 /**
  * Entry point for loader.
@@ -61,10 +62,13 @@ int main(int argc, char **argv)
 	int emulatedKey;
 
 	debug_mode = -1;
+	disable_cdrom = 0;
 	for (i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "-d") == 0) {
 			/* Enter debug mode, activate ps2link. */
 			debug_mode = 1;
+		} else if (strcmp(argv[i], "--no-cdvd") == 0) {
+			disable_cdrom = 1;
 		}
 	}
 
@@ -86,7 +90,7 @@ int main(int argc, char **argv)
 
 	initMenu(menu);
 
-	loadLoaderModules(debug_mode);
+	loadLoaderModules(debug_mode, disable_cdrom);
 
 	setEnableDisc(false);
 

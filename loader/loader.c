@@ -72,11 +72,11 @@
 #define iop_dprints iop_prints
 #else
 /** Debug print. */
-#define dprintf(args...)
+#define dprintf(args...) do { } while(0)
 /** Debug print on IOP. */
-#define iop_dprintf(args...)
+#define iop_dprintf(args...) do { } while(0)
 /** Debug print on IOP. */
-#define iop_dprints(args...)
+#define iop_dprints(args...) do { } while(0)
 
 #endif
 
@@ -1401,6 +1401,10 @@ void startModules(struct ps2_bootinfo *bootinfo)
 	{
 		if (modules[i].load) {
 			if (modules[i].eromdrv) {
+				if (!isDVDVSupported()) {
+					/* DVD video will not work, so don't load it. */
+					continue;
+				}
 				modules[i].args = get_eromdrvpath();
 				modules[i].argLen = strlen(modules[i].args) + 1;
 			}
@@ -1972,13 +1976,13 @@ static int real_loader(void)
 		}
 
 		/* Check if there is free memory for the console type. */
-		if (sbios_size < (0x10000 - strlen(ps2_console_type) - 1)) {
+		if (sbios_size < (0x10000 - ((int) strlen(ps2_console_type)) - 1)) {
 			/* Add PS2 console type behind SBIOS. */
 			bootinfo->ver_model = ((void *) sbios) + sbios_size;
 			strcpy(bootinfo->ver_model, ps2_console_type);
 
 			/* Access data from kernel space, because this will be accessed by the Linux kernel. */
-			bootinfo->ver_model = ((unsigned int) bootinfo->ver_model) | KSEG0_MASK;
+			bootinfo->ver_model = (void *) (((unsigned int) bootinfo->ver_model) | KSEG0_MASK);
 		}
 
 		/* Access data from kernel space, because TLB misses can't be handled here. */

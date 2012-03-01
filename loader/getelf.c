@@ -44,7 +44,6 @@ int real_copyRTEELF(void *arg)
 		char *buffer;
 		uint32_t size;
 
-		free(filename);
 		filename = NULL;
 		fseek(fin, 0, SEEK_END);
 		size = ftell(fin);
@@ -82,7 +81,7 @@ int real_copyRTEELF(void *arg)
 
 				printf("Found elf at file offset 0x%08x.\n",
 					((uint32_t) addr) - ((uint32_t) buffer));
-				for (code = addr + 4; code < endaddr; code += 4) {
+				for (code = addr + 4; code < ((void *) endaddr); code += 4) {
 					uint32_t value;
 
 					value = *((uint32_t *)code);
@@ -141,7 +140,6 @@ int real_copyRTEELF(void *arg)
 	else
 	{
 		error_printf("Failed to open file \"%s\"", filename);
-		free(filename);
 	}
 	
 	return 0;

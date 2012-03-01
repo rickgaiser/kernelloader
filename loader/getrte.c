@@ -26,13 +26,15 @@ const char *moduleList[] = {
 static int real_copyRTEModules(void *arg) {
 	int i;
 
+	(void) arg;
+
 	for (i = 0; moduleList[i] != NULL; i++) {
 		const char *filename = moduleList[i];
 		static char inPath[1024];
 		static char outPath[1024];
 		FILE *fin;
 		FILE *fout;
-		int size;
+		size_t size;
 		int filesize;
 		int copiedSize;
 

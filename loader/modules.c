@@ -336,7 +336,7 @@ void checkForMusicSupport(void)
 	}
 }
 
-int loadLoaderModules(int debug_mode)
+int loadLoaderModules(int debug_mode, int disable_cdrom)
 {
 	static int load_dvd_config = -1;
 	int i;
@@ -369,7 +369,10 @@ int loadLoaderModules(int debug_mode)
 
 	/* CDVDMAN is loaded by IopReset and NVRAM can be read. */
 	graphic_setStatusMessage("Read NVRAM from CDVD");
-	nvram_init();
+
+	if (!disable_cdrom) {
+		nvram_init();
+	}
 
 	eromdrvSupport = 0;
 
@@ -428,6 +431,9 @@ int loadLoaderModules(int debug_mode)
 				if (moduleList[i].eromdrv < 0) {
 					/* Try to detect EROM driver only the first time. */
 					moduleList[i].eromdrv = 1;
+					if (disable_cdrom) {
+						continue;
+					}
 
 					rv = open("rom1:EROMDRV", O_RDONLY);
 					if (rv >=0 ) {
@@ -515,7 +521,7 @@ int loadLoaderModules(int debug_mode)
 		CDDA_Init();
 		CDVD_Init();
 
-		if (lrv != NULL) {
+		if (lrv != 0) {
 			DiskType type;
 	
 			graphic_setStatusMessage("Load config from DVD");
@@ -546,7 +552,7 @@ int loadLoaderModules(int debug_mode)
 	snprintf(hardware_information, sizeof(hardware_information),
 		"%s with DVD-R %s, %s sound support and %s network adapter",
 		isSlimPSTwo() ? "slim PSTwo" : "fat PS2",
-		isDVDVSupported() ? "support" : "problem",
+		disable_cdrom ? "disabled" : (isDVDVSupported() ? "support" : "problem"),
 		(libsd_version <= 0x104) ? "direct" : "indirect",
 		network_support ? "with" : "without");
 

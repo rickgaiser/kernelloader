@@ -342,7 +342,9 @@ static int smap_subsys_init(void)
 static int smap_device_init(void)
 {
 	USE_SPD_REGS;
+#ifdef SHARED_MEM_DEBUG
 	const char *spdnames[] = { "(unknown)", "TS", "ES1", "ES2" };
+#endif
 	int idx, res;
 	u16 spdrev;
 
@@ -360,11 +362,13 @@ static int smap_device_init(void)
 	/* Locate the SPEED Lite chip and get the bus ready for the
 	   PCMCIA device.  */
 	if (dev9type == 0) {
-		if ((res = card_find_manfid(0xf15300)))
+		if ((res = card_find_manfid(0xf15300))) {
 			M_PRINTF("SPEED Lite not found.\n");
+		}
 
-		if (!res && (res = pcic_ssbus_mode(5)))
+		if (!res && (res = pcic_ssbus_mode(5))) {
 			M_PRINTF("Unable to change SSBUS mode.\n");
+		}
 
 		if (res) {
 			dev9Shutdown();
@@ -494,7 +498,9 @@ static int pcic_ssbus_mode(int voltage)
 
 static int pcmcia_device_probe()
 {
+#ifdef SHARED_MEM_DEBUG
 	const char *pcic_ct_names[] = { "No", "16-bit", "CardBus" };
+#endif
 	int voltage;
 
 	pcic_voltage = pcic_get_voltage();

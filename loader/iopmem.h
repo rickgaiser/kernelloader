@@ -26,15 +26,15 @@ int iop_printf(const char *format, ...);
 void iop_printx(uint32_t val);
 #else
 /** Do nothing. */
-#define iop_init_shared()
+#define iop_init_shared() do { } while(0)
 /** Do nothing. */
-#define iop_putc(c)
+#define iop_putc(c) do { } while(0)
 /** Do nothing. */
-#define iop_prints(text)
+#define iop_prints(text) do { } while(0)
 /** Do nothing. */
-#define iop_printf(args...)
+#define iop_printf(args...) do { } while(0)
 /** Do nothing. */
-#define iop_printx(val)
+#define iop_printx(val) do { } while(0)
 #endif
 
 #endif /* _IOPMEM_H_ */

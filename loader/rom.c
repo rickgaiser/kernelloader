@@ -10,7 +10,7 @@
 rom_entry_t rom_files[] =
 {
 	#include "romfilelist.h"
-	{ "", NULL, 0}
+	{"", NULL, 0, 0, 0, 0}
 };
 
 static int rom_initialized = 0;

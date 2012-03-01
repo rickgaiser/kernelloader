@@ -11,6 +11,8 @@ void dumpRegisters(uint32_t *regs)
 {
 	int i;
 
+	(void) regs;
+
 	for (i = 0; i < 32; i++) {
 		if ((i & 3) == 0) {
 			iop_printx(i);
@@ -64,6 +66,8 @@ void exception(int nr, uint32_t *regs)
 	uint32_t badVAddr;
 	uint32_t badPAddr;
 	uint32_t cause;
+
+	(void) nr;
 
 	epc = 0;
 	error_epc = 0xFFFFFFFF;

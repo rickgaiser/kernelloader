@@ -5,8 +5,12 @@
 #include "iopprintdata.h"
 #include "graphic.h"
 
-static void print_iop_data(iop_text_data_t *data, void *arg)
+static void print_iop_data(void *arg1, void *arg2)
 {
+	iop_text_data_t *data = arg1;
+
+	(void) arg2;
+
 	/* Be sure that it is zero terminated string. */
 	info_prints(data->text);
 }

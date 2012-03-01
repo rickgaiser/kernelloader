@@ -74,6 +74,9 @@ extern "C" {
 	const char *getPcicType(void);
 
 	extern char iop_reset_param[];
+	extern int debug_mode;
+	extern int disable_cdrom;
+
 #ifdef __cplusplus
 }
 #endif
