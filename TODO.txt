@@ -22,4 +22,15 @@ Fix heavy load USB problems on slim.
 
 Fix heavy load Network (Samba) problems on slim.
 
-Reset ist irgendwie in Syscall 0 und 1 vergraben.
+Add support for reset. Reset is somewhere defined in Syscall 0 and 1.
+
+Warum geht vmlinux_v4 nicht ab kernelloader 2.4 mit initrd ohne Festplatte.
+
+Driver for /proc/ps2sysvers.
+
+Write ps2_bootinfo->boot_time and other fields.
+
+NFS UDP ssems not to work with Linux 2.6. NFS-Root, out of memory, SLAB (slabtop)
+
+Memory leak with NFS/TCP in Linux 2.6.
+
