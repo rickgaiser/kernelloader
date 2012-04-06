@@ -321,7 +321,7 @@ static kernel_param_t hda2Config = {
 };
 
 static kernel_param_t hda3Config = {
-	"root=/dev/hda2",
+	"root=/dev/hda3",
 	kernelParameter,
 	sizeof(kernelParameter),
 	NULL,
