@@ -1,3 +1,7 @@
+2.7
+- Fix DVD-R support on Hong Kong consoles.
+- Fix hda3 selection (hda2 was selected).
+
 2.6
 - Fixed auto detection of video parameters on NTSC consoles.
   This error was introduced by version 2.5.

@@ -445,7 +445,7 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 						const u8 *nvm;
 
 						nvm = get_nvram();
-						if (nvm[NVM_FAKE_REGION] == ps2_rom_version[4]) {
+						if (nvm_errors == 0) {
 							/* NVM layout seems to be correct. */
 							eromdrvpath[12] = nvm[NVM_REAL_REGION];
 							rv = open(eromdrvpath, O_RDONLY);
@@ -453,19 +453,18 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 								/* Region code seems to be correct. */
 								close(rv);
 							} else {
-								error_printf("Can't find driver for DVD video: \"%s\".", eromdrvpath);
+								error_printf("The region code stored in the NVRAM S%02x T%02x F%02x R%02x "
+									"can't be detected by version string %s (%s).",
+									nvm[0x180],
+									nvm[0x181],
+									nvm[NVM_FAKE_REGION],
+									nvm[NVM_REAL_REGION],
+									ps2_rom_version);
 								continue;
 							}
 						} else {
-							if (nvm_errors > 0) {
-								error_printf("%d errors when reading NVRAM. Please set path "
-									"to EROMDRV and reload modules.", nvm_errors);
-							} else {
-								error_printf("The region code stored in the NVRAM 0x%02x "
-									"doesn't match 0x%02x from the PS2 version string.",
-									nvm[NVM_FAKE_REGION],
-									ps2_rom_version[4]);
-							}
+							error_printf("%d errors when reading NVRAM. Please set path "
+								"to EROMDRV and reload modules.", nvm_errors);
 							continue;
 						}
 					}

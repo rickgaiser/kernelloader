@@ -83,7 +83,7 @@ void nvram_init(void)
 	memcpy(ps2_console_type, &nvm[off->console_type], sizeof(ps2_console_type));
 	ps2_console_type[sizeof(ps2_console_type) - 1] = 0;
 	printf("PS2 Console type: %s\n", ps2_console_type);
-	snprintf(ps2_region_type, sizeof(ps2_region_type), "0x%02x 0x%02x (%d NVM errors)", nvm[off->fake_region], nvm[off->real_region], nvm_errors);
+	snprintf(ps2_region_type, sizeof(ps2_region_type), "S%02x T%02x F%02x R%02x (%d NVM errors)", nvm[0x180], nvm[0x181], nvm[off->fake_region], nvm[off->real_region], nvm_errors);
 }
 
 u8 *get_nvram(void)
