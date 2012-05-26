@@ -35,6 +35,8 @@ EE_FILES += fileio
 endif
 ifeq ($(SHARED_MEM_DEBUG),yes)
 EE_FILES += printf snprintf
+EE_CFLAGS += -DSHARED_MEM_DEBUG
+EE_FILES += iopmemdebug
 else
 ifeq ($(FILEIO_DEBUG),yes)
 EE_FILES += printf snprintf
@@ -44,10 +46,6 @@ EE_FILES += printf snprintf
 EE_CFLAGS += -DCALLBACK_DEBUG -fno-builtin
 endif
 endif
-endif
-ifeq ($(SHARED_MEM_DEBUG),yes)
-EE_CFLAGS += -DSHARED_MEM_DEBUG
-EE_FILES += iopmemdebug
 endif
 ifeq ($(ROM_MODULE_VERSION),old)
 EE_CFLAGS += -DOLD_ROM_MODULE_VERSION

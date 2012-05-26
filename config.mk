@@ -3,10 +3,9 @@ TARGET_IP = 192.168.0.23
 EXAMPLE_ELF = ../hello/hello.elf
 
 # Set debug output type:
-# 1. none - no debug output
-# 2. shared - sharedmem.irx via ps2link
-# 3. fileio - SIF RPC stdout
-# 4. callback - Call function registered by Linux kernel (printk, dmesg).
+# 1. fileio - SIF RPC stdout
+# 2. callback - Call function registered by Linux kernel (printk, dmesg).
+# sharedmem.irx via ps2link will be used if loaded
 DEBUG_OUTPUT_TYPE = callback
 
 # Reset IOP at start (only working when enabled)
@@ -30,15 +29,10 @@ PAD_MOVE_SCREEN = yes
 
 ### Don't change the following part, change DEBUG_OUTPUT_TYPE instead.
 
-ifeq ($(DEBUG_OUTPUT_TYPE),shared)
-# Debug output using shared memory (working without RPC).
 SHARED_MEM_DEBUG = yes
-else
-SHARED_MEM_DEBUG = no
-endif
 
 ifeq ($(DEBUG_OUTPUT_TYPE),fileio)
-# Needs to be disabled when SHARED_MEM_DEBUG is active.
+# SIF RPC stdout
 FILEIO_DEBUG = yes
 else
 FILEIO_DEBUG = no

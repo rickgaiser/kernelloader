@@ -1,6 +1,9 @@
 2.7
 - Fix DVD-R support on Hong Kong consoles.
 - Fix hda3 selection (hda2 was selected).
+- Use sharedmem.irx debug output if module was loaded
+  and disable callback debug output in SBIOS. This is for
+  debugging with ps2link.
 
 2.6
 - Fixed auto detection of video parameters on NTSC consoles.

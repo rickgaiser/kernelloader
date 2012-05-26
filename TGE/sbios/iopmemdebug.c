@@ -121,18 +121,19 @@ void iop_printx(uint32_t val)
 }
 
 /** Print one string. */
-void iop_prints(const char *text)
+int iop_prints(const char *text)
 {
 	if (initialized == 0) {
 		iop_init_shared();
 	}
 	if (initialized == 1) {
-		return;
+		return -1;
 	}
 	while(*text != 0) {
 		iop_putc(*text);
 		text++;
 	}
+	return 0;
 }
 
 int puts(const char *s)
