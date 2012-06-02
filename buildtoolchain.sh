@@ -23,6 +23,8 @@ NUM_CPUS=`grep /proc/cpuinfo -e "processor" | wc -l`
 
 install_program()
 {
+	local PROG
+
 	PROG="$1"
 	if [ "$PROG" = "svn" ]; then
 		PROG="subversion"
@@ -37,6 +39,8 @@ install_program()
 
 check_program()
 {
+	local PROG
+
 	PROG="$1"
 	which "$PROG" >/dev/null
 	if [ $? -ne 0 ]; then
