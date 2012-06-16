@@ -1,0 +1,66 @@
+offset = 0x80000000;
+phys = 0x1000;
+
+MEMORY
+{
+	mem(RWX) : ORIGIN = 0x80001000, LENGTH = 0xF000
+}
+
+PHDRS
+{
+	text PT_LOAD;
+}
+
+ENTRY(sbios)
+SECTIONS {
+	. = phys + offset;
+
+	.header : AT(phys + offset) {
+		*(.header)
+	} > mem : text
+
+	.text : {
+  		. = ALIGN(32 / 8);
+		*(.text .stub .text.* .gnu.linkonce.t.*)
+		/* .gnu.warning sections are handled specially by elf32.em.  */
+		*(.gnu.warning)
+		*(.mips16.fn.*) *(.mips16.call.*)
+	} > mem : text
+
+	.reginfo : {
+		*(.reginfo)
+	} > mem : text
+
+	.rodata : {
+		*(.rodata .rodata.* .gnu.linkonce.r.*)
+	} > mem : text
+
+	.data : {
+		*(.data .data.* .gnu.linkonce.d.*)
+	} > mem : text
+
+	.sdata : {
+		*(.sdata .sdata.* .gnu.linkonce.s.*)
+	} > mem : text
+
+	.sbss : {
+		*(.dynsbss)
+		*(.sbss .sbss.* .gnu.linkonce.sb.*)
+		*(.scommon)
+	} > mem : text
+
+	.bss : {
+		*(.bss)
+		. = ALIGN(32 / 8);
+	} > mem : text
+	
+	/* Only listed to get it not interfere with above sections: */
+	/DISCARD/ : {
+		*(.note*)
+		*(.stab*)
+		*(.comment*)
+		*(.mdebug*)
+		*(.debug*)
+	}
+}
+

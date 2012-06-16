@@ -14,7 +14,13 @@ ifeq ($(SBIOS_DEBUG),yes)
 EE_CFLAGS += -Os
 # Optimize for speed.
 else
+ifeq ($(ROM_MODULE_VERSION),new)
+# SBIOS for new module is larger and need to be optimized for size.
+EE_CFLAGS += -Os
+else
+# SBIOS for old modules can be optimized for speed.
 EE_CFLAGS += -O2
+endif
 endif
 EE_CFLAGS += $(EE_INCS)
 EE_CFLAGS += -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -Werror
@@ -22,8 +28,7 @@ EE_CFLAGS += -fno-builtin-memcpy -fno-builtin-memset
 # BSD doesn't enable floating point registers. Only printf() saves them as precaution.
 EE_CFLAGS += -msoft-float
 
-SBIOS_ADDR = 0x80001000
-EE_LDFLAGS = -nostartfiles -Wl,-Ttext -Wl,$(SBIOS_ADDR) -Wl,--defsym -Wl,_start=$(SBIOS_ADDR)
+EE_LDFLAGS = -nostartfiles -nostdlib -Tlinkfile
 
 EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap cache \
 	strlen strncpy memcpy pad memset strcpy cdvd ncmd scmd smod iopmem \

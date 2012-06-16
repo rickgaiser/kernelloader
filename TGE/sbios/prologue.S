@@ -6,12 +6,10 @@
  * See the file LICENSE, located within this directory, for licensing terms.
  */
 
-	.text
+	.section .header, "r"
 	.globl sbios_iopaddr
 	.globl sbios_osdparam
-	.globl _start
 
-_start:
 	.word	sbios	/* Entry address fo sbios calls. */
 
 	.ascii	"PS2b"
