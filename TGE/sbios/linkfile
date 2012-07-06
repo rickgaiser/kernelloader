@@ -3,7 +3,10 @@ phys = 0x1000;
 
 MEMORY
 {
-	mem(RWX) : ORIGIN = 0x80001000, LENGTH = 0xF000
+	/* At the end of the memory region is the string with the PS2 model number stored (32 Byte).
+	 * Therfore the size is 0xF000 - 32
+	 */
+	mem(RWX) : ORIGIN = 0x80001000, LENGTH = 0xEFE0
 }
 
 PHDRS
