@@ -14,6 +14,7 @@
 #define SBCALL_MAX	256
 
 #if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+#if 0 /* TBD: Too large for SBIOS. */
 static const char *sbiosDescription[] = {
 	"GETVER",
 	"HALT",
@@ -213,6 +214,7 @@ static const char *sbiosDescription[] = {
 	"CDVD_RCBYCTL",
 	"CDVD_READ_DVD", /* Added by TGE. */
 };
+#endif
 #endif
 
 #ifdef CALLBACK_DEBUG
@@ -497,6 +499,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 	int ret;
 	int (*sbfunc)(void *) = dispatch[sbcall];
 #if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+#if 0 /* TBD: Too large for SBIOS. */
 	const char *description = "unknown";
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {
@@ -506,6 +509,9 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 	}
 
 	printf("sbios call %d (%s) %s\n", sbcall, description, (sbfunc) ? "implemented" : "not implemented");
+#else
+	printf("sbios call %d %s\n", sbcall, (sbfunc) ? "implemented" : "not implemented");
+#endif
 #endif
 
 	if (!sbfunc) {

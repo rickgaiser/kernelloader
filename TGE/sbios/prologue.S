@@ -9,7 +9,9 @@
 	.section .header, "r"
 	.globl sbios_iopaddr
 	.globl sbios_osdparam
+	.globl sbios_header
 
+sbios_header:
 	.word	sbios	/* Entry address fo sbios calls. */
 
 	.ascii	"PS2b"

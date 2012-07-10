@@ -14,7 +14,7 @@ PHDRS
 	text PT_LOAD;
 }
 
-ENTRY(sbios)
+ENTRY(sbios_header)
 SECTIONS {
 	. = phys + offset;
 
