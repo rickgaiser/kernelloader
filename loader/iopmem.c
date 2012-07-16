@@ -123,7 +123,7 @@ void iop_init_shared(void)
 			if (strncmp(magic, SHAREDMEM_MAGIC, sizeof(magic)) == 0) {
 				sharedmem_dbg_t *dbg = (void *) addr;
 				sharedMemU = &dbg->shared[0];
-				printf("sharedMem at 0x%08x\n", sharedMemU);
+				printf("sharedMem at 0x%08x\n", (unsigned int) sharedMemU);
 				initializedU = -1;
 				break;
 			}
@@ -147,7 +147,7 @@ void iop_kmode_enter(void)
  * @param buf Pointer to destination buffer.
  * @param size Size of memory to read.
  */
-u32 iop_read(void *addr, void *buf, u32 size)
+u32 iop_read(volatile void *addr, void *buf, u32 size)
 {
 #ifdef USER_SPACE_SUPPORT
 	if (!isKernelMode()) {
@@ -156,7 +156,7 @@ u32 iop_read(void *addr, void *buf, u32 size)
 	}
 #endif
 
-	memcpy(buf, addr + SUB_VIRT_MEM, size);
+	memcpy(buf, ((void *) addr) + SUB_VIRT_MEM, size);
 
 #ifdef USER_SPACE_SUPPORT
 	if (!isKernelMode()) {
@@ -174,7 +174,7 @@ u32 iop_read(void *addr, void *buf, u32 size)
  * @param buf Pointer to data written.
  * @param size Size to read.
  */
-u32 iop_write(void *addr, void *buf, u32 size)
+u32 iop_write(volatile void *addr, void *buf, u32 size)
 {
 #ifdef USER_SPACE_SUPPORT
 	if (!isKernelMode()) {
@@ -183,7 +183,7 @@ u32 iop_write(void *addr, void *buf, u32 size)
 	}
 #endif
 
-	memcpy(addr + SUB_VIRT_MEM, buf, size);
+	memcpy(((void *) addr) + SUB_VIRT_MEM, buf, size);
 
 #ifdef USER_SPACE_SUPPORT
 	if (!isKernelMode()) {

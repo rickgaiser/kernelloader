@@ -13,9 +13,9 @@ void iop_kmode_enter(void);
 /** Initialize shared memory debug. */
 void iop_init_shared(void);
 /** Read iop memory. */
-u32 iop_read(void *addr, void *buf, u32 size);
+u32 iop_read(volatile void *addr, void *buf, u32 size);
 /** Write to iop memory. */
-u32 iop_write(void *addr, void *buf, u32 size);
+u32 iop_write(volatile void *addr, void *buf, u32 size);
 /** Print one character using sharedmem.irx (without rpc for testing). */
 void iop_putc(unsigned char c);
 /** Print one string using sharedmem.irx (without rpc for testing). */
