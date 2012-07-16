@@ -8,7 +8,7 @@
 # Licenced under Academic Free License version 2.0
 # Review ps2sdk README & LICENSE files for further details.
 #
-# (c) 2007 Mega Man
+# (c) 2007 - 2012 Mega Man
 #
 # $Id$
 # EE SIF RPC commands
@@ -343,40 +343,17 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 
 	data = data;
 
-	/* No callback as default. */
-	end_function = NULL;
-	end_param = NULL;
-
-	pkt_addr = client->hdr.pkt_addr;
-
 	/* Interrupts may not be disabled on Linux 2.6. */
 	core_save_disable(&status);
+	pkt_addr = client->hdr.pkt_addr;
 	client->hdr.sema_id++;
 
-	/* Set client free for use by next calls. */
-	client->hdr.pkt_addr = NULL;
-	core_restore(status);
-
 	if (request->cid == 0x8000000a) {
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-		SifRpcCallPkt_t *call = pkt_addr;
-
-		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x rpc_number 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, call->rpc_number);
-#endif
-		core_save_disable(&status);
-
 		/* Response to RPC call. */
 		end_function = client->end_function;
 		end_param = client->end_param;
-		core_restore(status);
 	} else if (request->cid == 0x80000009) {
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-		SifRpcBindPkt_t *bind = pkt_addr;
-
-		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x sid 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, bind->sid);
-#endif
-
-		core_save_disable(&status);
+		/* Response to Bind call. */
 		client->server = request->server;
 		client->buff   = request->buff;
 		client->cbuff  = request->cbuff;
@@ -384,17 +361,31 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 		/* Callback is not part of PS2SDK, but is required for linux. */
 		end_function = client->end_function;
 		end_param = client->end_param;
-		core_restore(status);
 	} else {
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr);
-#endif
+		/* No callback. */
+		end_function = NULL;
+		end_param = NULL;
 	}
+	/* Set client free for use by next calls. */
+	client->hdr.pkt_addr = NULL;
+	core_restore(status);
+
+#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+	if (request->cid == 0x8000000a) {
+		SifRpcCallPkt_t *call = pkt_addr;
+
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x rpc_number 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, call->rpc_number);
+	} else if (request->cid == 0x80000009) {
+		SifRpcBindPkt_t *bind = pkt_addr;
+
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x sid 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr, bind->sid);
+	} else {
+		printf("request_end: client 0x%x cid 0x%x pkt_addr 0x%x\n", (uint32_t) client, (uint32_t) request->cid, (uint32_t) pkt_addr);
+	}
+#endif
 
 	if (end_function != NULL) {
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
 		printf("Calling 0x%x\n", (uint32_t) end_function);
-#endif
 		end_function(end_param);
 	}
 
