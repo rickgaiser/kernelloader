@@ -25,7 +25,13 @@ commonExceptionHandler:
 	nop
 
 	addiu	k0, sp, 0
+#ifdef PS2_EE
 	lw	sp, exceptionKernelStack
+#else
+	lui	sp, %hi(exceptionKernelStack)
+	addiu	sp, %lo(exceptionKernelStack)
+	lw	sp, 0(sp)
+#endif
 	addiu	sp, sp, -STACK_OVERHEAD
 	addiu	sp, sp, -CONTEXT_SIZE
 
@@ -63,10 +69,24 @@ commonExceptionHandler:
 	SAVE_REG(30)
 	SAVE_REG(31)
 
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
+
 	/* Param 1: Pointer to CPU context. */
 	addiu	a0, sp, 0
+#ifdef PS2_EE
 	jal	errorHandler
+#else
+	lui	gp, %hi(_gp)
+	la	t9, errorHandler
+	jalr	t9
+#endif
 	nop
+	RESTORE_REG(25)
+	RESTORE_REG(28)
+	lq	sp, 16 * 29(sp)
 	eret
 
 callSyscallHandler:
@@ -85,13 +105,21 @@ callSyscallHandler:
 	negu	v1, v1
 negative_syscall:
 
-	addiu	sp, -0x10
-	sw	ra, 0(sp)
+	addiu	sp, -(STACK_OVERHEAD + 16)
+	sw	ra, STACK_OVERHEAD + 0(sp)
+	sw	gp, STACK_OVERHEAD + 8(sp)
+	sw	t9, STACK_OVERHEAD + 12(sp)
+
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
+
 	/* Save EPC. */
 	sync.p
 	mfc0	k0, $14
 	addiu	k0, 4
-	sw	k0, 4(sp)
+	sw	k0, STACK_OVERHEAD + 4(sp)
 	mtc0	k0, $14
 	sync.p
 
@@ -104,6 +132,7 @@ negative_syscall:
 	la	k0, syscallTable
 	sll	k1, v1, 2
 	addu	k0, k0, k1
+#ifdef PS2_EE
 	lw	k0, 0(k0)
 
 	/* If value is zero, Syscall is not implemented. */
@@ -112,6 +141,16 @@ negative_syscall:
 
 	/* Call syscall function. */
 	jalr	k0
+#else
+	lw	t9, 0(k0)
+
+	/* If value is zero, Syscall is not implemented. */
+	beq	t9, zero, undefinedSyscall
+	nop
+
+	/* Call syscall function. */
+	jalr	t9
+#endif
 	nop
 
 	j	commonExceptionHandlerExit
@@ -119,13 +158,20 @@ negative_syscall:
 
 undefinedSyscall:
 	move	a0, v1
+#ifdef PS2_EE
 	jal	unknownSyscall
+#else
+	la	t9, unknownSyscall
+	jalr	t9
+#endif
 	nop
 
 commonExceptionHandlerExit:
-	lw	k0, 4(sp)
-	lw	ra, 0(sp)
-	addiu	sp, 0x10
+	lw	k0, STACK_OVERHEAD + 4(sp)
+	lw	ra, STACK_OVERHEAD + 0(sp)
+	lw	gp, STACK_OVERHEAD + 8(sp)
+	lw	t9, STACK_OVERHEAD + 12(sp)
+	addiu	sp, (16 + STACK_OVERHEAD)
 	mtc0	k0, $14
 	sync.p
 	sync.l
@@ -146,7 +192,13 @@ interruptExceptionHandler:
 	bltz	k0, reuseStack
 	nop
 
+#ifdef PS2_EE
 	lw	sp, exceptionKernelStack
+#else
+	lui	sp, %hi(exceptionKernelStack)
+	addiu	sp, %lo(exceptionKernelStack)
+	lw	sp, 0(sp)
+#endif
 
 reuseStack:
 	addiu	sp, sp, -STACK_OVERHEAD
@@ -243,9 +295,20 @@ reuseStack:
 	sw	t4, STATUS_OFFSET + 4 * 6(sp)
 
 	/* Parameter 2: Register context. */
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
 	move a0, sp
+	addiu	sp, sp, -STACK_OVERHEAD
+#ifdef PS2_EE
 	jal irq_interrupt
+#else
+	la	t9, irq_interrupt
+	jalr	t9
+#endif
 	nop
+	addiu	sp, STACK_OVERHEAD
 
 	lw	t0, STATUS_OFFSET + 4 * 2(sp)
 	mthi	t0

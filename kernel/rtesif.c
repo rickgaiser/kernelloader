@@ -70,7 +70,7 @@ int sif_reg_set(int reg, int val)
 		/* sceSifSetReg() */
 		return (int)sbios(21, &arg);
 	} else if (sbversion <= 0x250) {
-		(int (**)(int, int))_sb_sif_reg_set = 0x80002700;
+		_sb_sif_reg_set = (void *) 0x80002700;
 		return _sb_sif_reg_set(reg, val);
 	}
 
@@ -90,7 +90,7 @@ int sif_reg_get(int reg)
 		/* sceSifGetReg() */
 		return (int)sbios(22, &reg);
 	} else if (sbversion <= 0x250) {
-		(int (**)(int))_sb_sif_reg_get = 0x800027c0;
+		_sb_sif_reg_get = (void *) 0x800027c0;
 		return _sb_sif_reg_get(reg);
 	}
 

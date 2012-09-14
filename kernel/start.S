@@ -13,7 +13,16 @@ initKernelStack:
 .type	_start,@function;
 .ent	_start
 _start:
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
 	lw	sp, initKernelStack
+#ifdef PS2_EE
 	j	start_kernel
+#else
+	la	t9, start_kernel
+	jal	t9
+#endif
 	nop
 .end	_start

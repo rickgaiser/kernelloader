@@ -1,17 +1,32 @@
-CC=ee-gcc
-AS=ee-as
-LD=ee-elf-ld
-
 include ../config.mk
+
+ifeq ($(NEW_KERNEL_TOOLCHAIN),yes)
+CROSS_COMPILE = mips64el-linux-gnu-
+BIN2S=/usr/local/ps2dev/ps2sdk/bin/bin2s
+LINKSCRIPT = elf32ltsmipn32.x
+else
+CROSS_COMPILE = ee-
+BIN2S=bin2s
+LINKSCRIPT = linkfile
+endif
+CC=$(CROSS_COMPILE)gcc
+AS=$(CROSS_COMPILE)as
+LD=$(CROSS_COMPILE)ld
+STRIP=$(CROSS_COMPILE)strip
 
 PROGRAM = kernel
 INSTALLFILE = ../loader/kernel.elf
 
 OBJ_DIR = obj
 
-# We specify -G0 to get rid of gp register problems.
-CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g -G0 -O0 \
-	-mips3 -nostdlib -DPS2_EE -I../include
+CFLAGS = -Wall -W -Werror-implicit-function-declaration -Wimplicit-int -EL -g \
+	-nostdlib -I../include
+
+ifeq ($(NEW_KERNEL_TOOLCHAIN),yes)
+CFLAGS += -fno-builtin -mabi=n32 -march=r5900 -mno-llsc
+else
+CFLAGS += -mips3 -G0 -O0 -DPS2_EE
+endif
 
 SRC = start $(PROGRAM) rtesif strlen strncpy \
 	cache timers irq interrupts panic mmu demo loader syscall \
@@ -30,10 +45,10 @@ install: $(INSTALLFILE)
 
 $(INSTALLFILE): $(PROGRAM).elf
 	install -m 644 -p $(PROGRAM).elf $(INSTALLFILE)
-	ee-strip $(INSTALLFILE)
+	$(STRIP) $(INSTALLFILE)
 
 $(PROGRAM).elf: $(OBJS)
-	$(CC) $(CFLAGS) -Tlinkfile -o $(PROGRAM).elf $(OBJS) -lgcc
+	$(CC) $(CFLAGS) -T$(LINKSCRIPT) -o $(PROGRAM).elf $(OBJS) -lgcc
 
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(OBJ_DIR)
@@ -48,4 +63,4 @@ clean:
 	-rmdir $(OBJ_DIR)
 
 demo.S: $(EXAMPLE_ELF)
-	bin2s $< $@ demo
+	$(BIN2S) $< $@ demo

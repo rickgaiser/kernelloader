@@ -27,6 +27,9 @@ SBIOS_DEBUG = no
 # Activate to be able to move the screen with the analog stick.
 PAD_MOVE_SCREEN = yes
 
+# Choose toolchain for simple kernel example:
+NEW_KERNEL_TOOLCHAIN = no
+
 ### Don't change the following part, change DEBUG_OUTPUT_TYPE instead.
 
 SHARED_MEM_DEBUG = yes

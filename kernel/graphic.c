@@ -33,7 +33,11 @@ static inline void store_double(unsigned long addr, unsigned long long val)
     src.di=val;
     __asm__ __volatile__(
         ".set push\n"
+#ifdef PS2_EE
         "       .set mips3\n"
+#else
+        "       .set arch=r5900\n"
+#endif
         "       pextlw         $8,%1,%0\n"
         "       sd             $8,(%2)\n"
         "       .set   pop"
