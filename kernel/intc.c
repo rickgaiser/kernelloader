@@ -19,7 +19,7 @@ static irq_handler_t *intc_handler[INTC_NUMBER_OF_HANDLERS];
 
 void intc_enable_irq(unsigned int irq_nr)
 {
-	DBG("intc_enable_irq(%d)\n");
+	DBG("intc_enable_irq(%d)\n", irq_nr);
 	if (!(saved_intc_mask & (1 << irq_nr))) {
 		saved_intc_mask |= 1 << irq_nr;
 		*intc_mask |= 1 << irq_nr;
@@ -28,7 +28,7 @@ void intc_enable_irq(unsigned int irq_nr)
 
 void intc_disable_irq(unsigned int irq_nr)
 {
-	DBG("intc_disable_irq(%d)\n");
+	DBG("intc_disable_irq(%d)\n", irq_nr);
 	if (saved_intc_mask & (1 << irq_nr)) {
 		saved_intc_mask &= ~(1 << irq_nr);
 		*intc_mask |= 1 << irq_nr;
