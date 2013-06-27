@@ -112,13 +112,6 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL,
 		.loadCfg = -1 /* MC modules are loaded before this entry. */
 	},
-#if defined(RESET_IOP)
-	{
-		.path = "rom0:" MODPREFIX "CDVDMAN",
-		.argLen = 0,
-		.args = NULL
-	},
-#endif
 	{
 		.path = "SMSUTILS.irx",
 		.argLen = 0,

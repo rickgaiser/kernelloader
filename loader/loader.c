@@ -473,56 +473,12 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 	},
 	{
-		.path = "rom0:XCDVDMAN",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL,
-		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
-	},
-	{
-		.path = "rom0:CDVDMAN",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL,
-		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
-	},
-	{
-		.path = "rom1:CDVDMAN",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL,
-	},
-	{
 #ifdef RTE
 		.path = "host:RTE/cdvdfsv.irx",
 #else
 		.path = CONFIG_DIR "/cdvdfsv.irx",
 #endif
 		.buffered = -1,
-		.argLen = 0,
-		.args = NULL,
-	},
-	{
-		.path = "rom0:XCDVDFSV",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL,
-		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
-	},
-	{
-		.path = "rom0:CDVDFSV",
-		.buffered = 0,
-		.argLen = 0,
-		.args = NULL,
-		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
-	},
-	{
-		.path = "rom1:CDVDFSV",
-		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
 	},
