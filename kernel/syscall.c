@@ -14,7 +14,7 @@ uint32_t unknownSyscall(int nr)
 	return 0;
 }
 
-uint32_t syscallTable[130] = {
+void *syscallTable[130] = {
 	/* 0 */
 	0, 0, syscallSetCrtc, 0, syscallExit, 0, 0, 0, 0, 0,
 	/* 10 */

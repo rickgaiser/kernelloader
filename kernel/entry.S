@@ -405,3 +405,215 @@ reuseStack:
 	eret
 .end interruptExceptionHandler
 
+.globl tlbRefillExceptionHandler
+.type tlbRefillExceptionHandler,@function;
+.ent tlbRefillExceptionHandler
+.set noat
+.set noreorder
+tlbRefillExceptionHandler:
+#ifdef PS2_EE
+	lw	sp, exceptionKernelStack
+#else
+	lui	sp, %hi(exceptionKernelStack)
+	addiu	sp, %lo(exceptionKernelStack)
+	lw	sp, 0(sp)
+#endif
+	addiu	sp, sp, -STACK_OVERHEAD
+	addiu	sp, sp, -CONTEXT_SIZE
+
+	/* Save all registers. */
+	sq	k0, 16 * 29(sp)
+	SAVE_REG(0)
+	SAVE_REG(1)
+	SAVE_REG(2)
+	SAVE_REG(3)
+	SAVE_REG(4)
+	SAVE_REG(5)
+	SAVE_REG(6)
+	SAVE_REG(7)
+	SAVE_REG(8)
+	SAVE_REG(9)
+	SAVE_REG(10)
+	SAVE_REG(11)
+	SAVE_REG(12)
+	SAVE_REG(13)
+	SAVE_REG(14)
+	SAVE_REG(15)
+	SAVE_REG(16)
+	SAVE_REG(17)
+	SAVE_REG(18)
+	SAVE_REG(19)
+	SAVE_REG(20)
+	SAVE_REG(21)
+	SAVE_REG(22)
+	SAVE_REG(23)
+	SAVE_REG(24)
+	SAVE_REG(25)
+	SAVE_REG(26)
+	SAVE_REG(27)
+	SAVE_REG(28)
+	SAVE_REG(30)
+	SAVE_REG(31)
+
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
+
+	/* Param 1: Pointer to CPU context. */
+	addiu	a0, sp, 0
+#ifdef PS2_EE
+	jal	tlbRefillError
+#else
+	lui	gp, %hi(_gp)
+	la	t9, tlbRefillError
+	jalr	t9
+#endif
+	nop
+	RESTORE_REG(25)
+	RESTORE_REG(28)
+	lq	sp, 16 * 29(sp)
+	eret
+.end tlbRefillExceptionHandler
+
+.globl counterExceptionHandler
+.type counterExceptionHandler,@function;
+.ent counterExceptionHandler
+.set noat
+.set noreorder
+counterExceptionHandler:
+#ifdef PS2_EE
+	lw	sp, exceptionKernelStack
+#else
+	lui	sp, %hi(exceptionKernelStack)
+	addiu	sp, %lo(exceptionKernelStack)
+	lw	sp, 0(sp)
+#endif
+	addiu	sp, sp, -STACK_OVERHEAD
+	addiu	sp, sp, -CONTEXT_SIZE
+
+	/* Save all registers. */
+	sq	k0, 16 * 29(sp)
+	SAVE_REG(0)
+	SAVE_REG(1)
+	SAVE_REG(2)
+	SAVE_REG(3)
+	SAVE_REG(4)
+	SAVE_REG(5)
+	SAVE_REG(6)
+	SAVE_REG(7)
+	SAVE_REG(8)
+	SAVE_REG(9)
+	SAVE_REG(10)
+	SAVE_REG(11)
+	SAVE_REG(12)
+	SAVE_REG(13)
+	SAVE_REG(14)
+	SAVE_REG(15)
+	SAVE_REG(16)
+	SAVE_REG(17)
+	SAVE_REG(18)
+	SAVE_REG(19)
+	SAVE_REG(20)
+	SAVE_REG(21)
+	SAVE_REG(22)
+	SAVE_REG(23)
+	SAVE_REG(24)
+	SAVE_REG(25)
+	SAVE_REG(26)
+	SAVE_REG(27)
+	SAVE_REG(28)
+	SAVE_REG(30)
+	SAVE_REG(31)
+
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
+
+	/* Param 1: Pointer to CPU context. */
+	addiu	a0, sp, 0
+#ifdef PS2_EE
+	jal	counterError
+#else
+	lui	gp, %hi(_gp)
+	la	t9, counterError
+	jalr	t9
+#endif
+	nop
+	RESTORE_REG(25)
+	RESTORE_REG(28)
+	lq	sp, 16 * 29(sp)
+	eret
+.end counterExceptionHandler
+
+.globl debugExceptionHandler
+.type debugExceptionHandler,@function;
+.ent debugExceptionHandler
+.set noat
+.set noreorder
+debugExceptionHandler:
+#ifdef PS2_EE
+	lw	sp, exceptionKernelStack
+#else
+	lui	sp, %hi(exceptionKernelStack)
+	addiu	sp, %lo(exceptionKernelStack)
+	lw	sp, 0(sp)
+#endif
+	addiu	sp, sp, -STACK_OVERHEAD
+	addiu	sp, sp, -CONTEXT_SIZE
+
+	/* Save all registers. */
+	sq	k0, 16 * 29(sp)
+	SAVE_REG(0)
+	SAVE_REG(1)
+	SAVE_REG(2)
+	SAVE_REG(3)
+	SAVE_REG(4)
+	SAVE_REG(5)
+	SAVE_REG(6)
+	SAVE_REG(7)
+	SAVE_REG(8)
+	SAVE_REG(9)
+	SAVE_REG(10)
+	SAVE_REG(11)
+	SAVE_REG(12)
+	SAVE_REG(13)
+	SAVE_REG(14)
+	SAVE_REG(15)
+	SAVE_REG(16)
+	SAVE_REG(17)
+	SAVE_REG(18)
+	SAVE_REG(19)
+	SAVE_REG(20)
+	SAVE_REG(21)
+	SAVE_REG(22)
+	SAVE_REG(23)
+	SAVE_REG(24)
+	SAVE_REG(25)
+	SAVE_REG(26)
+	SAVE_REG(27)
+	SAVE_REG(28)
+	SAVE_REG(30)
+	SAVE_REG(31)
+
+#ifndef PS2_EE
+	lui	gp, %hi(_gp)
+	addiu	gp, %lo(_gp)
+#endif
+
+	/* Param 1: Pointer to CPU context. */
+	addiu	a0, sp, 0
+#ifdef PS2_EE
+	jal	debugError
+#else
+	lui	gp, %hi(_gp)
+	la	t9, debugError
+	jalr	t9
+#endif
+	nop
+	RESTORE_REG(25)
+	RESTORE_REG(28)
+	lq	sp, 16 * 29(sp)
+	eret
+.end debugExceptionHandler

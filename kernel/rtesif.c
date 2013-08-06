@@ -41,7 +41,7 @@ static int (*_sbios)(int, void *) = NULL;
  */
 static int sbversion = 0;
 
-static inline int sbios(int func, void *arg)
+int sbios(int func, void *arg)
 {
 	if (!_sbios) {
 		volatile uint32_t *sbios_magic;
@@ -115,9 +115,12 @@ int sif_dma_request(void *dmareq, int count)
 
 void dmac5_handler(uint32_t *regs)
 {
+#if 0
 	volatile uint32_t *d5_chcr = (uint32_t *) KSEG1ADDR(D5_CHCR);
 	volatile uint32_t *d5_qwc = (uint32_t *) KSEG1ADDR(D5_QWC);
 	volatile uint32_t *d5_madr = (uint32_t *) KSEG1ADDR(D5_MADR);
+#endif
+	(void) regs;
 
 	DBG("Got DMAC5 interrupt (SIF0: EE <- IOP transfer).\n");
 #if 0
@@ -129,10 +132,13 @@ void dmac5_handler(uint32_t *regs)
 
 void dmac6_handler(uint32_t *regs)
 {
+#if 0
 	volatile uint32_t *d6_chcr = (uint32_t *) KSEG1ADDR(D6_CHCR);
 	volatile uint32_t *d6_madr = (uint32_t *) KSEG1ADDR(D6_MADR);
 	volatile uint32_t *d6_qwc = (uint32_t *) KSEG1ADDR(D6_QWC);
 	volatile uint32_t *d6_tadr = (uint32_t *) KSEG1ADDR(D6_TADR);
+#endif
+	(void) regs;
 
 	DBG("Got DMAC6 interrupt (SIF1: EE -> IOP transfer).\n");
 #if 0
@@ -167,6 +173,7 @@ void sif_set_dchain(void)
 	sbios(SB_SIFSETDCHAIN, NULL);
 }
 
+#if 0
 static void rpc_wakeup(void *p, int result)
 {
 	printf("rpc_wakeup() called.\n");
@@ -196,6 +203,7 @@ void SifInitRpc(int mode)
 	return;
 #endif
 }
+#endif
 
 static void rpcendNotify(void *arg)
 {
@@ -214,6 +222,7 @@ int SifBindRpc(SifRpcClientData_t *client, int rpc_number, int mode)
 	return sbios(SB_SIFBINDRPC, &arg);
 }
 
+#if 0
 int SifCallRpc(SifRpcClientData_t *client, int rpc_number, int mode,
 		void *send, int ssize, void *receive, int rsize,
 		SifRpcEndFunc_t end_function, void *end_param)
@@ -232,6 +241,7 @@ int SifCallRpc(SifRpcClientData_t *client, int rpc_number, int mode,
 
 	return sbios(SB_SIFCALLRPC, &arg);
 }
+#endif
 
 int SifCheckStatRpc(SifRpcClientData_t *cd)
 {

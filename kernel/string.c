@@ -2,7 +2,7 @@
 #include "string.h"
 #include "stdint.h"
 
-void *memcpy(void *dest, const void *src, int size)
+void *memcpy(void *dest, const void *src, unsigned int size)
 {
 	uint8_t *d = (uint8_t *) dest;
 	uint8_t *s = (uint8_t *) src;
@@ -14,7 +14,7 @@ void *memcpy(void *dest, const void *src, int size)
 	return dest;
 }
 
-void *memset(void *dest, int c, int size)
+void *memset(void *dest, int c, unsigned int size)
 {
 	uint8_t *d = (uint8_t *) dest;
 

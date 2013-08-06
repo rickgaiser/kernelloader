@@ -82,6 +82,7 @@ int ps2gs_set_gssreg(int reg, uint64_t val)
     return 0;
 }
 
+#if 0
 static int ps2gs_set_gssreg_dummy(int reg, uint64_t val)
 {
     if (reg >= PS2_GSSREG_PMODE && reg <= PS2_GSSREG_BGCOLOR) {
@@ -91,6 +92,7 @@ static int ps2gs_set_gssreg_dummy(int reg, uint64_t val)
 	}
     return 0;
 }
+#endif
 
 int ps2gs_get_gssreg(int reg, uint64_t *val)
 {

@@ -204,6 +204,10 @@ $L16:
 	sb	$0,0($4)
 	move	$2,$6
 	addu	$4,$4,1
+	nop
+	nop
+	nop
+	nop
 	.set	noreorder
 	.set	nomacro
 	bne	$2,$0,$L16

@@ -2,6 +2,7 @@
 #ifndef _RTE_SIF_H_
 #define _RTE_SIF_H_
 
+int sbios(int func, void *arg);
 int sif_reg_set(int reg, int val);
 int sif_reg_get(int reg);
 int sif_dma_request(void *dmareq, int count);

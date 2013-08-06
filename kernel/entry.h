@@ -30,6 +30,9 @@
 void commonExceptionHandler(void);
 /** Entry point for V_INTERRUPT exception handler. */
 void interruptExceptionHandler(void);
+void tlbRefillExceptionHandler(void);
+void counterExceptionHandler(void);
+void debugExceptionHandler(void);
 #endif
 
 #endif

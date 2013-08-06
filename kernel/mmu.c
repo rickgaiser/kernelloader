@@ -21,6 +21,8 @@
 #define PAGE_VALID (1 << 1)
 /** Page is global. */
 #define PAGE_GLOBAL (1 << 0)
+/** Page is SPRAM. */
+#define PAGE_SPRAM (1 << 31)
 /** Page size is 4 Kbyte. */
 #define PAGE_4K (0 << 13)
 /** Page size is 16 Kbyte. */
@@ -127,9 +129,10 @@ void mmu_init_module(void)
 	/* XXX; No TLB handler setting WIRED makes no sense. */
 	CP0_SET_WIRED(31);
 
+	/* Map SPRAM. This maps 16 KByte. */
 	mapMemory(0, 0x70000000,
-		0x00000000, PAGE_CACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL,
-		0x00000000, PAGE_CACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL, /* Strange mapping from PS2 kernel .*/
+		0x00000000, PAGE_UNCACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL | PAGE_SPRAM,
+		0x00000000, PAGE_UNCACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL,
 		PAGE_4K);
 
 	if ((KSEG0 + ZERO_REG_ADDRESS) < (uint32_t) &_end) {
@@ -137,7 +140,7 @@ void mmu_init_module(void)
 	}
 
 	/* Required by exception handler. */
-	mapMemory(0, 0xffff8000,
+	mapMemory(1, 0xffff8000,
 		ZERO_REG_ADDRESS, PAGE_CACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL,
 		ZERO_REG_ADDRESS + 0x4000, PAGE_CACHEABLE | PAGE_DIRTY | PAGE_VALID | PAGE_GLOBAL,
 		PAGE_16K);

@@ -33,17 +33,6 @@
 struct ps2_bootinfo *bootinfo;
 #endif
 
-/**
- * SBIOS function entry.
- * @param sbcall Number of the function that should be called.
- * @param arg Paramaeter for function called.
- * @return Return value of function called.
- */
-typedef int (sbios_t) (int sbcall, void *arg);
-
-/** Function pointer to SBIOS. */
-sbios_t *sbios;
-
 /*
  * A vastly simplified IOP reset routine.
  */
@@ -106,6 +95,11 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	volatile uint32_t *sbios_addr = (uint32_t *) 0x80001008;
 	int version;
 
+	(void) argc;
+	(void) argv;
+	(void) envp;
+	(void) prom_vec;
+
 	iop_prints("Kernel started\n");
 
 	if (sp >= (KSEG0 + ZERO_REG_ADDRESS)) {
@@ -135,6 +129,7 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	// Working with RTE until here:
 
 #if 0
+#if 0
 	/* Not working with RTE disc, but working with kernelloader. */
 	bootinfo = (struct ps2_bootinfo *) envp;
 
@@ -142,6 +137,7 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 #else
 	/* Working with RTE disc and kernelloader. */
 	sbios = *((sbios_t **) SBIOS_BASE);
+#endif
 #endif
 
 	iop_prints("Calling sbios\n");
@@ -160,7 +156,10 @@ int start_kernel(int argc, char **argv, char **envp, int *prom_vec)
 	printf("crash2 0x%x\n", *crash2);
 #endif
 
+	install_exception_handler(V_TLB_REFILL, tlbRefillExceptionHandler);
 	install_exception_handler(V_COMMON, commonExceptionHandler);
+	install_exception_handler(V_COUNTER, counterExceptionHandler);
+	install_exception_handler(V_DEBUG, debugExceptionHandler);
 #if 0
 	printf("crash3 0x%x\n", *crash3);
 	*crash3 = 0x12345678;

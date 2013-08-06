@@ -17,7 +17,7 @@ void install_exception_handler(int type, void *addr)
 	if (type > V_INTERRUPT) {
 		panic("Exception type %d is invalid.\n", type);
 	}
-	dest = (KSEG0 + type * 0x80);
+	dest = (void *) (KSEG0 + type * 0x80);
 	dest[0] = 0x00000000; /* nop, required to fix CPU bug. */
 	dest[1] = 0x00000000; /* nop, required to fix CPU bug. */
 	dest[2] = 0x08000000 /* jump */
@@ -72,6 +72,32 @@ void dumpRegisters(uint32_t *regs)
 void errorHandler(uint32_t *regs)
 {
 	printf("Exception occured\n");
+
+	iop_prints("Register:\n");
+	dumpRegisters(regs);
+	while(1);
+}
+
+void tlbRefillError(uint32_t *regs)
+{
+	printf("TLB Refill Exception occured\n");
+
+	iop_prints("Register:\n");
+	dumpRegisters(regs);
+	while(1);
+}
+
+void counterError(uint32_t *regs)
+{
+	printf("Counter Exception occured\n");
+
+	iop_prints("Register:\n");
+	dumpRegisters(regs);
+	while(1);
+}
+void debugError(uint32_t *regs)
+{
+	printf("Debug Exception occured\n");
 
 	iop_prints("Register:\n");
 	dumpRegisters(regs);

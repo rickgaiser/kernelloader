@@ -53,8 +53,10 @@ static uint64_t timer_interruptCount = 0;
 // ======================= 
 // Time Interrupt Callback 
 // ======================= 
-void timer_interrupt(uint32_t * regs)
+void timer_interrupt(uint32_t *regs)
 {
+	(void) regs;
+
 	timer_interruptCount++;
 
 	// A write to the overflow flag will clear the overflow flag 
