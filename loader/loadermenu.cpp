@@ -6,6 +6,7 @@
 #include <iopcontrol.h>
 #include <iopheap.h>
 #include <iopcontrol.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "graphic.h"
@@ -21,6 +22,7 @@
 #include "getelf.h"
 #include "libkbd.h"
 #include "nvram.h"
+#include "kprint.h"
 
 #define MAX_ENTRIES 256
 #define MAX_FILE_LEN 256
@@ -281,16 +283,16 @@ static const char *sbiosDescription[] = {
 int numberOfSbiosCalls = sizeof(sbiosDescription) / sizeof(const char *);
 
 /** Default Linux parameter for PAL mode. */
-const char commandline_pal[] = "crtmode=pal xmode=PAL video=ps2fb:pal,640x480-32";
+const char commandline_pal[] = "crtmode=pal1 xmode=PAL video=ps2fb:pal,640x480-32";
 /** Default Linux parameter for NTSC mode. */
-const char commandline_ntsc[] = "crtmode=ntsc xmode=NTSC video=ps2fb:ntsc,640x448-32";
+const char commandline_ntsc[] = "crtmode=ntsc1 xmode=NTSC video=ps2fb:ntsc,640x448-32";
 /** Default Linux parameter for VGA mode. */
 const char commandline_vga60[] = "crtmode=vesa0,60 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@60";
 const char commandline_vga72[] = "crtmode=vesa0 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@72";
 const char commandline_vga75[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@75";
 const char commandline_vga85[] = "crtmode=vesa0,75 xmode=VESA,1024x768x24 video=ps2fb:vesa,1024x768-16@85";
 /** Default Linux parameter for HDTV mode. */
-const char commandline_dtv[] = "crtmode=dtv0 xmode=dtv,480p video=ps2fb:dtv,720x480-32";
+const char commandline_dtv[] = "crtmode=dtv2 xmode=dtv,720p video=ps2fb:dtv,720x480-32";
 /** Default kernel parameter for ramdisk. */
 const char commandline_ramdisk[] = "ramdisk_size=16384";
 
@@ -386,7 +388,7 @@ int poweroff(void *arg)
 {
 	arg = arg;
 
-	printf("Try to power off.\n");
+	kprintf("Try to power off.\n");
 	graphic_paint();
 
 	// Turn off PS2
@@ -405,26 +407,49 @@ int reboot(void *arg)
 {
 	arg = arg;
 
-	printf("Try to reboot.\n");
+	kprintf("Try to reboot.\n");
 	graphic_paint();
 
-	padEnd();
-	padReset();
+	deinitializeController();
 
+	if (isDVDVSupported()) {
+		graphic_setStatusMessage("Stopping DVD");
+
+		/* Stop CD/DVD. */
+		CDVD_Stop();
+		CDVD_FlushCache();
+
+		CDDA_Exit();
+	}
+
+	graphic_setStatusMessage("Exit IOP Heap");
 	SifExitIopHeap();
+	graphic_setStatusMessage("Exit LoadFile");
 	SifLoadFileExit();
+	graphic_setStatusMessage("Exit FIO");
+	fioExit();
+	graphic_setStatusMessage("Exit RPC");
 	SifExitRpc();
+	graphic_setStatusMessage("Stop DMA");
 	SifStopDma();
+	graphic_setStatusMessage("PreReset Init RPC");
+	SifInitRpc(0);
 
-	SifIopReset(s_pUDNL, 0);
+	graphic_setStatusMessage("Reseting IOP");
+	while(!SifIopReset(s_pUDNL, 0));
 
-	while (SifIopSync());
+	graphic_setStatusMessage("IOP Sync");
+	while(!SifIopSync());
 
+	graphic_setStatusMessage("Initialize RPC");
 	SifInitRpc(0);
 	SifLoadModule("rom0:SIO2MAN", 0, NULL);
+	graphic_setStatusMessage("Exit RPC 2");
 	SifExitRpc();
+	graphic_setStatusMessage("Stop DMA 2");
 	SifStopDma();
 
+	graphic_setStatusMessage("Reboot");
 	/* Return to the PS2 browser. */
 	LoadExecPS2("", 0, NULL);
 
@@ -454,7 +479,7 @@ int fsFile(void *arg)
 #endif
 
 		strcpy(rootParam->target, rootParam->fileName);
-		printf("Filename is \"%s\"\n", rootParam->fileName);
+		kprintf("Filename is \"%s\"\n", rootParam->fileName);
 		if (strcmp(rootParam->fsName, "cdfs:") == 0) {
 			/* Stop CD when finished. */
 			CDVD_Stop();
@@ -466,6 +491,28 @@ int fsFile(void *arg)
 		error_printf("Filename is too long.\n");
 		return -1;
 	}
+}
+
+static int removefile(void *arg)
+{
+	const char *filename = (const char *) arg;
+	int rv;
+
+	rv = fioRemove(filename);
+	if (rv == 0) {
+		/* Bug in ROM FILEIO/XFILEIO drivers.
+		 * break; statement is missing at the end of the case for fioRemove
+		 * so it continues on to the next case, which happens to be mkdir.
+		 * So we need to delete the create directory.
+		 */
+		fioRmdir(filename);
+		return 0;
+	} else {
+		error_printf("Failed to delete file %s (rv = %d)\n",
+			filename, rv);
+		return -1;
+	}
+
 }
 
 int fsDir(void *arg);
@@ -495,21 +542,23 @@ int disableAllSBIOSCalls(void *arg)
 }
 
 /** Set enabled and disabled SBIOS calls to default setup for RTE. */
-int defaultSBIOSCalls(void *arg)
-{
-	int i;
-
-	arg = arg;
-
-	for (i = 0; i < numberOfSbiosCalls; i++) {
-		if ((i >= 176) && (i <= 196)) {
-			/* Disable CDVD, because of some problems. */
-			sbiosCallEnabled[i] = 0;
-		} else {
-			sbiosCallEnabled[i] = 1;
+extern "C" {
+	int defaultSBIOSCalls(void *arg)
+	{
+		int i;
+	
+		arg = arg;
+	
+		for (i = 0; i < numberOfSbiosCalls; i++) {
+			if ((i >= 176) && (i <= 196)) {
+				/* Disable CDVD, because of some problems. */
+				sbiosCallEnabled[i] = 0;
+			} else {
+				sbiosCallEnabled[i] = 1;
+			}
 		}
+		return 0;
 	}
-	return 0;
 }
 
 int setCurrentMenuAndStopCDVD(void *arg)
@@ -547,7 +596,7 @@ void fsGenerateDirListMenu(fsRootParam_t * rootParam, bool isRoot)
 		do {
 			rv = fileXioDread(dirFd, &dir);
 			if (rv > 0) {
-				//printf("dir: %s 0x%08x\n", dir.name, dir.stat.mode);
+				//kprintf("dir: %s 0x%08x\n", dir.name, dir.stat.mode);
 
 				if (strcmp(dir.name, ".") != 0) {
 					fsDirParam[i].rootParam = rootParam;
@@ -817,6 +866,7 @@ extern "C" {
 #endif
 int setDefaultConfiguration(void *arg)
 {
+	int moduletype;
 	int slim;
 	int i;
 	int version;
@@ -832,7 +882,12 @@ int setDefaultConfiguration(void *arg)
 	strcpy(configfile, CONFIG_FILE);
 
 	loaderConfig.enableSBIOSTGE = 1;
-	loaderConfig.enableDev9 = 1;
+	if (debug_mode == -1) {
+		loaderConfig.enableDev9 = 1;
+	} else {
+		/* Hard disc and network not working with ps2link. */
+		loaderConfig.enableDev9 = 0;
+	}
 	loaderConfig.enableEEDebug = 0;
 	loaderConfig.autoBootTime = 0;
 	loaderConfig.patchLibsd = 0;
@@ -841,39 +896,70 @@ int setDefaultConfiguration(void *arg)
 		sbiosCallEnabled = (int *) malloc(numberOfSbiosCalls * sizeof(int));
 	}
 	if (sbiosCallEnabled != NULL) {
-		enableAllSBIOSCalls(NULL);
+		if (do_default_sbios_calls) {
+			defaultSBIOSCalls(NULL);
+		} else {
+			enableAllSBIOSCalls(NULL);
+		}
 	} else {
 		error_printf("Not enough memory.");
 	}
 
-	if (isSlimPSTwo()) {
+	if (isSlimPSTwo() && (debug_mode == -1)) {
 		/* Value for slim PSTwo. */
-		slim = 1;
+		moduletype = 1;
 		/* New modules seems to be more stable on slim on heavy USB use. */
 		loaderConfig.newModulesInTGE = 1;
 		/* Load newer CDVDMAN module on IOP reset. */
-		strcpy(iop_reset_param, "rom0:UDNL rom0:EELOADCNF");
+		strcpy(iop_reset_param, "rom0:UDNL rom0:OSDCNF");
 	} else {
 		/* Value for fat PS2. */
-		slim = -1;
+		moduletype = -1;
 		loaderConfig.newModulesInTGE = 0;
 		/* Load old CDVDMAN module on IOP reset. */
 		strcpy(iop_reset_param, "rom0:UDNL");
+	}
+	if (isSlimPSTwo()) {
+		slim = 1;
+	} else {
+		slim = -1;
 	}
 
 	for (i = 0; i < getNumberOfModules(); i++) {
 		moduleEntry_t *module;
 
+
 		module = getModuleEntry(i);
 
-		if (module->defaultmod) {
+		if (module->debug_mode) {
+			if (module->debug_mode != debug_mode) {
+				module->load = 0;
+
+				/* Don't load modules which are not compatible with ps2link. */
+				continue;
+			}
+		}
+		switch (module->defaultmod)
+		{
+		case 1: /* Default module depending whether new or old modules used. */
+			if ((module->slim == 0) || (module->slim == moduletype)) {
+				module->load = 1;
+			} else {
+				module->load = 0;
+			}
+			break;
+
+		case 2: /* Default module depending whether slim or fat PS2. */
 			if ((module->slim == 0) || (module->slim == slim)) {
 				module->load = 1;
 			} else {
 				module->load = 0;
 			}
-		} else {
+			break;
+
+		default:
 			module->load = 0;
+			break;
 		}
 		if (module->sound) {
 			if (get_libsd_version() <= 0x104) {
@@ -952,9 +1038,14 @@ void initMenu(Menu *menu)
 	Menu *fileMenu = menu->addSubMenu("File Menu");
 	fileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
 	fileMenu->addItem("Restore defaults", setDefaultConfiguration, NULL);
+	fileMenu->addItem("Load Config from MC0", mcLoadConfig, (void *) CONFIG_FILE);
 	fileMenu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
-	fileMenu->addItem("Load Config", mcLoadConfig, (void *) configfile);
-	fileMenu->addItem("Save Current Config", mcSaveConfig, configfile);
+	fileMenu->addItem("Load Config from USB", mcLoadConfig, (void *) USB_CONFIG_FILE);
+	fileMenu->addItem("Load NetSurf Config from USB", mcLoadConfig, (void *) PS2NS_CONFIG_FILE);
+	fileMenu->addItem("Load Selected Config", mcLoadConfig, configfile);
+	fileMenu->addItem("Save Config on MC0", mcSaveConfig, (void *) CONFIG_FILE);
+	fileMenu->addItem("Save Selected Config", mcSaveConfig, configfile);
+	fileMenu->addItem("Delete Config on MC0", removefile, (void *) CONFIG_FILE);
 
 	Menu *configFileMenu = fileMenu->addSubMenu("Select Config File");
 	configFileMenu->addItem(fileMenu->getTitle(), setCurrentMenu, fileMenu, getTexBack());

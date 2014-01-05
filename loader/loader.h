@@ -1,10 +1,10 @@
-/* Copyright (c) 2007 - 2012 Mega Man */
+/* Copyright (c) 2007 - 2014 Mega Man */
 #ifndef _LOADER_H_
 #define _LOADER_H_
 
 #include "stdint.h"
 
-#define LOADER_VERSION "2.7"
+#define LOADER_VERSION "3.0"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,7 +16,7 @@ extern "C" {
 		/** Path to module file. */
 		const char *path;
 		/** Buffer used for loading the module. */
-		unsigned char *buffer;
+		const unsigned char *buffer;
 		/** Module size. */
 		unsigned int size;
 		/** True, if module must be buffered and can't be loaded after IOP reset. */
@@ -45,6 +45,8 @@ extern "C" {
 		int network;
 		/** True, if module is responsible eromdrv. */
 		int eromdrv;
+		/** 1, if debug mode. 0, load always. -1, no debug mode */
+		int debug_mode;
 	} moduleEntry_t;
 
 	typedef struct {
@@ -75,7 +77,9 @@ extern "C" {
 
 	extern char iop_reset_param[];
 	extern int debug_mode;
+	extern int do_default_sbios_calls;
 	extern int disable_cdrom;
+
 
 #ifdef __cplusplus
 }

@@ -20,6 +20,7 @@
 #include "graphic.h"
 #include "loadermenu.h"
 #include "nvram.h"
+#include "kprint.h"
 
 #ifdef NEW_ROM_MODULES
 #define MODPREFIX "X"
@@ -93,17 +94,20 @@ static moduleLoaderEntry_t moduleList[] = {
 	{
 		.path = "rom0:" MODPREFIX "SIO2MAN",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:" MODPREFIX "MCMAN",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:" MODPREFIX "MCSERV",
 		.argLen = 0,
-		.args = NULL
+		.args = NULL,
+		.debug_mode = -1,
 	},
 #endif
 	{
@@ -131,31 +135,36 @@ static moduleLoaderEntry_t moduleList[] = {
 		.path = "ioptrap.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "iomanX.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "poweroff.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "ps2dev9.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "ps2ip.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "ps2smap.irx",
@@ -163,6 +172,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL,
 		.ps2smap = 1,
 		.network = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "ps2link.irx",
@@ -170,7 +180,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		.args = NULL,
 		.checkMc = -1,
 		.network = -1,
-		.debug_mode = 1,
+		.debug_mode = -1,
 	},
 #endif
 	{
@@ -204,7 +214,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		.path = "fileXio.irx",
 		.argLen = 0,
 		.args = NULL,
-		.checkMc = -1
+		.checkMc = -1,
 	},
 	{
 		.path = "ps2kbd.irx",
@@ -325,40 +335,55 @@ void checkForMusicSupport(void)
 		}
 		fclose(fin);
 	} else {
-		printf("Failed to open rom1:LIBSD.\n");
+		kprintf("Failed to open rom1:LIBSD.\n");
 	}
 }
 
 int loadLoaderModules(int debug_mode, int disable_cdrom)
 {
 	static int load_dvd_config = -1;
+	static int load_netsurf_config = -1;
+	static int load_usb_config = -1;
 	int i;
 	int rv;
 	int lrv = -1;
 
+	if (debug_mode == 1) {
+		/* Network is used by ps2link and can't be used by Linux. */
+		network_support = 0;
+	}
+
 #ifdef RESET_IOP
-	graphic_setStatusMessage("Reseting IOP");
-	FlushCache(0);
+	if (debug_mode == -1) {
+		graphic_setStatusMessage("Flushing cache");
+		FlushCache(0);
+		graphic_setStatusMessage("Exit IOP Heap");
+		SifExitIopHeap();
+		graphic_setStatusMessage("Exit LoadFile");
+		SifLoadFileExit();
+		graphic_setStatusMessage("Exit FIO");
+		fioExit();
+		graphic_setStatusMessage("Exit RPC");
+		SifExitRpc();
+		graphic_setStatusMessage("Stop DMA");
+		SifStopDma();
+		graphic_setStatusMessage("PreReset Init RPC");
+		SifInitRpc(0);
+		graphic_setStatusMessage("Reseting IOP");
+		while(!SifIopReset(s_pUDNL, 0));
 
-	SifExitIopHeap();
-	SifLoadFileExit();
-	SifExitRpc();
-	SifStopDma();
+		graphic_setStatusMessage("IOP Sync");
+		while (!SifIopSync());
 
-	SifIopReset(s_pUDNL, 0);
-
-	while (SifIopSync());
-
-	graphic_setStatusMessage("Initialize RPC");
-	SifInitRpc(0);
+		graphic_setStatusMessage("Initialize RPC");
+		SifInitRpc(0);
+	}
+#endif
 
 	graphic_setStatusMessage("Patching enable LMB");
 	sbv_patch_enable_lmb();
 	graphic_setStatusMessage("Patching disable prefix check");
 	sbv_patch_disable_prefix_check();
-#else
-	SifInitRpc(0);
-#endif
 
 	/* CDVDMAN is loaded by IopReset and NVRAM can be read. */
 	graphic_setStatusMessage("Read NVRAM from CDVD");
@@ -374,7 +399,7 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {
-		rom_entry_t *romfile;
+		const rom_entry_t *romfile;
 
 		if (moduleList[i].debug_mode != 0) {
 			if (moduleList[i].debug_mode != debug_mode) {
@@ -396,7 +421,7 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 			moduleList[i].loadCfg = 0;
 		}
 		graphic_setStatusMessage(moduleList[i].path);
-		printf("Loading module (%s)\n", moduleList[i].path);
+		kprintf("Loading module (%s)\n", moduleList[i].path);
 
 		if (!network_support) {
 			if (moduleList[i].network) {
@@ -470,7 +495,7 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 				if (romfile != NULL) {
 					int ret;
 	
-					ret = SifExecModuleBuffer(romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
+					ret = SifExecModuleBuffer((void *) romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
 					if (ret < 0) {
 						rv = ret;
 					}
@@ -479,9 +504,9 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 				}
 				if (rv < 0) {
 					if (moduleList[i].eromdrv != 0) {
-						printf("Failed to load module \"%s\".\n", get_eromdrvpath());
+						kprintf("Failed to load module \"%s\".\n", get_eromdrvpath());
 					} else {
-						printf("Failed to load module \"%s\".\n", moduleList[i].path);
+						kprintf("Failed to load module \"%s\".\n", moduleList[i].path);
 					}
 					if (moduleList[i].ps2smap && !isSlimPSTwo()) {
 						network_support = 0;
@@ -505,6 +530,30 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 
 	fileXioInit();
 
+	if (load_netsurf_config) {
+		load_netsurf_config = 0;
+
+		if (lrv != 0) {
+			graphic_setStatusMessage("Check for NetSurf config");
+
+			lrv = loadConfiguration(PS2NS_CONFIG_FILE);
+
+			graphic_setStatusMessage(NULL);
+		}
+	}
+
+	if (load_usb_config) {
+		load_usb_config = 0;
+
+		if (lrv != 0) {
+			graphic_setStatusMessage("Check for USB config");
+
+			lrv = loadConfiguration(USB_CONFIG_FILE);
+
+			graphic_setStatusMessage(NULL);
+		}
+	}
+
 	if (load_dvd_config && isDVDVSupported()) {
 		load_dvd_config = 0;
 
@@ -526,14 +575,26 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 				CDVD_SetDVDV(0);
 			}
 
-			lrv = loadConfiguration(DVD_CONFIG_FILE);
+			kprintf("kloader disc type %u\n", type);
+			switch (type) {
+			case DiskType_CD:
+			case DiskType_DVD:
+			case DiskType_DVDV:
+				/* Load configuration from disc. */
+				lrv = loadConfiguration(DVD_CONFIG_FILE);
 
-			changeMode();
+				changeMode();
 #if 0
-			if (lrv != 0) {
-				error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);
-			}
+				if (lrv != 0) {
+					error_printf("Failed to load config from \"%s\", using default configuration.", DVD_CONFIG_FILE);
+				}
 #endif
+				break;
+			default:
+				kprintf("kloader unsupported disc type %u\n", type);
+				break;
+			}
+
 			/* Stop CD when finished. */
 			CDVD_Stop();
 			CDVD_FlushCache();

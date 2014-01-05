@@ -21,9 +21,10 @@
 #include "smapregs.h"
 #include "iopmem.h"
 #include "loader.h"
+#include "kprint.h"
 
 #define M_PRINTF(format, args...)	\
-	iop_printf(format, ## args)
+	kprintf(format, ## args)
 
 /* SSBUS registers.  */
 #define SSBUS_R_1418		0xbf801418
@@ -162,7 +163,7 @@ void dev9Shutdown()
 		DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & 0xfffb;
 		DEV9_REG(DEV9_R_POWER) = DEV9_REG(DEV9_R_POWER) & 0xfffe;
 	}
-	iop_printf("DEV9 not working, stopping system.\n");
+	kprintf("DEV9 not working, stopping system.\n");
 	SleepThread();
 }
 

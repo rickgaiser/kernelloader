@@ -112,6 +112,7 @@ void iop_init_shared(void)
 		u32 addr;
 		u32 end;
 
+		sio_printf("Found module " SHAREDMEM_MODULE_NAME "\n");
 		printf("Found module " SHAREDMEM_MODULE_NAME "\n");
 		addr = module.text_start + module.text_size;
 		end = addr + module.data_size + module.bss_size;
@@ -123,6 +124,7 @@ void iop_init_shared(void)
 			if (strncmp(magic, SHAREDMEM_MAGIC, sizeof(magic)) == 0) {
 				sharedmem_dbg_t *dbg = (void *) addr;
 				sharedMemU = &dbg->shared[0];
+				sio_printf("sharedMem at 0x%08x\n", (unsigned int) sharedMemU);
 				printf("sharedMem at 0x%08x\n", (unsigned int) sharedMemU);
 				initializedU = -1;
 				break;
@@ -235,7 +237,7 @@ void iop_printx(uint32_t val)
 		if (v < 10) {
 			iop_putc('0' + v);
 		} else {
-			iop_putc('A' + v - 10);
+			iop_putc('a' + v - 10);
 		}
 	}
 }

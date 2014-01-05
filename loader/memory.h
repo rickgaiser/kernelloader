@@ -16,6 +16,15 @@
 #define dcache_size 0x2000
 /** SIze of instruction cache. */
 #define icache_size 0x4000
+/** Convert unknown address to physical address. */
+#define PHYSADDR(x) (((uint32_t) x) & 0x0FFFFFFF)
+
+/** Base address for SBIOS. */
+#define SBIOS_START_ADDRESS 0x80001000
+#define MAX_SBIOS_SIZE 0xefc0
+#define SBIOS_RESERVED 0x20
+/** Normal usable memory starts here.*/
+#define NORMAL_MEMORY_START 0x80000
 
 /**
  * Convert userspace address to kernelspace address.

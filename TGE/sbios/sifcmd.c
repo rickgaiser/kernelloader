@@ -199,7 +199,7 @@ static void sif_cmd_interrupt()
 	header = (tge_sifcmd_header_t *)packet;
 	/* Get the command handler id and determine which handler list to
 	   dispatch from.  */
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG)
 	printf("fid 0x%x\n", header->fid);
 #endif
 	id = header->fid & ~SYSTEM_CMD;
@@ -215,7 +215,7 @@ static void sif_cmd_interrupt()
 	}
 
 	if ((cmd_handlers != NULL) && (cmd_handlers[id].handler != NULL)) {
-#if defined(SBIOS_DEBUG) && defined(SHARED_MEM_DEBUG)
+#if defined(SBIOS_DEBUG)
 		printf("Callback 0x%x\n", (uint32_t) cmd_handlers[id].handler);
 #endif
 		cmd_handlers[id].handler(packet, cmd_handlers[id].harg);

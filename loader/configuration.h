@@ -10,6 +10,10 @@
 #define CONFIG_DIR2 "mc1:kloader"
 /** Config file used for DVDs. */
 #define DVD_CONFIG_FILE "cdfs:config.txt"
+/** Config file used for NetSurf from USB storage device. */
+#define PS2NS_CONFIG_FILE "mass0:PS2NS/CONFIG.TXT"
+/** Config file from USB storage device. */
+#define USB_CONFIG_FILE "mass0:CONFIG.TXT"
 
 #ifdef __cplusplus
 extern "C" {

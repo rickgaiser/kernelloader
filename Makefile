@@ -14,6 +14,7 @@ all:
 		make -C RTE; \
 	fi
 	make -C modules
+	make -C crc32gen
 	make -C loader
 
 test:
@@ -33,5 +34,6 @@ clean:
 	make -C RTE clean
 	make -C modules clean
 	make -C loader clean
+	make -C crc32gen clean
 	make -C ppm2rgb clean
 	make -C png2rgb clean

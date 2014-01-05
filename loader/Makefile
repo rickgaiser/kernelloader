@@ -6,7 +6,7 @@ EE_BIN = $(PROGRAM).elf
 EE_OBJS = $(PROGRAM).o main.o jump.o entry.o exception.o interrupts.o graphic.o cache.o
 EE_OBJS += menu.o menuEntry.o pad.o modules.o rom.o loadermenu.o configuration.o eedebug.o
 EE_OBJS += SMS_SIF.o SMS_CDVD.o SMS_CDDA.o getrte.o getsbios.o getelf.o ps2dev9.o hdd.o
-EE_OBJS += nvram.o
+EE_OBJS += nvram.o kprint.o crc32check.o
 EE_LIBS = -lpatches -L$(PS2DEV)/gsKit/lib -lgskit -ldmakit -L$(PS2SDK)/ports/lib -lstlport
 EE_LIBS += -lmc -lfileXio -lkbd -lcdvd
 ifneq ($(LIBTIFF),)
@@ -51,11 +51,10 @@ EE_LIBS += -lz
 EE_FLAGS += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo -DRTE; fi)
 
 EE_FLAGS += -I$(PS2SDK)/ports/include
+EE_FLAGS += -I../crc32gen/
+EE_FLAGS += -Werror
 
 EE_CFLAGS += $(EE_FLAGS) -Wimplicit-int -Werror-implicit-function-declaration
-ifneq ($(SHARED_MEM_DEBUG),yes)
-EE_FLAGS += -Werror
-endif
 
 EE_CXXFLAGS = $(EE_FLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIONS -D_STLP_USE_NEWALLOC -D_STLP_HAS_WCHAR_T -D_STLP_NO_IOSTREAMS -Dwint_t=int -I$(PS2SDK)/ports/include/stlport/
 
@@ -75,12 +74,7 @@ MODULES = \
 	usbd.irx \
 	usb_mass.irx \
 	ps2kbd.irx \
-	freesio2.irx \
-	freepad.irx \
-	freesd.irx \
-	audsrv.irx \
-	smaprpc.irx \
-	dev9init.irx
+	smaprpc.irx
 
 ROM_FILES += $(MODULES) \
 	SMSUTILS.irx \
@@ -129,6 +123,7 @@ ROM_FILES += $(shell if [ -e "$(PS2LINUXDVD)/pbpx_955.09" ]; then echo $(RTE_FIL
 all: $(PACKEDFILE)
 
 $(PACKEDFILE): $(EE_BIN)
+	../crc32gen/crc32gen $^
 	sjcrunch $^ $@
 
 $(MODULES):
@@ -140,7 +135,7 @@ test: all
 ifeq ($(LOAD_PS2LINK),yes)
 	ps2client -h $(TARGET_IP) execee host:$(PACKEDFILE) -d
 else
-	ps2client -h $(TARGET_IP) execee host:$(PACKEDFILE)
+	ps2client -h $(TARGET_IP) execee host:$(PACKEDFILE) --fix-no-disc
 endif
 
 reset: $(PROGRAM).elf
@@ -199,7 +194,8 @@ rominitialize.h: $(RGB_FILES)
 	rm -f $@.tmp
 
 %_elf.s: %.elf
-	bin2s $^ $@ $(subst -,_,$(subst /,_,$*))_elf
+	bin2s $^ $@.tmp $(subst -,_,$(subst /,_,$*))_elf
+	sed -e "s/\.data/.section .rom/g" <$@.tmp >$@
 
 %_rgb.s: %.rgb
 	rm -f $@.tmp

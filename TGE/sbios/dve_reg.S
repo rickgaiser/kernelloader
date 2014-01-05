@@ -59,8 +59,9 @@ dve_pcmcia_waitloop:
 	bgez	$a1, dve_pcmcia_waitloop
 	nop
 	lui		$v0, 0xBF80
-	j		dve_stuff_return
 	li		$v0, 0xBF801472
+	j		dve_stuff_return
+	nop
 
 
 dve_expbay_stuff:
@@ -137,5 +138,6 @@ dve_set_reg_loop2:
 	andi	$v0, $a0, 2
 
 dve_set_reg_return_neg_1:
-	jr		$ra
 	li		$v0, 0xFFFFFFFF
+	jr		$ra
+	nop

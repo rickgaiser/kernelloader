@@ -1,6 +1,7 @@
 /* Copyright (c) 2007 Mega Man */
 #include <gsKit.h>
 #include <gsFontM.h>
+#include <libcdvd.h>
 
 #include "config.h"
 #include "graphic.h"
@@ -14,6 +15,15 @@
 #include "SMS_CDVD.h"
 #include "SMS_CDDA.h"
 #include "nvram.h"
+#include "crc32check.h"
+#include "kprint.h"
+
+#include <sbv_patches.h>
+#include <sifrpc.h>
+#include <iopcontrol.h>
+#include <loadfile.h>
+#include <iopheap.h>
+#include <sio.h>
 
 #define KEY_F1 1
 #define KEY_F2 2
@@ -42,6 +52,7 @@
 
 int debug_mode;
 int disable_cdrom;
+int do_default_sbios_calls;
 
 /**
  * Entry point for loader.
@@ -60,17 +71,56 @@ int main(int argc, char **argv)
 	int i;
 	int refreshesPerSecond;
 	int emulatedKey;
+	register int sp asm("sp");
+
+	crc32check("Please download kloader.elf again.");
+	sio_printf("Stack 0x%08x\n", sp);
 
 	debug_mode = -1;
 	disable_cdrom = 0;
+	do_default_sbios_calls = 0;
 	for (i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "-d") == 0) {
 			/* Enter debug mode, activate ps2link. */
 			debug_mode = 1;
 		} else if (strcmp(argv[i], "--no-cdvd") == 0) {
 			disable_cdrom = 1;
+		} else if (strcmp(argv[i], "--fix-no-disc") == 0) {
+			/* Fix Linux start when no disc is inserted. */
+			do_default_sbios_calls = 1;
 		}
 	}
+
+
+	sio_printf("kloader started\n");
+
+	if (debug_mode == -1) {
+		SifInitRpc(0);
+
+		if (!disable_cdrom) {
+			/* Initialize CDVD, because SifIopReset() can hang otherwise. */
+			sio_printf("kloader CDVD_INIT_NOCHECK\n");
+			cdInit(CDVD_INIT_NOCHECK);
+			sio_printf("kloader CDVD_INIT_EXIT\n");
+			cdInit(CDVD_INIT_EXIT);
+		}
+
+		sio_printf("kloader SifIopReset\n");
+		while(!SifIopReset(NULL, 0));
+		sio_printf("kloader SifIopSync\n");
+  		while(!SifIopSync());
+		sio_printf("kloader SifInitRpc\n");
+	} else {
+		printAllModules();
+	}
+
+  	SifInitRpc(0); 	    		  	
+	SifLoadFileInit();
+	SifInitIopHeap();
+			
+	sbv_patch_enable_lmb();
+
+	sbv_patch_disable_prefix_check();
 
 	/* Disable debug output at startup. */
 	loaderConfig.enableEEDebug = 0;
@@ -92,6 +142,10 @@ int main(int argc, char **argv)
 
 	loadLoaderModules(debug_mode, disable_cdrom);
 
+	if (do_default_sbios_calls) {
+		defaultSBIOSCalls(NULL);
+	}
+
 	setEnableDisc(false);
 
 	initializeController();
@@ -104,9 +158,9 @@ int main(int argc, char **argv)
 	old_pad = 0;
 
 	refreshesPerSecond = getModeFrequenzy();
-	printf("argc %d\n", argc);
+	kprintf("argc %d\n", argc);
 	for (i = 0; i < argc; i++) {
-		printf("argv[%d] = %s\n", i, argv[i]);
+		kprintf("argv[%d] = %s\n", i, argv[i]);
 	}
 
 	if (loaderConfig.autoBootTime > 0) {
@@ -152,6 +206,7 @@ int main(int argc, char **argv)
 		} while (true);
 		old_pad = paddata;
 	}
+	crc32check("Something has overwritten the memory.");
 	emulatedKey = ' ';
 	do {
 		char key;

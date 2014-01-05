@@ -370,7 +370,7 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 	client->hdr.pkt_addr = NULL;
 	core_restore(status);
 
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+#if defined(SBIOS_DEBUG)
 	if (request->cid == 0x8000000a) {
 		SifRpcCallPkt_t *call = pkt_addr;
 
@@ -385,7 +385,7 @@ static void _request_end(SifRpcRendPkt_t *request, void *data)
 #endif
 
 	if (end_function != NULL) {
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+#if defined(SBIOS_DEBUG)
 		printf("Calling 0x%x\n", (uint32_t) end_function);
 #endif
 		end_function(end_param);

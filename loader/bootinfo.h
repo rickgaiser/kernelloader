@@ -14,9 +14,10 @@
 #define __ASM_PS2_BOOTINFO_H
 
 #include "sysconf.h"
+#include "memory.h"
 
 #define PS2_BOOTINFO_MAGIC	0x50324c42	/* "P2LB" */
-#define PS2_BOOTINFO_OLDADDR	0x01fff000
+#define PS2_BOOTINFO_OLDADDR	(0x01fff000 | KSEG0_MASK)
 #define PS2_BOOTINFO_MACHTYPE_PS2	0
 #define PS2_BOOTINFO_MACHTYPE_T10K	1
 

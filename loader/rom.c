@@ -4,6 +4,7 @@
 #include <malloc.h>
 
 #include "rom.h"
+#include "kprint.h"
 
 #include "romdefinitions.h"
 
@@ -23,7 +24,7 @@ static void rom_initialize()
 	#include "rominitialize.h"
 }
 
-rom_entry_t *rom_getFile(const char *filename)
+const rom_entry_t *rom_getFile(const char *filename)
 {
 	int i;
 
@@ -33,10 +34,14 @@ rom_entry_t *rom_getFile(const char *filename)
 	i = 0;
 	while(rom_files[i].start != NULL)
 	{
-		if (strcmp(rom_files[i].filename, filename) == 0)
+		if (strcmp(rom_files[i].filename, filename) == 0) {
+			kprintf("rom file %s at 0x%08x size 0x%08x\n",
+				filename, rom_files[i].start, rom_files[i].size);
 			return &rom_files[i];
+		}
 		i++;
 	}
+	kprintf("rom file %s not found\n", filename);
 	return NULL;
 }
 
@@ -48,7 +53,7 @@ rom_entry_t *rom_getFile(const char *filename)
  */
 rom_stream_t *rom_open(const char *filename, const char *mode)
 {
-	rom_entry_t *file;
+	const rom_entry_t *file;
 	rom_stream_t *fd;
 
 	if (!rom_initialized)
@@ -81,7 +86,7 @@ rom_stream_t *rom_open(const char *filename, const char *mode)
 		fin = fopen(hostfilename, mode);
 		if (fin != NULL)
 		{
-			//printf("File opened 0x%08x\n", fin);
+			//kprintf("File opened 0x%08x\n", fin);
 			fd = (rom_stream_t *) malloc(sizeof(rom_stream_t));
 			if (fd != NULL)
 			{
@@ -92,7 +97,7 @@ rom_stream_t *rom_open(const char *filename, const char *mode)
 			else
 			{
 				fclose(fin);
-				printf("Error: rom_open(): out of memory.\n");
+				kprintf("Error: rom_open(): out of memory.\n");
 				return NULL;
 			}
 		}
@@ -117,8 +122,8 @@ int rom_read(rom_stream_t *fd, void *buffer, int size)
 	{
 		int remaining;
 
-		//printf("rom_read(\"%s\", 0x%08x, %d)\n", fd->file->filename, buffer, size);
-		//printf("rom_read(): pos = %d\n", fd->pos);
+		//kprintf("rom_read(\"%s\", 0x%08x, %d)\n", fd->file->filename, buffer, size);
+		//kprintf("rom_read(): pos = %d\n", fd->pos);
 
 		if (fd->pos >= fd->file->size)
 			return -1;
@@ -132,7 +137,7 @@ int rom_read(rom_stream_t *fd, void *buffer, int size)
 			return -2;
 		if (fd->file->size < 0)
 			return -2;
-		//printf("rom_read(): size = %d\n", size);
+		//kprintf("rom_read(): size = %d\n", size);
 		memcpy(buffer, (void *)(((int)fd->file->start) + fd->pos), size);
 		fd->pos += size;
 		return size;

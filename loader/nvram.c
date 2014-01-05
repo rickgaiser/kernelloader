@@ -4,6 +4,8 @@
 
 #include "nvram.h"
 #include "modules.h"
+#include "memory.h"
+#include "kprint.h"
 
 typedef struct {
 	int version;
@@ -31,7 +33,7 @@ nvm_offsets_t nvmOff[] = {
 /** Store copy of DVD internal NVRAM. */
 static u8 nvm[0x400];
 
-char ps2_console_type[32] = "CDVD error";
+char ps2_console_type[SBIOS_RESERVED] = "CDVD error";
 char ps2_region_type[32] = "CDVD error";
 int nvm_errors = -1;
 
@@ -57,9 +59,9 @@ void nvram_init(void)
 		}
 	}
 
-	rv = cdInit(CDVD_INIT_INIT);
+	rv = cdInit(CDVD_INIT_NOCHECK);
 	if (rv != 1) {
-		printf("Error: cdInit(CDVD_INIT_INIT) failed\n");
+		kprintf("Error: cdInit(CDVD_INIT_NOCHECK) failed\n");
 		return;
 	}
 
@@ -68,7 +70,7 @@ void nvram_init(void)
 	for (addr = 0; addr < sizeof(nvm)/2; addr++) {
 		rv = cdReadNVM(addr, &data, &stat);
 		if (rv != 1) {
-			printf("sceCdReadNVM Error: rv = %d, addr = 0x%04x data = 0x%04x, stat = 0x%02x\n", rv, 2 * addr, data, stat);
+			kprintf("sceCdReadNVM Error: rv = %d, addr = 0x%04x data = 0x%04x, stat = 0x%02x\n", rv, 2 * addr, data, stat);
 			nvm_errors++;
 		} else {
 			nvm[addr * 2] = data & 0xFF;
@@ -77,12 +79,12 @@ void nvram_init(void)
 	}
 	rv = cdInit(CDVD_INIT_EXIT);
 	if (rv != 1) {
-		printf("Error: cdInit(CDVD_INIT_EXIT) failed\n");
+		kprintf("Error: cdInit(CDVD_INIT_EXIT) failed\n");
 	}
 
 	memcpy(ps2_console_type, &nvm[off->console_type], sizeof(ps2_console_type));
 	ps2_console_type[sizeof(ps2_console_type) - 1] = 0;
-	printf("PS2 Console type: %s\n", ps2_console_type);
+	kprintf("PS2 Console type: %s\n", ps2_console_type);
 	snprintf(ps2_region_type, sizeof(ps2_region_type), "S%02x T%02x F%02x R%02x (%d NVM errors)", nvm[0x180], nvm[0x181], nvm[off->fake_region], nvm[off->real_region], nvm_errors);
 }
 

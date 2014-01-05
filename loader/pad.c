@@ -9,6 +9,7 @@
 
 #include "pad.h"
 #include "graphic.h"
+#include "kprint.h"
 
 #define PADCOUNT 2
 
@@ -33,18 +34,18 @@ void initializeController(void)
 	int slot = 0;				// Always zero if not using multitap
 
 	if (padInit(0) != 0) {
-		printf("padInit() failed.\n");
+		kprintf("padInit() failed.\n");
 		return;
 	}
 
 	for (port = 0; port < PADCOUNT; port++) {
 		if ((ret = padPortOpen(port, slot, padBuf[port])) == 0) {
-			printf("padOpenPort failed: %d\n", ret);
+			kprintf("padOpenPort failed: %d\n", ret);
 			return;
 		}
 
 		if (!initializePad(port, slot)) {
-			printf("pad %d initalization failed!\n", port);
+			kprintf("pad %d initalization failed!\n", port);
 		}
 	}
 }
@@ -60,7 +61,7 @@ void deinitializeController(void)
 	for (port = 0; port < PADCOUNT; port++) {
 		ret = padPortClose(port, slot);
 		if (ret != 1) {
-			printf("padClosePort failed: %d\n", ret);
+			kprintf("padClosePort failed: %d\n", ret);
 		}
 	}
 	padEnd();
@@ -85,7 +86,7 @@ int isPadReady(int port, int slot)
 			return 0;
 		if (state != laststate) {
 			padStateInt2String(state, stateString);
-			printf("Please wait, pad(%d,%d) is in state %s\n",
+			kprintf("Please wait, pad(%d,%d) is in state %s\n",
 				port, slot, stateString);
 			laststate = state;
 		}
@@ -114,23 +115,23 @@ int initializePad(int port, int slot)
 	// How many different modes can this device operate in?
 	// i.e. get # entrys in the modetable
 	modes = padInfoMode(port, slot, PAD_MODETABLE, -1);
-	printf("The device has %d modes\n", modes);
+	kprintf("The device has %d modes\n", modes);
 
 	if (modes > 0) {
-		printf("( ");
+		kprintf("( ");
 		for (i = 0; i < modes; i++) {
-			printf("%d ", padInfoMode(port, slot, PAD_MODETABLE, i));
+			kprintf("%d ", padInfoMode(port, slot, PAD_MODETABLE, i));
 		}
-		printf(")");
+		kprintf(")");
 	}
 
-	printf("It is currently using mode %d\n",
+	kprintf("It is currently using mode %d\n",
 		padInfoMode(port, slot, PAD_MODECURID, 0));
 
 	// If modes == 0, this is not a Dual shock controller 
 	// (it has no actuator engines)
 	if (modes == 0) {
-		printf("This is a digital controller?\n");
+		kprintf("This is a digital controller?\n");
 		return 0;
 	}
 	// Verify that the controller has a DUAL SHOCK mode
@@ -141,7 +142,7 @@ int initializePad(int port, int slot)
 		i++;
 	} while (i < modes);
 	if (i >= modes) {
-		printf("This is no Dual Shock controller\n");
+		kprintf("This is no Dual Shock controller\n");
 		padInitialized[port] = -1;
 		return 1;
 	}
@@ -149,30 +150,30 @@ int initializePad(int port, int slot)
 	// This check should always pass if the Dual Shock test above passed
 	ret = padInfoMode(port, slot, PAD_MODECUREXID, 0);
 	if (ret == 0) {
-		printf("This is no Dual Shock controller??\n");
+		kprintf("This is no Dual Shock controller??\n");
 		padInitialized[port] = -1;
 		return 1;
 	}
 
-	printf("Enabling dual shock functions of pad %d\n", port);
+	kprintf("Enabling dual shock functions of pad %d\n", port);
 
 	// When using MMODE_LOCK, user cant change mode with Select button
 	padSetMainMode(port, slot, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);
 
 	if (!isPadReady(port, slot)) {
-		printf("Failed pad %d\n", port);
+		kprintf("Failed pad %d\n", port);
 		return 0;
 	}
-	printf("infoPressMode: %d\n", padInfoPressMode(port, slot));
+	kprintf("infoPressMode: %d\n", padInfoPressMode(port, slot));
 
 	if (!isPadReady(port, slot))
 		return 0;
-	printf("enterPressMode: %d\n", padEnterPressMode(port, slot));
+	kprintf("enterPressMode: %d\n", padEnterPressMode(port, slot));
 
 	if (!isPadReady(port, slot))
 		return 0;
 	actuators[port] = padInfoAct(port, slot, -1, 0);
-	printf("# of actuators: %d\n", actuators[port]);
+	kprintf("# of actuators: %d\n", actuators[port]);
 
 	if (actuators[port] != 0) {
 		actAlign[port][0] = 0;	// Enable small engine
@@ -184,10 +185,10 @@ int initializePad(int port, int slot)
 
 		if (!isPadReady(port, slot))
 			return 0;
-		printf("padSetActAlign: %d\n",
+		kprintf("padSetActAlign: %d\n",
 			padSetActAlign(port, slot, actAlign[port]));
 	} else {
-		printf("Did not find any actuators.\n");
+		kprintf("Did not find any actuators.\n");
 	}
 
 	if (!isPadReady(port, slot))
@@ -215,7 +216,7 @@ int readPad(int port)
 	ret = padGetState(port, slot);
 	while ((ret != PAD_STATE_STABLE) && (ret != PAD_STATE_FINDCTP1)) {
 		if (ret == PAD_STATE_DISCONN) {
-			//printf("Pad(%d, %d) is disconnected\n", port, slot);
+			//kprintf("Pad(%d, %d) is disconnected\n", port, slot);
 			return 0;
 		}
 		ret = padGetState(port, slot);

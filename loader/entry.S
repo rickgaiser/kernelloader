@@ -6,6 +6,7 @@
  * Thirs stage: High level exception handler function exception in exception.c)
  */
 #include "mipsregister.h"
+#include "memory.h"
 
 #define CONTEXT_SIZE (32 * 4)
 #define SAVE_REG(r) sw $r, 4 * r(sp)
@@ -32,9 +33,9 @@ exceptionHandlerStart:
 	addiu sp,sp,-(16 + CONTEXT_SIZE)
 	SAVE_REG(4)
 	SAVE_REG(31)
-exceptionHandlerPatch1:
-	lui ra, 0	/* Patched by loader, set to high 16-bits of exceptionHandleStage2. */
-	ori ra, exceptionHandleStage2
+exceptionHandlerPatch1: /* Patched by loader, because %hi is not working. */
+	lui ra, %hi(exceptionHandleStage2) /* TBD: %hi is not working. */
+	ori ra, %lo(exceptionHandleStage2)
 
 	/* Parameter 1: Number of the exception handler. */
 	lui a0, 0

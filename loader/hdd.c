@@ -10,6 +10,7 @@
 #include "loader.h"
 #include "hdd.h"
 #include "ps2dev9.h"
+#include "kprint.h"
 
 /* 0x80 for busy, 0x88 for bus busy.  */
 static int ata_wait_busy(int bits)
@@ -44,7 +45,7 @@ static int ata_wait_busy(int bits)
 		DelayThread(delay);
 	}
 
-	iop_printf("Timeout while waiting on busy (0x%02x).\n", bits);
+	kprintf("Timeout while waiting on busy (0x%02x).\n", bits);
 	return -502;
 }
 
@@ -81,12 +82,12 @@ static int ata_reset_devices()
 void ata_setup(void)
 {
 	if (ata_bus_reset() != 0) {
-		iop_printf("Failed ata_bus_reset().\n");
+		kprintf("Failed ata_bus_reset().\n");
 		return;
 	}
 
 	if (ata_reset_devices() != 0) {
-		iop_printf("Failed ata_reset_devices().\n");
+		kprintf("Failed ata_reset_devices().\n");
 		return;
 	}
 	dev9IntrEnable(SPD_INTR_ATA0);

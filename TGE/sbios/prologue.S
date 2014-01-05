@@ -6,7 +6,7 @@
  * See the file LICENSE, located within this directory, for licensing terms.
  */
 
-	.section .header, "r"
+	.section .header
 	.globl sbios_iopaddr
 	.globl sbios_osdparam
 	.globl sbios_header

@@ -116,6 +116,7 @@ int32_t iSignalSema(int32_t sid)
 	}
 	/* XXX: Wakeup threaqd. */
 	semaphoreArray[sid].count++;
+	return 0; /* TBD: What is the correct return code? */
 }
 
 uint32_t syscallExit(void)

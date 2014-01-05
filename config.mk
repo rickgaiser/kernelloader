@@ -6,7 +6,7 @@ EXAMPLE_ELF = ../hello/hello.elf
 # 1. fileio - SIF RPC stdout
 # 2. callback - Call function registered by Linux kernel (printk, dmesg).
 # sharedmem.irx via ps2link will be used if loaded
-DEBUG_OUTPUT_TYPE = callback
+DEBUG_OUTPUT_TYPE = sio
 
 # Reset IOP at start (only working when enabled)
 RESET_IOP = yes
@@ -30,9 +30,9 @@ PAD_MOVE_SCREEN = yes
 # Choose toolchain for simple kernel example:
 NEW_KERNEL_TOOLCHAIN = no
 
-### Don't change the following part, change DEBUG_OUTPUT_TYPE instead.
-
 SHARED_MEM_DEBUG = yes
+
+### Don't change the following part, change DEBUG_OUTPUT_TYPE instead.
 
 ifeq ($(DEBUG_OUTPUT_TYPE),fileio)
 # SIF RPC stdout
@@ -46,4 +46,11 @@ ifeq ($(DEBUG_OUTPUT_TYPE),callback)
 CALLBACK_DEBUG = yes
 else
 CALLBACK_DEBUG = no
+endif
+
+ifeq ($(DEBUG_OUTPUT_TYPE),sio)
+# Activate SIO
+SIO_DEBUG = yes
+else
+SIO_DEBUG = no
 endif

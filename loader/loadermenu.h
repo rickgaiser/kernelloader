@@ -13,6 +13,7 @@ extern "C" {
 #endif
 int setDefaultConfiguration(void *arg);
 void configureVideoParameter(void);
+int defaultSBIOSCalls(void *arg);
 #ifdef __cplusplus
 }
 #endif

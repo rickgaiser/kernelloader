@@ -13,23 +13,30 @@
 
 ENTRY(_start);
 
+PHDRS
+{
+	text PT_LOAD FLAGS(5);
+	data PT_LOAD FLAGS(6);
+}
+
 SECTIONS {
 	/* Load into high 16 MB, lower 16MB reserved for extracting kernel and initrd. */
 	.text 0x1000000: {
 		_ftext = . ;
-		*(.rom)
 		*(.text)
 		*(.text.*)
 		*(.gnu.linkonce.t*)
 		KEEP(*(.init))
 		KEEP(*(.fini))
 		QUAD(0)
-	}
+	} : text
 
 	PROVIDE(_etext = .);
 	PROVIDE(etext = .);
 
-	.reginfo : { *(.reginfo) }
+	.crc32 ALIGN(16): {
+		*(.crc32)
+	} : text
 
 	/* Global/static constructors and deconstructors. */
 	.ctors ALIGN(16): {
@@ -37,20 +44,23 @@ SECTIONS {
 		KEEP(*(EXCLUDE_FILE(*crtend*.o) .ctors))
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
-	}
+	} : text
 	.dtors ALIGN(16): {
 		KEEP(*crtbegin*.o(.dtors))
 		KEEP(*(EXCLUDE_FILE(*crtend*.o) .dtors))
 		KEEP(*(SORT(.dtors.*)))
 		KEEP(*(.dtors))
-	}
+	} : text
 
 	/* Static data.  */
 	.rodata ALIGN(128): {
+		_frodata = . ;
+		*(.rom)
 		*(.rodata)
 		*(.rodata.*)
 		*(.gnu.linkonce.r*)
-	}
+	} : text
+	PROVIDE(_erodata = .);
 
 	.data ALIGN(128): {
 		_fdata = . ;
@@ -58,20 +68,21 @@ SECTIONS {
 		*(.data.*)
 		*(.gnu.linkonce.d*)
 		SORT(CONSTRUCTORS)
-	}
+	} : data
 
-	.rdata ALIGN(128): { *(.rdata) }
-	.gcc_except_table ALIGN(128): { *(.gcc_except_table) }
+	.jcr ALIGN(16): { *(.jcr) } : data
+	.rdata ALIGN(128): { *(.rdata) } : data
+	.gcc_except_table ALIGN(128): { *(.gcc_except_table) } : data
 
 	_gp = ALIGN(128) + 0x7ff0;
-	.lit4 ALIGN(128): { *(.lit4) }
-	.lit8 ALIGN(128): { *(.lit8) }
+	.lit4 ALIGN(128): { *(.lit4) } : data
+	.lit8 ALIGN(128): { *(.lit8) } : data
 
 	.sdata ALIGN(128): {
 		*(.sdata)
 		*(.sdata.*)
 		*(.gnu.linkonce.s*)
-	}
+	} : data
 
 	_edata = .;
 	PROVIDE(edata = .);
@@ -83,15 +94,17 @@ SECTIONS {
 		*(.sbss.*)
 		*(.gnu.linkonce.sb*)
 		*(.scommon)
-	}
+	} : data
 
 	.bss ALIGN(128) : {
 		*(.bss)
 		*(.bss.*)
 		*(.gnu.linkonce.b*)
 		*(COMMON)
-	}
+	} : data
 	_end_bss = .;
+
+	.reginfo : { *(.reginfo) }
 
 	. = ALIGN(32);
 	_end = . ;

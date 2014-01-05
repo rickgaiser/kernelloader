@@ -18,7 +18,6 @@
 #include "bootinfo.h"
 #include "iopmem.h"
 #include "jump.h"
-#include "entry.h"
 #include "exception.h"
 #include "memory.h"
 #include "interrupts.h"
@@ -39,6 +38,8 @@
 #include "hdd.h"
 #include "modules.h"
 #include "nvram.h"
+#include "kprint.h"
+#include "crc32check.h"
 
 #define SET_PCCR(val) \
 	__asm__ __volatile__( \
@@ -65,33 +66,20 @@
 
 #if 0
 /** Debug print. */
-#define dprintf printf
-/** Debug print on IOP. */
-#define iop_dprintf iop_printf
-/** Debug print on IOP. */
-#define iop_dprints iop_prints
+#define dprintf kprintf
 #else
 /** Debug print. */
 #define dprintf(args...) do { } while(0)
-/** Debug print on IOP. */
-#define iop_dprintf(args...) do { } while(0)
-/** Debug print on IOP. */
-#define iop_dprints(args...) do { } while(0)
-
 #endif
 
 /** Number of instructions checked to find SBIOS call table. */
 #define NUMBER_OF_INSTRUCTIONS_CHECKED 128
-/** Base address for SBIOS. */
-#define SBIOS_START_ADDRESS 0x80001000
-/** Normal usable memroy starts here.*/
-#define NORMAL_MEMORY_START 0x80000
 
 /** Definition of kernel entry function. */
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 
 /** Parameter for IOP reset. */
-char iop_reset_param[MAX_INPUT_LEN] = "rom0:UDNL rom0:EELOADCNF";
+char iop_reset_param[MAX_INPUT_LEN] = "rom0:UDNL rom0:OSDCNF";
 
 /** Modules that should be loaded. */
 moduleEntry_t modules[] = {
@@ -100,6 +88,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = CONFIG_DIR "/init.irx",
@@ -113,6 +102,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:eromdrvloader.irx",
@@ -121,6 +111,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.defaultmod = 1,
 		.eromdrv = 1,
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -131,6 +122,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:XSIO2MAN",
@@ -138,27 +130,33 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.slim = 1, /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.debug_mode = -1,
 	},
+#if 0
 	{
 		.path = "host:freesio2.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
+#endif
 	{
 		.path = "rom0:SIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.slim = -1, /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom1:SIO2MAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -169,6 +167,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:XMCMAN",
@@ -176,7 +175,8 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.slim = 1, /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:MCMAN",
@@ -184,7 +184,8 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.slim = -1, /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -195,6 +196,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:XMCSERV",
@@ -202,7 +204,8 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.slim = 1, /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:MCSERV",
@@ -210,7 +213,8 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.slim = -1, /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -221,6 +225,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom0:XPADMAN",
@@ -228,27 +233,33 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = 1 /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.slim = 1, /* XXX: New modules seems to be more stable on heavy USB usage. */
+		.debug_mode = -1,
 	},
+#if 0
 	{
 		.path = "host:freepad.irx",
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
+#endif
 	{
 		.path = "rom0:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
-		.slim = -1 /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.slim = -1, /* XXX: SBIOS causes system hang on heavy USB usage. */
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom1:PADMAN",
 		.buffered = 0,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -283,6 +294,7 @@ moduleEntry_t modules[] = {
 		.libsd = -1,
 		.sound = 1,
 	},
+#if 0
 	{
 		.path = "host:freesd.irx",
 		.buffered = -1,
@@ -290,6 +302,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.libsd = -1,
 	},
+#endif
 	{
 #ifdef RTE
 		.path = "host:RTE/sdrdrv.irx",
@@ -324,6 +337,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:iomanX.irx",
@@ -332,6 +346,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.defaultmod = 1,
 		.slim = 1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:poweroff.irx",
@@ -339,6 +354,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.defaultmod = 1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:ps2dev9.irx",
@@ -347,6 +363,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.defaultmod = 1,
 		.slim = 1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:ps2ip.irx",
@@ -354,6 +371,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.network = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:ps2smap.irx",
@@ -362,6 +380,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		.ps2smap = 1,
 		.network = -1,
+		.debug_mode = -1,
 	},
  	{
 		.path = "host:smaprpc.irx",
@@ -371,6 +390,7 @@ moduleEntry_t modules[] = {
 		.defaultmod = 1,
 		.slim = 1,
 		.network = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:ps2link.irx",
@@ -378,6 +398,7 @@ moduleEntry_t modules[] = {
 		.argLen = 0,
 		.args = NULL,
 		.network = -1,
+		.debug_mode = -1,
 	},
 	{
 		.path = "host:sharedmem.irx",
@@ -399,6 +420,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		/* Interrupt relay when DEV9 is not loaded. */
@@ -406,8 +428,9 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.defaultmod = 1,
-		.slim = -1
+		.defaultmod = 2,
+		.slim = -1,
+		.debug_mode = -1,
 	},
 	{
 		/* Interrupt relay when DEV9 is not loaded and slim PSTwo. */
@@ -415,6 +438,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		/* Interrupt relay when DEV9 is loaded. */
@@ -422,6 +446,8 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.defaultmod = 2,
+		.slim = -1,
 		/* Only hard disc and USB is working. */
 	},
 	{
@@ -430,8 +456,8 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.defaultmod = 1,
-		.slim = 1
+		.defaultmod = 2,
+		.slim = 1,
 		/* Only hard disc and USB is working. Network not working from EE side (use smaprpc.irx). */
 	},
 	{
@@ -451,6 +477,7 @@ moduleEntry_t modules[] = {
 		.args = NULL,
 		/* XXX: Module is broken. */
 	},
+#if 0
 	{
 		.path = "host:dev9init.irx",
 		.buffered = -1,
@@ -461,7 +488,9 @@ moduleEntry_t modules[] = {
 		.slim = -1,
 #endif
 		.dev9init = -1,
+		.debug_mode = -1,
 	},
+#endif
 	{
 #ifdef RTE
 		.path = "host:RTE/cdvdman.irx",
@@ -471,6 +500,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 #ifdef RTE
@@ -481,6 +511,7 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
+		.debug_mode = -1,
 	},
 	{
 		.path = "rom1:RMMAN",
@@ -552,14 +583,21 @@ uint8_t libsdPatched[] = {
 
 /** Start address of linker section ".text" of this loader. */
 void _ftext(void);
+/** Start address of linker section ".rom" of this loader. */
+void _from(void);
 /** End address of this loader. */
 void _end(void);
 
-/** Called if system is in an unrecoverable state. */
-void panic()
+void *kmemcpy(void *dest, const void *src, int size)
 {
-	/* Nothing can be done here. */
-	while(1);
+	int i;
+	uint8_t *d = dest;
+	const uint8_t *s = src;
+
+	for (i = 0; i < size; i++) {
+		d[i] = s[i];
+	}
+	return dest;
 }
 
 /** Patch libsd, so that sound and USB is working at the same time. */
@@ -569,7 +607,7 @@ void patchLibsd(uint8_t *buffer, uint32_t size)
 
 	for (i = 0; i < (size - sizeof(libsdOrig)); i++) {
 		if (memcmp(buffer + i, libsdOrig, sizeof(libsdOrig)) == 0) {
-			memcpy(buffer + i, libsdPatched, sizeof(libsdPatched));
+			kmemcpy(buffer + i, libsdPatched, sizeof(libsdPatched));
 		}
 	}
 }
@@ -581,29 +619,28 @@ void patchLibsd(uint8_t *buffer, uint32_t size)
  * @param start Physical start address (included).
  * @param end Physical end address (excluded).
  */
-int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+int check_sections32(const char *name, const char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest, uint8_t *destaddr)
 {
-	Elf32_Ehdr_t *file_header;
+	const Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	uint32_t entry = 0;
 	uint32_t area;
 	int copied_entry = 0;
 
-	start = start & 0x0FFFFFFF;
-	end = end & 0x0FFFFFFF;
 	if (highest != NULL) {
 		*highest = 0;
 	}
 
-	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf32_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf32_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
+		kprintf("Magic 0x%08x is wrong at 0x%08x.\n", file_header->magic, &file_header->magic);
 		error_printf("Magic 0x%08x is wrong.\n", file_header->magic);
 		return -1;
 	}
 	entry = file_header->entry;
-	printf("entry is 0x%08x\n", entry);
+	kprintf("entry is 0x%08x\n", entry);
 	area = entry >> 28;
 	switch(area) {
 		case 0x8:
@@ -615,7 +652,7 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 				entry, name);
 			return -20;
 	}
-	entry = entry & 0x0FFFFFFF;
+	entry = PHYSADDR(entry);
 	if (entry < start) {
 		error_printf("Entry point 0x%08x of %s is before 0x%08x.",
 			entry, name, start);
@@ -637,7 +674,7 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 			uint32_t dest;
 			uint32_t size;
 
-			printf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
+			kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 				program_header->vaddr,
 				program_header->paddr,
 				program_header->offset,
@@ -652,19 +689,26 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 
 			if (size != 0) {
 				if (program_header->filesz != 0) {
-					char *startaddr;
-					char *endaddr;
-					/* Check if file is completly loaded. */
-					startaddr = &buffer[program_header->offset];
-					endaddr = startaddr + program_header->filesz;
+					uint32_t endoffset;
 
-					if ((startaddr < buffer) || (startaddr >= &buffer[filesize])) {
-						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, startaddr - buffer);
-						return -30;
-					}
-					if ((endaddr < buffer) || (endaddr >= &buffer[filesize])) {
-						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, endaddr - buffer);
+					/* Check if file is completly loaded. */
+					if (program_header->filesz > (128 * 1024 * 1024)) {
+						error_printf("The %s file has a section with a bad file size.",
+							name, program_header->filesz);
 						return -31;
+					}
+					if (program_header->offset > (128 * 1024 * 1024)) {
+						error_printf("The %s file has a section with a bad offset.",
+							name, program_header->filesz);
+						return -31;
+					}
+
+					endoffset = program_header->offset + program_header->filesz;
+
+					if (endoffset >= filesize) {
+						error_printf("The %s file with %u Bytes must be at least %d Bytes. Please redownload this file.",
+							name, filesize, endoffset);
+						return -30;
 					}
 				}
 				uint32_t last;
@@ -679,7 +723,7 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 							dest, name);
 						return -2;
 				}
-				dest = dest & 0x0FFFFFFF;
+				dest = PHYSADDR(dest);
 
 				if (dest < start) {
 					error_printf("The memory region start address 0x%08x of %s is before 0x%08x.",
@@ -698,9 +742,26 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 						last, name, end);
 					return -4;
 				}
-				if (((dest & 0x0FFFFFFF) <= (entry & 0x0FFFFFFF))
-					&& (((dest + size) & 0x0FFFFFFF) > (entry & 0x0FFFFFFF))) {
+				if ((dest <= entry)
+					&& ((dest + size) > entry)) {
 					copied_entry = -1;
+				}
+
+				if (destaddr != NULL) {
+					uint8_t *d = &destaddr[dest - start];
+					int size = program_header->memsz - program_header->filesz;
+
+					if (program_header->filesz != 0)
+					{
+						kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
+							program_header->vaddr,
+							program_header->paddr,
+							program_header->offset,
+							program_header->filesz);
+						kmemcpy(d, &buffer[program_header->offset], program_header->filesz);
+					}
+					if (size > 0)
+						memset(&d[program_header->filesz], 0, size);
 				}
 			}
 		}
@@ -712,29 +773,27 @@ int check_sections32(const char *name, char *buffer, uint32_t filesize, uint32_t
 	return 0;
 }
 
-int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+int check_sections64(const char *name, const char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest, uint8_t *destaddr)
 {
-	Elf64_Ehdr_t *file_header;
+	const Elf64_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	uint32_t entry = 0;
 	uint32_t area;
 	int copied_entry = 0;
 
-	start = start & 0x0FFFFFFF;
-	end = end & 0x0FFFFFFF;
 	if (highest != NULL) {
 		*highest = 0;
 	}
 
-	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf64_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf64_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
 		error_printf("Magic 0x%08x is wrong.\n", file_header->magic);
 		return -1;
 	}
 	entry = file_header->entry;
-	printf("entry is 0x%08llx\n", (unsigned long long) file_header->entry);
+	kprintf("entry is 0x%08llx\n", (unsigned long long) file_header->entry);
 	area = entry >> 28;
 	switch(area) {
 		case 0x8:
@@ -746,7 +805,7 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 				entry, name);
 			return -20;
 	}
-	entry = entry & 0x0FFFFFFF;
+	entry = PHYSADDR(entry);
 	if (entry < start) {
 		error_printf("Entry point 0x%08x of %s is before 0x%08x.",
 			entry, name, start);
@@ -768,7 +827,7 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 			uint32_t dest;
 			uint32_t size;
 
-			printf("VAddr: 0x%08llx PAddr: 0x%08llx Offset 0x%08llx Size 0x%08llx\n",
+			kprintf("VAddr: 0x%08llx PAddr: 0x%08llx Offset 0x%08llx Size 0x%08llx\n",
 				(unsigned long long) program_header->vaddr,
 				(unsigned long long) program_header->paddr,
 				(unsigned long long) program_header->offset,
@@ -783,19 +842,26 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 
 			if (size != 0) {
 				if (program_header->filesz != 0) {
-					char *startaddr;
-					char *endaddr;
-					/* Check if file is completly loaded. */
-					startaddr = &buffer[program_header->offset];
-					endaddr = startaddr + program_header->filesz;
+					uint32_t endoffset;
 
-					if ((startaddr < buffer) || (startaddr >= &buffer[filesize])) {
-						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, startaddr - buffer);
-						return -30;
-					}
-					if ((endaddr < buffer) || (endaddr >= &buffer[filesize])) {
-						error_printf("The %s file must be at least %d Bytes. Please redownload this file.", name, endaddr - buffer);
+					/* Check if file is completly loaded. */
+					if (program_header->filesz > (128 * 1024 * 1024)) {
+						error_printf("The %s file has a section with a bad file size.",
+							name, program_header->filesz);
 						return -31;
+					}
+					if (program_header->offset > (128 * 1024 * 1024)) {
+						error_printf("The %s file has a section with a bad offset.",
+							name, program_header->filesz);
+						return -31;
+					}
+
+					endoffset = program_header->offset + program_header->filesz;
+
+					if (endoffset >= filesize) {
+						error_printf("The %s file with %u Bytes must be at least %d Bytes. Please redownload this file.",
+							name, filesize, endoffset);
+						return -30;
 					}
 				}
 				uint32_t last;
@@ -810,7 +876,7 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 							dest, name);
 						return -2;
 				}
-				dest = dest & 0x0FFFFFFF;
+				dest = PHYSADDR(dest);
 
 				if (dest < start) {
 					error_printf("The memory region start address 0x%08x of %s is before 0x%08x.",
@@ -829,9 +895,26 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 						last, name, end);
 					return -4;
 				}
-				if (((dest & 0x0FFFFFFF) <= (entry & 0x0FFFFFFF))
-					&& (((dest + size) & 0x0FFFFFFF) > (entry & 0x0FFFFFFF))) {
+				if ((dest <= entry)
+					&& ((dest + size) > entry)) {
 					copied_entry = -1;
+				}
+
+				if (destaddr != NULL) {
+					uint8_t *d = &destaddr[dest - start];
+					int size = program_header->memsz - program_header->filesz;
+
+					if (program_header->filesz != 0)
+					{
+						kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
+							program_header->vaddr,
+							program_header->paddr,
+							program_header->offset,
+							program_header->filesz);
+						kmemcpy(d, &buffer[program_header->offset], program_header->filesz);
+					}
+					if (size > 0)
+						memset(&d[program_header->filesz], 0, size);
 				}
 			}
 		}
@@ -843,18 +926,21 @@ int check_sections64(const char *name, char *buffer, uint32_t filesize, uint32_t
 	return 0;
 }
 
-int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest)
+int check_sections(const char *name, const char *buffer, uint32_t filesize, uint32_t start, uint32_t end, uint32_t *highest, uint8_t *destaddr)
 {
 	Elf32_Ehdr_t *file_header;
 	int pos = 0;
 
+	start = PHYSADDR(start);
+	end = PHYSADDR(end);
+
 	file_header = (Elf32_Ehdr_t *) &buffer[pos];
 	if (file_header->info[0] == 2) {
 		/* 64 Bit ELF file. */
-		return check_sections64(name, buffer, filesize, start, end, highest);
+		return check_sections64(name, buffer, filesize, start, end, highest, destaddr);
 	} else {
 		/* 32 Bit ELF file. */
-		return check_sections32(name, buffer, filesize, start, end, highest);
+		return check_sections32(name, buffer, filesize, start, end, highest, destaddr);
 	}
 }
 
@@ -862,44 +948,44 @@ int check_sections(const char *name, char *buffer, uint32_t filesize, uint32_t s
  * Copy program sections of ELF file to memory.
  * @param buffer Pointer to ELF file.
  */
-entry_t *copy_sections32(char *buffer)
+entry_t *copy_sections32(const char *buffer)
 {
-	Elf32_Ehdr_t *file_header;
+	const Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	entry_t *entry = NULL;
 
-	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf32_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf32_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
-		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		kprintf("Magic 0x%08x is wrong.\n", file_header->magic);
 		return NULL;
 	}
 	entry = (entry_t *) file_header->entry;
-	iop_printf(U2K("entry is 0x%08x\n"), (int) entry);
+	kprintf("entry is 0x%08x\n", (int) entry);
 	for (i = 0; i < file_header->phnum; i++)
 	{
-		Elf32_Phdr_t *program_header;
-		program_header = (Elf32_Phdr_t *) &buffer[pos];
+		const Elf32_Phdr_t *program_header;
+		program_header = (const Elf32_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf32_Phdr_t);
 
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
 		{
-			unsigned char *dest;
+			uint8_t *dest;
 
 			// Copy to physical address which can be accessed by loader.
-			dest = (unsigned char *) (program_header->paddr);
+			dest = (uint8_t *) program_header->paddr;
 
 			if (program_header->filesz != 0)
 			{
-				iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+				kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 					program_header->vaddr,
 					program_header->paddr,
 					program_header->offset,
 					program_header->filesz);
-				memcpy(dest, &buffer[program_header->offset], program_header->filesz);
-				iop_printf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+				kmemcpy(dest, &buffer[program_header->offset], program_header->filesz);
+				kprintf("First bytes 0x%02x 0x%02x\n", (int) dest[0], (int) dest[1]);
 			}
 			int size = program_header->memsz - program_header->filesz;
 			if (size > 0)
@@ -909,45 +995,45 @@ entry_t *copy_sections32(char *buffer)
 	return entry;
 }
 
-entry_t *copy_sections64(char *buffer)
+entry_t *copy_sections64(const char *buffer)
 {
-	Elf64_Ehdr_t *file_header;
+	const Elf64_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	entry_t *entry = NULL;
 
-	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf64_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf64_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
-		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		kprintf("Magic 0x%08x is wrong.\n", file_header->magic);
 		return NULL;
 	}
-	entry = (entry_t *) ((uint32_t) (file_header->entry & 0xFFFFFFFF));
-	iop_printf(U2K("entry is 0x%08x\n"), (int) entry);
-	iop_printf(U2K("phnum %d\n"), (int) file_header->phnum);
+	entry = (entry_t *) PHYSADDR(file_header->entry);
+	kprintf("entry is 0x%08x\n", (int) entry);
+	kprintf("phnum %d\n", (int) file_header->phnum);
 	for (i = 0; i < file_header->phnum; i++)
 	{
-		Elf64_Phdr_t *program_header;
-		program_header = (Elf64_Phdr_t *) &buffer[pos];
+		const Elf64_Phdr_t *program_header;
+		program_header = (const Elf64_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf64_Phdr_t);
 
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
 		{
-			unsigned char *dest;
+			uint8_t *dest;
 
 			// Copy to physical address which can be accessed by loader.
-			dest = (unsigned char *) ((uint32_t) (program_header->paddr & 0xFFFFFFFF));
+			dest = (uint8_t *) ((uint32_t) program_header->paddr);
 
 			if (program_header->filesz != 0)
 			{
-				iop_printf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+				kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 					program_header->vaddr,
 					program_header->paddr,
 					program_header->offset,
 					program_header->filesz);
-				memcpy(dest, &buffer[program_header->offset], program_header->filesz);
-				iop_printf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+				kmemcpy(dest, &buffer[program_header->offset], program_header->filesz);
+				kprintf("First bytes 0x%02x 0x%02x\n", (int) dest[0], (int) dest[1]);
 			}
 			int size = program_header->memsz - program_header->filesz;
 			if (size > 0)
@@ -957,12 +1043,12 @@ entry_t *copy_sections64(char *buffer)
 	return entry;
 }
 
-entry_t *copy_sections(char *buffer)
+entry_t *copy_sections(const char *buffer)
 {
-	Elf32_Ehdr_t *file_header;
+	const Elf32_Ehdr_t *file_header;
 	int pos = 0;
 
-	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf32_Ehdr_t *) &buffer[pos];
 	if (file_header->info[0] == 2) {
 		/* 64 Bit ELF file. */
 		return copy_sections64(buffer);
@@ -977,25 +1063,25 @@ entry_t *copy_sections(char *buffer)
  * Required to check if kernel can be started without problems.
  * @param buffer Pointer to ELF file.
  */
-void verify_sections32(char *buffer)
+void verify_sections32(const char *buffer)
 {
-	Elf32_Ehdr_t *file_header;
+	const Elf32_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	entry_t *entry = NULL;
 
-	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf32_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf32_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
-		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		kprintf("Magic 0x%08x is wrong.\n", file_header->magic);
 		panic();
 	}
 	entry = (entry_t *) file_header->entry;
-	iop_dprintf(U2K("entry is 0x%08x\n"), (int) entry);
+	kprintf("entry is 0x%08x\n", (int) entry);
 	for (i = 0; i < file_header->phnum; i++)
 	{
-		Elf32_Phdr_t *program_header;
-		program_header = (Elf32_Phdr_t *) &buffer[pos];
+		const Elf32_Phdr_t *program_header;
+		program_header = (const Elf32_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf32_Phdr_t);
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
@@ -1007,16 +1093,16 @@ void verify_sections32(char *buffer)
 
 			if (program_header->filesz != 0)
 			{
-				iop_dprintf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+				kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 					program_header->vaddr,
 					program_header->paddr,
 					program_header->offset,
 					program_header->filesz);
 				if (memcmp(dest, &buffer[program_header->offset], program_header->filesz) != 0) {
-					iop_prints(U2K("Verify failed"));
+					kputs("Verify failed");
 					panic();
 				};
-				iop_dprintf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+				kprintf("First bytes 0x%02x 0x%02x\n", (int) dest[0], (int) dest[1]);
 			}
 			unsigned int size = program_header->memsz - program_header->filesz;
 			if (size > 0) {
@@ -1024,7 +1110,7 @@ void verify_sections32(char *buffer)
 
 				for (i = 0; i < size; i++) {
 					if (dest[program_header->filesz] != 0) {
-						iop_prints(U2K("Verify failed in memset"));
+						kputs("Verify failed in memset");
 						panic();
 					}
 				}
@@ -1034,25 +1120,25 @@ void verify_sections32(char *buffer)
 	return;
 }
 
-void verify_sections64(char *buffer)
+void verify_sections64(const char *buffer)
 {
-	Elf64_Ehdr_t *file_header;
+	const Elf64_Ehdr_t *file_header;
 	int pos = 0;
 	int i;
 	entry_t *entry = NULL;
 
-	file_header = (Elf64_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf64_Ehdr_t *) &buffer[pos];
 	pos += sizeof(Elf64_Ehdr_t);
 	if (file_header->magic != ELFMAGIC) {
-		iop_printf(U2K("Magic 0x%08x is wrong.\n"), file_header->magic);
+		kprintf("Magic 0x%08x is wrong.\n", file_header->magic);
 		panic();
 	}
-	entry = (entry_t *) ((uint32_t) (file_header->entry & 0xFFFFFFFF));
-	iop_dprintf(U2K("entry is 0x%08x\n"), (int) entry);
+	entry = (entry_t *) PHYSADDR(file_header->entry);
+	kprintf("entry is 0x%08x\n", (int) entry);
 	for (i = 0; i < file_header->phnum; i++)
 	{
-		Elf64_Phdr_t *program_header;
-		program_header = (Elf64_Phdr_t *) &buffer[pos];
+		const Elf64_Phdr_t *program_header;
+		program_header = (const Elf64_Phdr_t *) &buffer[pos];
 		pos += sizeof(Elf64_Phdr_t);
 		if ( (program_header->type == PT_LOAD)
 			&& (program_header->memsz != 0) )
@@ -1060,20 +1146,20 @@ void verify_sections64(char *buffer)
 			unsigned char *dest;
 
 			// Copied to physical address which can be accessed by loader.
-			dest = (unsigned char *) ((uint32_t)(program_header->paddr & 0xFFFFFFFF));
+			dest = (unsigned char *) PHYSADDR(program_header->paddr);
 
 			if (program_header->filesz != 0)
 			{
-				iop_dprintf(U2K("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n"),
+				kprintf("VAddr: 0x%08x PAddr: 0x%08x Offset 0x%08x Size 0x%08x\n",
 					program_header->vaddr,
 					program_header->paddr,
 					program_header->offset,
 					program_header->filesz);
 				if (memcmp(dest, &buffer[program_header->offset], program_header->filesz) != 0) {
-					iop_prints(U2K("Verify failed"));
+					kputs("Verify failed");
 					panic();
 				};
-				iop_dprintf(U2K("First bytes 0x%02x 0x%02x\n"), (int) dest[0], (int) dest[1]);
+				kprintf("First bytes 0x%02x 0x%02x\n", (int) dest[0], (int) dest[1]);
 			}
 			unsigned int size = program_header->memsz - program_header->filesz;
 			if (size > 0) {
@@ -1081,7 +1167,7 @@ void verify_sections64(char *buffer)
 
 				for (i = 0; i < size; i++) {
 					if (dest[program_header->filesz] != 0) {
-						iop_prints(U2K("Verify failed in memset"));
+						kputs("Verify failed in memset");
 						panic();
 					}
 				}
@@ -1091,12 +1177,12 @@ void verify_sections64(char *buffer)
 	return;
 }
 
-void verify_sections(char *buffer)
+void verify_sections(const char *buffer)
 {
-	Elf32_Ehdr_t *file_header;
+	const Elf32_Ehdr_t *file_header;
 	int pos = 0;
 
-	file_header = (Elf32_Ehdr_t *) &buffer[pos];
+	file_header = (const Elf32_Ehdr_t *) &buffer[pos];
 	if (file_header->info[0] == 2) {
 		/* 64 Bit ELF file. */
 		return verify_sections64(buffer);
@@ -1165,7 +1251,7 @@ char *load_file(const char *filename, int *size, void *addr)
 	int pos = 0;
 	int n;
 	int next = 10000;
-	printf("%s size %d\n", filename, *size);
+	kprintf("%s size %d\n", filename, *size);
 	while ((n = fread(&buffer[pos], 1, next, fin)) > 0) {
 		pos += n;
 		s -= n;
@@ -1190,16 +1276,14 @@ char *load_file(const char *filename, int *size, void *addr)
  * @param size Pointer where file size will be stored, can be NULL.
  * @return Pointer to memory where file is loaded to.
  */
-char *load_kernel_file(const char *filename, int *size, void *addr)
+char *load_kernel_file(const char *filename, int *size)
 {
 	char *buffer = NULL;
-	int s;
 	gzFile fin;
 	int maxsize = 6 * 1024 * 1024;
 
 	if (size == NULL) {
-		size = &s;
-		addr = NULL;
+		return NULL;
 	}
 
 	setEnableDisc(-1);
@@ -1207,7 +1291,7 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 	fin = gzopen(filename, "rb");
 	if (fin == NULL) {
 		error_printf("Error cannot open file %s.", filename);
-		printf("Failed to open file %s.\n", filename);
+		kprintf("Failed to open file %s.\n", filename);
 		setEnableDisc(0);
 		return NULL;
 	}
@@ -1226,18 +1310,16 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 	if (buffer == NULL) {
 		gzclose(fin);
 		error_printf("Failed to allocate memory (memory leak)! Please restart kernelloader and boot kernel directly.");
-		printf("Failed to allocate memory.\n");
+		kprintf("Failed to allocate memory.\n");
 		setEnableDisc(0);
 		return NULL;
 	}
-	if (addr == NULL) {
-		if ((u32) buffer < (u32) &_end) {
-			/* This will lead to problems. */
-			error_printf("memalign() is unusable!");
-			printf("memalign() is unusable!\n");
-			setEnableDisc(0);
-			return NULL;
-		}
+	if ((u32) buffer < (u32) &_end) {
+		/* This will lead to problems. */
+		error_printf("memalign() is unusable!");
+		kprintf("memalign() is unusable!\n");
+		setEnableDisc(0);
+		return NULL;
 	}
 
 	dprintf("Loading...\n");
@@ -1245,13 +1327,9 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 	int n;
 	int next = 10 * 1024;
 	while ((n = gzread(fin, &buffer[pos], next)) > 0) {
+		dprintf("n = %d\n", n);
 		pos += n;
-		s -= n;
-		if (s < next)
-			next = s;
-		if (next <= 0)
-			break;
-		dprintf(".");
+		dprintf("pos = %d\n", pos);
 		graphic_setPercentage(pos / (maxsize / 100), filename);
 		if ((pos + next) > maxsize) {
 			error_printf("Error file %s is too big (free %ukB).\n", filename, maxsize / 1024);
@@ -1260,15 +1338,16 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 			} else {
 				error_printf("You should use ee-strip to make the kernel smaller (gzip doesn't help).");
 			}
-			printf("Error file %s is too large (> %ukByte).\n", filename, maxsize / 1024);
+			kprintf("Error file %s is too large (> %ukByte).\n", filename, maxsize / 1024);
 			setEnableDisc(0);
 			gzclose(fin);
 			free(buffer);
 			return NULL;
 		}
 	}
+	dprintf("last n = %d\n", n);
 	*size = pos;
-	printf("%s size %d\n", filename, *size);
+	kprintf("%s size %d\n", filename, *size);
 	gzclose(fin);
 
 	/* Make it smaller, so remaining memory can be used for other stuff. */
@@ -1280,6 +1359,7 @@ char *load_kernel_file(const char *filename, int *size, void *addr)
 
 	return buffer;
 }
+
 int getNumberOfModules(void)
 {
 	return sizeof(modules) / sizeof(moduleEntry_t);
@@ -1306,23 +1386,27 @@ int loadModules(void)
 			}
 		}
 		if ((modules[i].buffered) && (modules[i].load)) {
-			rom_entry_t *romfile = NULL;
+			const rom_entry_t *romfile = NULL;
 
 			dprintf("Loading module %s.\n", modules[i].path);
 			if (strncmp(modules[i].path, "host:", 5) == 0) {
-				printf("Try to load %s\n", &modules[i].path[5]);
+				kprintf("Try to load %s\n", &modules[i].path[5]);
 				romfile = rom_getFile(&modules[i].path[5]);
 			}
 			if (romfile == NULL) {
-				modules[i].buffer = load_file(modules[i].path, &modules[i].size, NULL);
-				if (modules[i].buffer == NULL) {
+				char *buffer;
+				buffer = load_file(modules[i].path, &modules[i].size, NULL);
+				modules[i].buffer = buffer;
+				if (buffer == NULL) {
 					error_printf("Failed to load module '%s'.", modules[i].path);
 
 					/* Free memory. */
 					for (j = 0; j < i; j++) {
 						if ((modules[j].buffered) && (modules[j].load)) {
 							if (modules[j].allocated) {
-								free(modules[i].buffer);
+								free(buffer);
+								buffer = NULL;
+								modules[i].buffer = NULL;
 								modules[j].allocated = 0;
 							}
 						}
@@ -1331,7 +1415,7 @@ int loadModules(void)
 				} else {
 					modules[i].allocated = 1;
 					if (modules[i].libsd && loaderConfig.patchLibsd) {
-						patchLibsd(modules[i].buffer, modules[i].size);
+						patchLibsd(buffer, modules[i].size);
 					}
 				}
 			} else {
@@ -1376,7 +1460,7 @@ void startModules(struct ps2_bootinfo *bootinfo)
 			if (modules[i].buffered) {
 				int ret;
 
-				ret = SifExecModuleBuffer(modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
+				ret = SifExecModuleBuffer((void *) modules[i].buffer, modules[i].size, modules[i].argLen, modules[i].args, &rv);
 				if (ret < 0) {
 					rv = ret;
 				} else {
@@ -1417,33 +1501,6 @@ void startModules(struct ps2_bootinfo *bootinfo)
 			}
 		}
 	}
-}
-
-/**
- * Install an exception handler
- * @param number The number of the exception handler to install.
- */
-void installExceptionHandler(int number)
-{
-	void *dstAddr;
-	void *srcAddr;
-	uint32_t *patch;
-	uint32_t size;
-
-	if (number > 4) {
-		iop_prints(U2K("Exception number is too big.\n"));
-		panic();
-	}
-	dstAddr = (void *) (KSEG0_MASK + 0x80 * number);
-	srcAddr = (void *) (((uint32_t) exceptionHandlerStart) | KSEG0_MASK);
-	size = ((uint32_t) exceptionHandlerEnd) - ((uint32_t) exceptionHandlerStart);
-
-	patch = (uint32_t *) exceptionHandlerPatch2;
-	iop_dprintf(U2K("exceptionHandlerPatch2 = 0x%08x\n"), *patch);
-	*patch = ((*patch) & 0xFFFF0000) | number;
-	iop_dprintf(U2K("exceptionHandlerPatch2 = 0x%08x\n"), *patch);
-
-	memcpy(dstAddr, srcAddr, size);
 }
 
 const char *pagemask2text(uint32_t pagemask)
@@ -1494,7 +1551,7 @@ void print_tlbs(void)
 		"sync.p\n"
 		"mfc0 %0, $6\n":"=r" (wired):);
 
-	iop_printf(U2K("wired %d\n"), wired);
+	kprintf("wired %d\n", wired);
 	for (entry = 0; entry < 48; entry++) {
 		uint32_t entryhi;
 		uint32_t pagemask;
@@ -1551,22 +1608,22 @@ void print_tlbs(void)
 		/* Barrier. */
 		__asm__ __volatile__("sync.p"::: "memory");
 
-		iop_printf(U2K("index %d\n"), index);
-		iop_printf(U2K("entryhi 0x%x vaddr 0x%x asid %d\n"), entryhi, entryhi & 0xffffe000, entryhi & 0xFF);
-		iop_printf(U2K("pagemask 0x%x %s\n"), pagemask, pagemask2text(pagemask));
-		iop_printf(U2K("entrylo0 0x%x paddr 0x%x %s, %s, %s, %s\n"),
+		kprintf("index %d\n", index);
+		kprintf("entryhi 0x%x vaddr 0x%x asid %d\n", entryhi, entryhi & 0xffffe000, entryhi & 0xFF);
+		kprintf("pagemask 0x%x %s\n", pagemask, pagemask2text(pagemask));
+		kprintf("entrylo0 0x%x paddr 0x%x %s, %s, %s, %s\n",
 			entrylo0, (entrylo0 & 0x03ffffffc0) << 6,
 			(entrylo0 & 2) ? U2K("valid") : U2K("invalid"),
 			entrylo2cachetext(entrylo0),
 			(entrylo0 & 4) ? U2K("dirty") : U2K("not dirty"),
 			(entrylo0 & 1) ? U2K("global") : U2K("not global"));
-		iop_printf(U2K("entrylo1 0x%x paddr 0x%x %s, %s, %s, %s\n"),
+		kprintf("entrylo1 0x%x paddr 0x%x %s, %s, %s, %s\n",
 			entrylo1, (entrylo1 & 0x03ffffffc0) << 6,
 			(entrylo1 & 2) ? U2K("valid") : U2K("invalid"),
 			entrylo2cachetext(entrylo1),
 			(entrylo1 & 4) ? U2K("dirty") : U2K("not dirty"),
 			(entrylo1 & 1) ? U2K("global") : U2K("not global"));
-		iop_printf(U2K("\n"));
+		kprintf("\n");
 	}
 }
 
@@ -1624,7 +1681,7 @@ void printAllModules(void)
 	while (smod_get_next_mod(current, &module) != 0)
 	{
 		smem_read(module.name, name, 256);
-		printf("modules id %d \"%s\" version 0x%02x\n", module.id, name, module.version);
+		kprintf("modules id %d \"%s\" version 0x%02x\n", module.id, name, module.version);
 		current = &module;
 		i++;
 	}
@@ -1649,7 +1706,7 @@ uint32_t *getSBIOSCallTable(char *addr)
 	entrypoint = (uint32_t *) addr;
 	magic = (uint32_t *) (addr + 4);
 
-	printf("Entrypoint 0x%08x magic 0x%08x\n", *entrypoint, *magic);
+	kprintf("Entrypoint 0x%08x magic 0x%08x\n", *entrypoint, *magic);
 
 	if (*magic != *magic_check) {
 		error_printf("SBIOS file is incorrect (magic is wrong).");
@@ -1662,7 +1719,7 @@ uint32_t *getSBIOSCallTable(char *addr)
 		uint32_t value;
 
 		value = *((uint32_t *)code);
-		//printf("Check code at 0x%08x 0x%08x op %d\n", code, value, value >> 26);
+		//kprintf("Check code at 0x%08x 0x%08x op %d\n", code, value, value >> 26);
 		if ((value >> 26) == 9) {
 			/* addiu instruction. */
 			int rs;
@@ -1765,13 +1822,13 @@ uint32_t *getSBIOSCallTable(char *addr)
 			if (regs[5] == search) {
 				/* memcopy gets SBIOS in register a1 and size in register a2. */
 				sbiosSize = regs[6];
-				printf("SBIOS size is 0x%08x.\n", sbiosSize);
+				kprintf("SBIOS size is 0x%08x.\n", sbiosSize);
 				break;
 			}
 #endif
 		}
 	}
-	printf("SBIOS Call table offset is at 0x%08x.\n", jumpBase);
+	kprintf("SBIOS Call table offset is at 0x%08x.\n", jumpBase);
 	if (jumpBase != 0) {
 		jumpBase = jumpBase - SBIOS_START_ADDRESS + ((uint32_t) addr);
 	} else {
@@ -1815,6 +1872,120 @@ static void SetSysConf(struct ps2_sysconf *sysconf)
 	}
 }
 
+const char *load_sbios(struct ps2_bootinfo *bootinfo)
+{
+	const char *sbios_filename = NULL;
+	int sbios_size = 0;
+	const char *sbios = NULL;
+	char *sbiosbuffer = NULL;
+	static uint8_t sbiosbin[MAX_SBIOS_SIZE + SBIOS_RESERVED] __attribute__((aligned(4)));
+	uint32_t *SBIOSCallTable = NULL;
+	int found = 0;
+	int i;
+
+	memset(sbiosbin, 0, sizeof(sbiosbin));
+
+	sbios_filename = getSBIOSFilename();
+	if (strncmp(sbios_filename, "host:", 5) == 0) {
+		const rom_entry_t *romfile;
+
+		romfile = rom_getFile(&sbios_filename[5]);
+		if (romfile != NULL) {
+			sbios = romfile->start;
+			sbios_size = romfile->size;
+		}
+	}
+	if (sbios == NULL) {
+		sbiosbuffer = load_file(sbios_filename, &sbios_size, NULL);
+		sbios = sbiosbuffer;
+	}
+	if (sbios == NULL) {
+		error_printf("Failed to load sbios.elf");
+		return NULL;
+	}
+
+	graphic_setStatusMessage("Checking SBIOS...");
+
+	/* Test if this is a ELF or a binary file.*/
+	if ((sbios_size < 8) || (((const uint32_t *) sbios)[1] != *magic_check)) {
+		int rv;
+		uint32_t highest;
+
+		/* SBIOS in ELF format. */
+
+		/* Check for errors in ELF file and
+		 * copy SBIOS into buffer sbiosbin.
+		 */
+		rv = check_sections("SBIOS", sbios, sbios_size,
+			SBIOS_START_ADDRESS,
+			SBIOS_START_ADDRESS + MAX_SBIOS_SIZE,
+			&highest, sbiosbin);
+		if (sbiosbuffer != NULL) {
+			free(sbiosbuffer);
+			sbiosbuffer = NULL;
+		}
+		if (rv != 0) {
+			/* Error in ELF file for SBIOS. */
+			return NULL;
+		}
+		sbios_size = highest - PHYSADDR(SBIOS_START_ADDRESS);
+	} else {
+		/* SBIOS in binary format. */
+		if (sbios_size >= MAX_SBIOS_SIZE) {
+			error_printf("SBIOS file is too large.");
+			return NULL;
+		}
+		/* Copy SBIOS into buffer sbiosbin. */
+		kmemcpy(sbiosbin, sbios, sbios_size);
+		if (sbiosbuffer != NULL) {
+			free(sbiosbuffer);
+			sbiosbuffer = NULL;
+		}
+	}
+	sbios = NULL;
+
+	for (i = 1; i < (sbios_size / 4); i++) {
+		if (((uint32_t *) sbiosbin)[i] == *magic_check) {
+			found = 1;
+
+			/* Found magic, store location in bootinfo structure. */
+			bootinfo->sbios_base = SBIOS_START_ADDRESS + (i - 1) * 4;
+			kprintf("SBIOS base 0x%08x\n", bootinfo->sbios_base);
+			SBIOSCallTable = getSBIOSCallTable((char *) (&(((uint32_t *) sbiosbin)[i - 1])));
+			if (SBIOSCallTable != NULL) {
+				break;
+			}
+		}
+	}
+	if (SBIOSCallTable == NULL) {
+		if (!found) {
+			error_printf("SBIOS file is invalid, magic not found.");
+		}
+		return NULL;
+	}
+
+	graphic_setStatusMessage("Setup SBIOS...");
+	kprintf("Using address 0x%08x as SBIOSCallTable (SBIOS is at 0x%08x).\n",
+		(uint32_t) SBIOSCallTable, (uint32_t) sbiosbin);
+	disableSBIOSCalls(SBIOSCallTable);
+	graphic_setStatusMessage(NULL);
+
+	/* Check if there is free memory for the console type. */
+	if (strlen(ps2_console_type) >= SBIOS_RESERVED) {
+		error_printf("PS2 console string is to long!");
+		return NULL;
+	}
+	/* Add PS2 console type behind SBIOS. */
+	strcpy(((void *) sbiosbin) + sbios_size, ps2_console_type);
+
+	/* sbiosbin will be copied later to SBIOS_START_ADDRESS.
+	 * Access data from kernel space, because this will be accessed by
+	 * the Linux kernel. */
+	bootinfo->ver_model = (void *) (SBIOS_START_ADDRESS + sbios_size);
+
+	return sbiosbin;
+}
+
 /**
  * Load kernel, initrd and required modules. Then start kernel.
  * @param mode Graphic mode that should be used.
@@ -1824,142 +1995,70 @@ static int real_loader(void)
 	entry_t *entry;
 	int ret;
 	char *buffer = NULL;
-	char *sbios = NULL;
-	struct ps2_bootinfo *bootinfo = (struct ps2_bootinfo *) PS2_BOOTINFO_OLDADDR;
+	const char *sbios = NULL;
+	struct ps2_bootinfo bootinfo;
 	register int sp asm("sp");
 	static char commandline[2 * MAX_INPUT_LEN] = "";
-	uint32_t *patch;
 	uint32_t iopaddr;
 	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
 #if 0
 	volatile uint32_t *sbios_osdparam = (uint32_t *) 0x8000100c;
 #endif
-	int sbios_size = 0;
 	int kernel_size = 0;
-	const char *sbios_filename = NULL;
 	const char *kernel_filename = NULL;
 	uint32_t *initrd_header = NULL;
 	uint32_t initrd_start = 0;
 	uint32_t initrd_size = 0;
 
 	/* Initialize memboot parameter. */
-	memset(bootinfo, 0, sizeof(struct ps2_bootinfo));
+	memset(&bootinfo, 0, sizeof(struct ps2_bootinfo));
 
 	strcpy(commandline, getKernelParameter());
 
-	bootinfo->size = sizeof(struct ps2_bootinfo);
+	bootinfo.size = sizeof(struct ps2_bootinfo);
 	if (IsT10K()) {
-		bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_T10K;
-		bootinfo->maxmem = 128 * 1024 * 1024;
+		bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_T10K;
+		bootinfo.maxmem = 128 * 1024 * 1024;
 	} else {
-		bootinfo->mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
-		bootinfo->maxmem = 32 * 1024 * 1024 - 4096;
+		bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
+		bootinfo.maxmem = 32 * 1024 * 1024 - 4096;
 	}
-	bootinfo->opt_string = (char *) (((unsigned int) commandline) | KSEG0_MASK); /* Command line parameters. */
+	bootinfo.opt_string = (char *) (((unsigned int) commandline) | KSEG0_MASK); /* Command line parameters. */
 
-	SetSysConf(&bootinfo->sysconf);
+	SetSysConf(&bootinfo.sysconf);
 
-	printf("Started loader\n");
+	kprintf("Started loader\n");
 
-	patch = (uint32_t *) exceptionHandlerPatch1;
-	dprintf("exceptionHandlerPatch = 0x%08x\n", *patch);
-	*patch = ((*patch) & 0xFFFF0000) | (((((uint32_t) exceptionHandleStage2) & 0xFFFF0000) | KSEG0_MASK)>> 16);
-	dprintf("exceptionHandlerPatch = 0x%08x\n", *patch);
-
-	printf("Load kernel......\n");
-	printf("Stack 0x%08x\n", sp);
+	kprintf("Load kernel......\n");
+	kprintf("Stack 0x%08x\n", sp);
 	if ((u32) sp < (u32) &_end) {
 		/* This will lead to problems. */
 		error_printf("Stack is unusable!");
 		return -1;
 	}
-	sbios_filename = getSBIOSFilename();
-	if (strncmp(sbios_filename, "host:", 5) == 0) {
-		rom_entry_t *romfile;
-
-		romfile = rom_getFile(&sbios_filename[5]);
-		if (romfile != NULL) {
-			sbios = romfile->start;
-			sbios_size = romfile->size;
-		}
-	}
+	sbios = load_sbios(&bootinfo);
 	if (sbios == NULL) {
-		sbios = load_file(sbios_filename, &sbios_size, NULL);
-	}
-	if (sbios == NULL) {
-		error_printf("Failed to load sbios.elf");
-		return -1;
-	} else {
-		uint32_t *SBIOSCallTable = NULL;
-		int found = 0;
-		int i;
-
-		graphic_setStatusMessage("Checking SBIOS...");
-
-		/* Don't check binary file.*/
-		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
-			/* Check for errors in ELF file. */
-			if (check_sections("SBIOS", sbios, sbios_size, 0x1000, 0x10000, NULL) != 0) {
-				free(sbios);
-				return -2;
-			}
-		} else {
-			if (sbios_size >= 0x10000) {
-				error_printf("SBIOS file is too large.");
-				return -2;
-			}
-		}
-
-		for (i = 0; i < (sbios_size / 4); i++) {
-			if (((uint32_t *) sbios)[i] == *magic_check) {
-				found = 1;
-				SBIOSCallTable = getSBIOSCallTable((char *) (&(((uint32_t *) sbios)[i - 1])));
-				if (SBIOSCallTable != NULL) {
-					break;
-				}
-			}
-		}
-		if (SBIOSCallTable == NULL) {
-			if (!found) {
-				error_printf("SBIOS file is invalid, magic not found.");
-			}
-			return -3;
-		} else {
-			graphic_setStatusMessage("Setup SBIOS...");
-			printf("Using address 0x%08x as SBIOSCallTable (SBIOS is at 0x%08x).\n", (uint32_t) SBIOSCallTable, (uint32_t) sbios);
-			disableSBIOSCalls(SBIOSCallTable);
-			graphic_setStatusMessage(NULL);
-		}
-
-		/* Check if there is free memory for the console type. */
-		if (sbios_size < (0x10000 - ((int) strlen(ps2_console_type)) - 1)) {
-			/* Add PS2 console type behind SBIOS. */
-			bootinfo->ver_model = ((void *) sbios) + sbios_size;
-			strcpy(bootinfo->ver_model, ps2_console_type);
-
-			/* Access data from kernel space, because this will be accessed by the Linux kernel. */
-			bootinfo->ver_model = (void *) (((unsigned int) bootinfo->ver_model) | KSEG0_MASK);
-		}
-
-		/* Access data from kernel space, because TLB misses can't be handled here. */
-		sbios = (char *) (((unsigned int) sbios) | KSEG0_MASK);
+		return -35;
 	}
 	FlushCache(0);
 	kernel_filename = getKernelFilename();
 	if (strncmp(kernel_filename, "host:", 5) == 0) {
-		rom_entry_t *romfile;
+		const rom_entry_t *romfile;
 
 		romfile = rom_getFile(&kernel_filename[5]);
 		if (romfile != NULL) {
 			buffer = memalign(64, romfile->size);
 			if (buffer != NULL) {
-				memcpy(buffer, romfile->start, romfile->size);
+				kmemcpy(buffer, romfile->start, romfile->size);
 				kernel_size = romfile->size;
+			} else {
+				error_printf("Failed to allocate memory for kernel.");
+				return -14;
 			}
 		}
 	}
 	if (buffer == NULL) {
-		buffer = load_kernel_file(kernel_filename, &kernel_size, NULL);
+		buffer = load_kernel_file(kernel_filename, &kernel_size);
 	}
 	if (buffer != NULL) {
 		const char *initrd_filename;
@@ -1974,9 +2073,9 @@ static int real_loader(void)
 
 		/* Check for errors in ELF file. */
 		graphic_setStatusMessage("Checking Kernel...");
-		if (check_sections("kernel", buffer, kernel_size, 0x10000, lowestAddress, &highest) != 0) {
-			free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
+		if (check_sections("kernel", buffer, kernel_size, 0x10000, lowestAddress, &highest, NULL) != 0) {
 			free(buffer);
+			buffer = NULL;
 			return -2;
 		}
 
@@ -1992,14 +2091,20 @@ static int real_loader(void)
 			initrd_header = NULL;
 		}
 
-		/* Access data from kernel space, because TLB misses can't be handled here. */
-		buffer = (char *) (((unsigned int) buffer) | KSEG0_MASK);
 		graphic_setStatusMessage(NULL);
 		if (loadModules()) {
-			free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
-			free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
+			free(buffer);
+			buffer = NULL;
 			return -2;
 		}
+
+#if 0
+		if (crc32check("Memory corrupted by loading kernel.") != 0) {
+			free(buffer);
+			buffer = NULL;
+			return -13;
+		}
+#endif
 
 		initrd_filename = getInitRdFilename();
 		if (initrd_filename != NULL) {
@@ -2007,20 +2112,20 @@ static int real_loader(void)
 				/* We don't want to overwrite end of kernel. */
 				error_printf("Can't load initrd. End of kernel must not be within the last 8 bytes of a page. "
 					"Kernel must be larger than %d Bytes.\n", NORMAL_MEMORY_START);
-				free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
-				free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
+				free(buffer);
+				buffer = NULL;
 				return -12;
 			}
 			initrd_size = ((uint32_t) lowestAddress) - ((uint32_t) &initrd_header[2]);
-			printf("%d bytes for initrd available.\n", initrd_size);
+			kprintf("%d bytes for initrd available.\n", initrd_size);
 			initrd_start = ((unsigned int) load_file(initrd_filename, &initrd_size, &initrd_header[2]));
 			if (initrd_start != 0) {
 				if (initrd_size != 0) {
 					if ((base + 8 + initrd_size) >= lowestAddress) {
 						error_printf("Initrd is to big to move behind kernel %d <= %d bytes.\n",
 							lowestAddress, (highest + 8 + initrd_size));
-						free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
-						free((void *) (((unsigned int) buffer) & 0x0FFFFFFF));
+						free(buffer);
+						buffer = NULL;
 						return -11;
 					}
 					/* Magic number is used by kernel to detect initrd. */
@@ -2034,54 +2139,92 @@ static int real_loader(void)
 						getKernelParameter(), initrd_start, initrd_size);
 				} else {
 					error_printf("Loading of initrd failed (1).");
+					free(buffer);
+					buffer = NULL;
 					return -9;
 				}
 			} else {
 				error_printf("Loading of initrd failed (out of memory).");
+				free(buffer);
+				buffer = NULL;
 				return -10;
 			}
-			printf("initrd_start 0x%08x 0x%08x\n", initrd_start, initrd_size);
+			kprintf("initrd_start 0x%08x 0x%08x\n", initrd_start, initrd_size);
+		}
+
+		/* Check integrity of kloader ELF. */
+		if (crc32check("Memory corrupted by loading kernel, initrd or SBIOS.") != 0) {
+			free(buffer);
+			buffer = NULL;
+			return -13;
 		}
 
 #if 0
 		CDVD_Stop();
 		CDVD_FlushCache();
 #endif
+		if (isDVDVSupported()) {
+			graphic_setStatusMessage("Stopping DVD");
 
-		printf("Try to reboot IOP.\n");
-		graphic_setStatusMessage("Reseting IOP");
+			/* Stop CD/DVD. */
+			CDVD_Stop();
+			CDVD_FlushCache();
+
+			CDDA_Exit();
+		}
+
+		if (debug_mode == -1) {
+			kprintf("Try to reboot IOP.\n");
+			graphic_setStatusMessage("Reseting IOP");
+		}
 
 		PS2KbdClose();
 		deinitializeController();
 
 		FlushCache(0);
 
-		SifExitIopHeap();
-		SifLoadFileExit();
-		SifExitRpc();
-		SifStopDma();
+		if (debug_mode == -1) {
+			graphic_setStatusMessage("Exit IOP Heap");
+			SifExitIopHeap();
+			graphic_setStatusMessage("Exit LoadFile");
+			SifLoadFileExit();
+			graphic_setStatusMessage("Exit FIO");
+			fioExit();
+			graphic_setStatusMessage("Exit RPC");
+			SifExitRpc();
+			graphic_setStatusMessage("Stop DMA");
+			SifStopDma();
+			graphic_setStatusMessage("PreReset Init RPC");
+			SifInitRpc(0);
 
-		SifIopReset(iop_reset_param, 0);
+			graphic_setStatusMessage("CDVD_INIT_NOCHECK\n");
+			cdInit(CDVD_INIT_NOCHECK);
+			graphic_setStatusMessage("CDVD_INIT_EXIT\n");
+			cdInit(CDVD_INIT_EXIT);
 
-		while (SifIopSync());
+			graphic_setStatusMessage("Reseting IOP");
+			while (!SifIopReset(iop_reset_param, 0));
 
-		graphic_setStatusMessage("Initialize RPC");
-		//printf("RPC");
-		SifInitRpc(0);
+			graphic_setStatusMessage("IOP Sync");
+			while (!SifIopSync());
 
-		graphic_setStatusMessage("Patching enable LMB");
-		sbv_patch_enable_lmb();
-		graphic_setStatusMessage("Patching disable prefix check");
-		sbv_patch_disable_prefix_check();
+			graphic_setStatusMessage("Initialize RPC");
+			SifInitRpc(0);
+
+			graphic_setStatusMessage("Patching enable LMB");
+			sbv_patch_enable_lmb();
+			graphic_setStatusMessage("Patching disable prefix check");
+			sbv_patch_disable_prefix_check();
+		}
 
 		graphic_setStatusMessage("Adding eedebug handler");
 
 		addEEDebugHandler();
 
 		graphic_setStatusMessage("Starting modules");
-		//printf("Starting modules\n");
+		//kprintf("Starting modules\n");
 
-		startModules(bootinfo);
+		startModules(&bootinfo);
 
 		graphic_setStatusMessage("Started all modules");
 
@@ -2118,6 +2261,12 @@ static int real_loader(void)
 #ifdef USER_SPACE_SUPPORT
 		iop_kmode_enter();
 #endif
+		/* Access data from kernel space, because TLB misses can't be handled here. */
+		buffer = (char *) (((uint32_t) buffer) | KSEG0_MASK);
+
+		/* Access data from kernel space, because TLB misses can't be handled here. */
+		sbios = U2K(sbios);
+
 
 		/* Be sure that all interrupts are disabled. */
 		__asm__ __volatile__(
@@ -2148,13 +2297,13 @@ static int real_loader(void)
 		/* Be sure that local variables are not lost after changing stack pointer. */
 		flushDCacheAll();
 
-		iop_dprints(U2K("Kernel mode print\n"));
-		iop_dprintf(U2K("Stack 0x%08x\n"), sp);
+		kputs("Kernel mode print\n");
+		kprintf("Stack 0x%08x\n", sp);
 
 		if (isSlimPSTwo()) {
-			if (loaderConfig.enableDev9) {
+			if (loaderConfig.enableDev9 && hasNetworkSupport()) {
 				/* Use value 0x0200 to inform Linux about slim PSTwo. This was not part of Sony's Linux. */
-				bootinfo->pccard_type = 0x0200;
+				bootinfo.pccard_type = 0x0200;
 			}
 		} else {
 			if (loaderConfig.enableDev9 && hasNetworkSupport()) {
@@ -2166,14 +2315,14 @@ static int real_loader(void)
 					ata_setup();
 	
 					/* Tell Linux to activate HDD and Network. */
-					bootinfo->pccard_type = 0x0100;
+					bootinfo.pccard_type = 0x0100;
 					pcicType = getPcicType();
 					if (strlen(pcicType) > 0) {
 						/* User configured calue in menu. */
-						bootinfo->pcic_type = atoi(pcicType);
+						bootinfo.pcic_type = atoi(pcicType);
 					} else {
 						/* Auto detect type. */
-						bootinfo->pcic_type = pcic_get_cardtype();
+						bootinfo.pcic_type = pcic_get_cardtype();
 					}
 				}
 			}
@@ -2271,32 +2420,19 @@ static int real_loader(void)
 #endif
 #if 0
 		/* XXX: Crash to test exception handlers. */
-		iop_prints(U2K("Try to crash\n"));
-		//patch = (void *) 0x04000000;
-		patch = (void *) 0x00100000;
-		*patch = 0;
+		kputs("Try to crash\n");
+		*((volatile unsigned int *) 0x40000000) = 0;
 #endif
-
 		/* Install SBIOS. */
-		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
-			bootinfo->sbios_base = (uint32_t) copy_sections(sbios);
-		} else {
-			/* Copy binary data. */
-			memcpy((void *) SBIOS_START_ADDRESS, sbios, sbios_size);
-			bootinfo->sbios_base = SBIOS_START_ADDRESS;
-		}
+		/* Copy binary data. */
+		kmemcpy((void *) SBIOS_START_ADDRESS, sbios, MAX_SBIOS_SIZE + SBIOS_RESERVED);
 
 		/* Install linux kernel. */
-		iop_prints(U2K("Copy kernel\n"));
+		kputs("Copy kernel\n");
 		entry = copy_sections(buffer);
 
-		/* Can only verify ELF files. */
-		if ((sbios_size < 8) || (((uint32_t *) sbios)[1] != *magic_check)) {
-			/* Verify if everything is correct. */
-			verify_sections(sbios);
-		}
 		verify_sections(buffer);
-		iop_prints(U2K("Code verified\n"));
+		kputs("Code verified\n");
 
 		/* Set iopaddr for SifRPC. */
 		*sbios_iopaddr = iopaddr;
@@ -2304,7 +2440,9 @@ static int real_loader(void)
 		/* XXX: Need to check parameter. */
 		*sbios_osdparam = 0x0107ddc8;
 #endif
-		iop_printf(U2K("Patched sbios_iopaddr 0x%08x\n"), iopaddr);
+		kprintf("Patched sbios_iopaddr 0x%08x\n", iopaddr);
+
+		kmemcpy((void *) PS2_BOOTINFO_OLDADDR, &bootinfo, sizeof(bootinfo));
 
 		if (entry != NULL) {
 			/* Activate SBIOS and linux kernel. */
@@ -2315,26 +2453,30 @@ static int real_loader(void)
 #if 1
 			/* XXX: not done by original loader, only for testing. */
 			/* Flush all tlb entries. */
-			iop_prints(U2K("Flush TLBs (iop_printf will not work after this).\n"));
+			kputs("Flush TLBs (printf will not work after this).\n");
 			/* printf is not working, because it uses a function pointer, which lead to a jump into kernelspace. */
 			flush_tlbs();
-			iop_prints(U2K("TLBs flushed.\n"));
+			kputs("TLBs flushed.\n");
+#endif
+#if 0
+			/* XXX: Crash to test exception handlers. */
+			kputs("Try to crash\n");
+			*((volatile unsigned int *) 0x100000) = 0;
 #endif
 
-			iop_prints(U2K("Jump to kernel!\n"));
-			ret = entry(0 /* unused */, NULL /* unused */, (char **) ((u32) bootinfo | KSEG0_MASK), NULL /* unused */);
-			iop_prints(U2K("Back from kernel!\n"));
+			kputs("Jump to kernel!\n");
+			ret = entry(0 /* unused */, NULL /* unused */, (char **) PS2_BOOTINFO_OLDADDR, NULL /* unused */);
+			kputs("Back from kernel!\n");
 			panic();
 		} else {
-			iop_prints(U2K("ELF not loaded.\n"));
+			kputs("ELF not loaded.\n");
 		}
 	} else {
 		error_printf("Failed to load kernel.");
-		free((void *) (((unsigned int) sbios) & 0x0FFFFFFF));
 		return -1;
 	}
-	iop_prints(U2K("End reached?\n"));
-	error_printf("Unknown program state.");
+	kputs("End reached?\n");
+	panic();
 
 	return -2;
 }
@@ -2364,6 +2506,11 @@ int loader(void *arg)
 	int rv;
 
 	arg = arg;
+
+	/* Check for kloader integrity. */
+	if (crc32check("Memory corupted before loading kernel.") != 0) {
+		return -1;
+	}
 
 	if (isDVDVSupported()) {
 		type = CDDA_DiskType();

@@ -121,8 +121,13 @@ int sbcall_getver()
 	return TGE_SBIOS_VERSION;
 }
 
-static int sio_putc(int c)
+int sio_putc(int c)
 {
+	if (c == '\n') {
+		/* Translate \n to \r\n.  */
+		sio_putc('\r');
+	}
+
 	/* Wait for free space in the TX FIFO.  */
 	while (_lw(EE_SIO_ISR) & 0x8000)
 		;
@@ -131,16 +136,20 @@ static int sio_putc(int c)
 	return c;
 }
 
+#ifdef SIO_DEBUG
+void sio_puts(const char *b)
+{
+	while(*b != 0) {
+		sio_putc(*b);
+		b++;
+	}
+}
+#endif
+
 /* Output a character over the serial port.  */
 int sbcall_putc(tge_sbcall_putc_arg_t *arg)
 {
 	iop_putc(arg->c);
-
-	/* Translate \n to \r\n.  */
-	if (arg->c == '\n') {
-		sio_putc('\r');
-		return sio_putc('\n');
-	}
 
 	return sio_putc(arg->c);
 }

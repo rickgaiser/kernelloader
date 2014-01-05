@@ -136,18 +136,3 @@ int iop_prints(const char *text)
 	return 0;
 }
 
-int puts(const char *s)
-{
-	if (initialized == 0) {
-		iop_init_shared();
-	}
-	if (initialized == 1) {
-		return 0;
-	}
-	while(*s != 0) {
-		iop_putc(*s);
-		s++;
-	}
-	iop_putc('\n');
-	return 0;
-}

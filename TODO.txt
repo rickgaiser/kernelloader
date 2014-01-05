@@ -34,3 +34,6 @@ NFS UDP ssems not to work with Linux 2.6. NFS-Root, out of memory, SLAB (slabtop
 
 Memory leak with NFS/TCP in Linux 2.6.
 
+hard disc support inclusive irx.
+
+Linux kernel hangs in CDVD init whith new SifiopReset.

@@ -62,7 +62,8 @@ static int real_copyRTEModules(void *arg) {
 						if (fwrite(copybuffer, 1, size, fout) != size) {
 							fclose(fout);
 							fclose(fin);
-							unlink(outPath);
+							fioRemove(outPath);
+							fioRmdir(outPath); /* Needed because of bug in fioRemove. */
 							error_printf("Failed to write file %s (MC0 full?).", outPath);
 							break;
 						}

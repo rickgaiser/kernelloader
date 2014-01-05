@@ -11,7 +11,7 @@ extern "C" {
 typedef struct rom_entry
 {
 	unsigned char filename[ROM_MAX_FILENAME];
-	void *start;
+	const void *start;
 	int size;
 	int width;
 	int height;
@@ -20,7 +20,7 @@ typedef struct rom_entry
 
 typedef struct rom_stream
 {
-	rom_entry_t *file;
+	const rom_entry_t *file;
 	FILE *fin;
 	int pos;
 } rom_stream_t;
@@ -33,7 +33,7 @@ int rom_close(rom_stream_t *fd);
 int rom_isFast(rom_stream_t *fd);
 int rom_eof(rom_stream_t *fd);
 
-rom_entry_t *rom_getFile(const char *filename);
+const rom_entry_t *rom_getFile(const char *filename);
 
 #ifdef __cplusplus
 }

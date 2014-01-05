@@ -44,13 +44,13 @@ class ConfigurationCheckItem:ConfigurationItem {
 		static char text[MAXIMUM_CONFIG_LENGTH];
 		int len;
 
-		//printf("write: %s=%d 0x%x\n", name, *value, value);
+		//kprintf("write: %s=%d 0x%x\n", name, *value, value);
 		len = snprintf(text, MAXIMUM_CONFIG_LENGTH, "%s=%d\n", name, *value);
 		return fwrite(text, 1, len, fd);
 	}
 
 	void readData(const char *buffer) {
-		//printf("read: %s=%s 0x%x\n", name, buffer, value);
+		//kprintf("read: %s=%s 0x%x\n", name, buffer, value);
 		*value = atoi(buffer);
 	}
 };
@@ -67,13 +67,13 @@ class ConfigurationVideoModeItem:ConfigurationItem {
 		static char text[MAXIMUM_CONFIG_LENGTH];
 		int len;
 
-		//printf("write: %s=%d 0x%x\n", name, *value, value);
+		//kprintf("write: %s=%d 0x%x\n", name, *value, value);
 		len = snprintf(text, MAXIMUM_CONFIG_LENGTH, "%s=%d\n", name, *value);
 		return fwrite(text, 1, len, fd);
 	}
 
 	void readData(const char *buffer) {
-		//printf("read: %s=%s 0x%x\n", name, buffer, value);
+		//kprintf("read: %s=%s 0x%x\n", name, buffer, value);
 		*value = atoi(buffer);
 		configureVideoParameter();
 	}
@@ -177,7 +177,7 @@ extern "C" {
 			"icon.sys",
 			"kloader.icn",
 		};
-		rom_entry_t *romfile;
+		const rom_entry_t *romfile;
 		char path[40];
 		unsigned int n;
 
@@ -311,7 +311,7 @@ void addConfigCheckItem(const char *name, int *value)
 	ConfigurationCheckItem *item;
 
 	item = new ConfigurationCheckItem(name, value);
-	//printf("name %s value 0x%x\n", name, value);
+	//kprintf("name %s value 0x%x\n", name, value);
 
 	addConfigurationItem((ConfigurationItem *) item);
 }
@@ -321,7 +321,7 @@ void addConfigVideoItem(const char *name, int *value)
 	ConfigurationVideoModeItem *item;
 
 	item = new ConfigurationVideoModeItem(name, value);
-	//printf("name %s value 0x%x\n", name, value);
+	//kprintf("name %s value 0x%x\n", name, value);
 
 	addConfigurationItem((ConfigurationItem *) item);
 }

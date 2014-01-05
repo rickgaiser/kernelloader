@@ -11,16 +11,11 @@ int iop_prints(const char *text);
 void iop_printx(uint32_t val);
 
 void iop_putc(unsigned char c);
-
-/** Print string using iop memory (for debugging). */
-int puts(const char *s);
 #else
 /** Do nothing .*/
 #define iop_prints(text) do {} while(0)
 /** Do nothing .*/
 #define iop_printx(val) do {} while(0)
-/** Do nothing .*/
-#define puts(text) do {} while(0)
 /** Do nothing .*/
 #define iop_putc(c) do {} while(0)
 #endif

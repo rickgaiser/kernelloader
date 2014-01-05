@@ -4,13 +4,12 @@
 
 #include <stdarg.h>
 
-#if defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG) || defined(FILEIO_DEBUG)
-int printf(const char *format, ...);
-#else
-/** Do nothing. */
-/** Don't print something. */
-#define printf(args...) do {} while(0)
+#ifdef SIO_DEBUG
+void sio_puts(const char *b);
+int sio_putc(int c);
 #endif
+int printf(const char *format, ...);
+int puts(const char *buffer);
 int snprintf(char *str, int len, const char *fmt, ...);
 int vsnprintf(char *b, int len, const char *fmt, va_list pvar);
 

@@ -13,6 +13,7 @@
 #include "getsbios.h"
 #include "configuration.h"
 #include "modules.h"
+#include "kprint.h"
 
 char rteElf[MAX_INPUT_LEN] = "cdfs:pbpx_955.09";
 char rteElfOffset[MAX_INPUT_LEN] = "16773120";
@@ -29,7 +30,7 @@ static int real_copyRTESBIOS(void *arg)
 	(void) arg;
 
 	filename = rteElf;
-	printf("Search for sbios in \"%s\".\n", filename);
+	kprintf("Search for sbios in \"%s\".\n", filename);
 
 	graphic_setPercentage(0, filename);
 
@@ -75,7 +76,7 @@ static int real_copyRTESBIOS(void *arg)
 				void *code;
 				addr -= 4;
 
-				printf("Found sbios.bin at file offset 0x%08x.\n",
+				kprintf("Found sbios.bin at file offset 0x%08x.\n",
 					((uint32_t) addr) - ((uint32_t) buffer));
 
 				if (offset != 0) {
@@ -83,7 +84,7 @@ static int real_copyRTESBIOS(void *arg)
 
 					search = addr - buffer;
 					search += offset;
-					printf("Search 0x%08x\n", search);
+					kprintf("Search 0x%08x\n", search);
 					for (code = buffer; code < ((void *) endaddr); code += 4) {
 						uint32_t value;
 
@@ -99,12 +100,12 @@ static int real_copyRTESBIOS(void *arg)
 							immidiate = ((int16_t) ((uint16_t) (value & 0xFFFF)));
 
 							regs[rt] = regs[rs] + immidiate;
-							//printf("addiu %d, %d, 0x%04x\n", rt, rs, immidiate);
+							//kprintf("addiu %d, %d, 0x%04x\n", rt, rs, immidiate);
 
 							if (regs[rt] == search) {
 								uint32_t pos;
 								pos = (uint32_t) code - (uint32_t) buffer;
-								printf("Loadded at 0x%08x (file position 0x%08x).\n", pos + offset, pos);
+								kprintf("Loadded at 0x%08x (file position 0x%08x).\n", pos + offset, pos);
 							}
 						}
 						if ((value >> 26) == 15) {
@@ -119,7 +120,7 @@ static int real_copyRTESBIOS(void *arg)
 
 							if (rs == 0) {
 								regs[rt] = immidiate << 16;
-								//printf("lui %d, 0x%08x\n", rt, regs[rt]);
+								//kprintf("lui %d, 0x%08x\n", rt, regs[rt]);
 							}
 						}
 						if ((value >> 26) == 0) {
@@ -135,7 +136,7 @@ static int real_copyRTESBIOS(void *arg)
 								rd = (value >> 11) & 0x1f;
 
 								if (regs[rt] == search) {
-									printf("0x%08x = 0x%08x - 0x%08x\n", regs[rs] - regs[rt], regs[rs], regs[rt]);
+									kprintf("0x%08x = 0x%08x - 0x%08x\n", regs[rs] - regs[rt], regs[rs], regs[rt]);
 								}
 								regs[rd] = regs[rs] - regs[rt];
 							}
@@ -145,7 +146,7 @@ static int real_copyRTESBIOS(void *arg)
 							if (regs[5] == search) {
 								/* memcopy gets SBIOS in register a1 and size in register a2. */
 								sbiosSize = regs[6];
-								printf("SBIOS size is 0x%08x.\n", sbiosSize);
+								kprintf("SBIOS size is 0x%08x.\n", sbiosSize);
 								break;
 							}
 						}
@@ -162,13 +163,14 @@ static int real_copyRTESBIOS(void *arg)
 					if (fwrite(addr, sbiosSize, 1, fout) != 1)
 					{
 						fclose(fout);
-						unlink("mc0:kloader/sbios.bin");
+						fioRemove("mc0:kloader/sbios.bin");
+						fioRmdir("mc0:kloader/sbios.bin"); /* Needed because of bug in fioRemove. */
 						free(buffer);
 						error_printf("Failed to write sbios.bin");
 						return -5;
 					}
 					fclose(fout);
-					printf("sbios.bin written.\n");
+					kprintf("sbios.bin written.\n");
 				}
 				else
 				{

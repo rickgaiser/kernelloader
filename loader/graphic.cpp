@@ -4,6 +4,7 @@
 #include "malloc.h"
 #include "stdio.h"
 #include "kernel.h"
+#include "sio.h"
 
 #include "config.h"
 #include "menu.h"
@@ -11,6 +12,7 @@
 #include "graphic.h"
 #include "loader.h"
 #include "configuration.h"
+#include "kprint.h"
 #include <screenshot.h>
 
 
@@ -153,6 +155,21 @@ const char *modeDescription[] = {
 	"PAL",
 };
 
+extern "C" {
+	int xoffset = 0;
+	int yoffset = 0;
+}
+
+void check_screen_offsets(void)
+{
+	kprintf("Set screen mode to %ux%u\n", gsGlobal->Width, gsGlobal->Height);
+	if (gsGlobal->Width > 640) {
+		xoffset = (gsGlobal->Width - 640) / 2;
+	} else {
+		xoffset = 0;
+	}
+}
+
 static void gsKit_texture_upload_inline(GSGLOBAL *gsGlobal, GSTEXTURE *Texture)
 {
 	static u32 *lastMem;
@@ -209,7 +226,7 @@ void paintTexture(GSTEXTURE *tex, int x, int y, int z)
 						size = gsKit_texture_size_ee(tex->Width, slice, tex->PSM);
 						vramSize = gsKit_texture_size(tex->Width, slice, tex->PSM);
 						if (slice == 0) {
-							printf("minimum vramSize 0x%08x\n", vramSize);
+							kprintf("minimum vramSize 0x%08x\n", vramSize);
 						}
 						if (size & 15) {
 							/* Get next 16 byte aligned size. */
@@ -338,9 +355,9 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 
 		if (lineNo >= scrollPos) {
 #if 0
-			printf("Test pos %d i %d lastSpacePos %d %s\n", pos, i, lastSpacePos, lineBuffer);
+			kprintf("Test pos %d i %d lastSpacePos %d %s\n", pos, i, lastSpacePos, lineBuffer);
 #else
-			gsKit_fontm_print_scaled(gsGlobal, gsFont, x, y, z, scale, TexCol,
+			gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + x, yoffset + y, z, scale, TexCol,
 				lineBuffer);
 #endif
 			y += 30;
@@ -362,11 +379,11 @@ void graphic_common(void)
 	gsKit_clear(gsGlobal, Blue);
 
 	/* Paint background. */
-	paintTexture(texCloud, 0, 0, 0);
+	paintTexture(texCloud, xoffset + 0, yoffset + 0, 0);
 
-	paintTexture(texPenguin, 5, 10, 1);
+	paintTexture(texPenguin, xoffset + 5, yoffset + 10, 1);
 
-	gsKit_fontm_print_scaled(gsGlobal, gsFont, 110, 50, 3, scale, TexCol,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 110, yoffset + 50, 3, scale, TexCol,
 		"Kernelloader " LOADER_VERSION
 #ifdef RESET_IOP
 		"R"
@@ -384,11 +401,11 @@ void graphic_common(void)
 		"S"
 #endif
 	);
-	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY - 15, 3, 0.5, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 490, gsGlobal->Height - reservedEndOfDisplayY - 15, 3, 0.5, TexBlack,
 		modeDescription[currentMode]);
-	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 490, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.5, TexBlack,
 		"by Mega Man");
-	gsKit_fontm_print_scaled(gsGlobal, gsFont, 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 490, gsGlobal->Height - reservedEndOfDisplayY + 15, 3, 0.5, TexBlack,
 		"UNSTABLE"
 #ifdef RTE
 		" RTE"
@@ -407,7 +424,7 @@ void graphic_auto_boot_paint(int time)
 	graphic_common();
 
 	snprintf(msg, sizeof(msg), "Auto Boot in %d seconds.", time);
-	gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+	gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 		msg);
 
 	gsKit_queue_exec(gsGlobal);
@@ -426,74 +443,74 @@ void graphic_paint(void)
 	graphic_common();
 
 	if (enableDisc) {
-		paintTexture(texDisc, 100, 300, 40);
+		paintTexture(texDisc, xoffset + 100, yoffset + 300, 40);
 	}
 
 	if (statusMessage != NULL) {
-		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, yoffset + 90, 3, scale, TexCol,
 			statusMessage);
 	} else if (loadName[0] != 0) {
-		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 90, 3, scale, TexCol,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, yoffset + 90, 3, scale, TexCol,
 			loadName);
-		gsKit_prim_sprite(gsGlobal, 50, 120, 50 + 520, 140, 2, White);
+		gsKit_prim_sprite(gsGlobal, xoffset + 50, yoffset + 120, xoffset + 50 + 520, yoffset + 140, 2, White);
 		if (loadPercentage > 0) {
-			gsKit_prim_sprite(gsGlobal, 50, 120,
-				50 + (520 * loadPercentage) / 100, 140, 2, Red);
+			gsKit_prim_sprite(gsGlobal, xoffset + 50, yoffset + 120,
+				xoffset + 50 + (520 * loadPercentage) / 100, yoffset + 140, 2, Red);
 		}
 	}
 	msg = getErrorMessage();
 	if (msg != NULL) {
-		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, 170, 3, scale, TexRed,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, yoffset + 170, 3, scale, TexRed,
 			"Error Message:");
 		printTextBlock(50, 230, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, msg, 0, -1, 0);
 	} else {
 		if (!isInfoBufferEmpty()) {
-			scrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos, -1, 0);
+			scrollPos = printTextBlock(xoffset + 50, yoffset + 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, infoBuffer, scrollPos, -1, 0);
 		} else {
 			if (inputBuffer != NULL) {
-				inputScrollPos = printTextBlock(50, 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos, writeable ? cursorpos : -1, writeable && (cursor_counter < (getModeFrequenzy()/2)));
+				inputScrollPos = printTextBlock(xoffset + 50, yoffset + 170, 3, 26, gsGlobal->Height - reservedEndOfDisplayY, inputBuffer, inputScrollPos, writeable ? cursorpos : -1, writeable && (cursor_counter < (getModeFrequenzy()/2)));
 			} else if (menu != NULL) {
 				menu->paint();
 			}
 		}
 	}
 	if (enableDisc) {
-		gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+		gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 			"Loading, please wait...");
 	} else {
 		if (msg != NULL) {
 			if (usePad) {
-				gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+				gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 					"Press CROSS to continue.");
 			}
 		} else {
 			if (!isInfoBufferEmpty()) {
 				if (usePad) {
-					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 						"Press CROSS to continue.");
-					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 						"Use UP and DOWN to scroll.");
 				}
 			} else {
 				if (inputBuffer != NULL) {
 					if (writeable) {
-						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 							"Please use USB keyboard.");
 					}
-					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+					gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, xoffset + gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 						"Press CROSS to quit.");
 				} else if (menu != NULL) {
 					if (usePad) {
-						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 							"Press CROSS to select menu.");
-						gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
+						gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY + 18, 3, 0.8, TexBlack,
 							"Use UP and DOWN to scroll.");
 					}
 				}
 			}
 		}
 		if (!usePad) {
-			gsKit_fontm_print_scaled(gsGlobal, gsFont, 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
+			gsKit_fontm_print_scaled(gsGlobal, gsFont, xoffset + 50, gsGlobal->Height - reservedEndOfDisplayY, 3, 0.8, TexBlack,
 				"Please wait...");
 		}
 	}
@@ -552,6 +569,9 @@ extern "C" {
 	 * @param text Text displayed on screen.
 	 */
 	void graphic_setStatusMessage(const char *text) {
+		if (text != NULL) {
+			sio_printf("Status: %s\n", text);
+		}
 		statusMessage = text;
 		graphic_paint();
 	}
@@ -560,7 +580,7 @@ extern "C" {
 GSTEXTURE *getTexture(const char *filename)
 {
 	GSTEXTURE *tex = NULL;
-	rom_entry_t *romfile;
+	const rom_entry_t *romfile;
 	romfile = rom_getFile(filename);
 	if (romfile != NULL) {
 		tex = (GSTEXTURE *) malloc(sizeof(GSTEXTURE));
@@ -583,7 +603,7 @@ GSTEXTURE *getTexture(const char *filename)
 				if (tex->Vram != GSKIT_ALLOC_ERROR) {
 					gsKit_texture_upload(gsGlobal, tex);
 				} else {
-					printf("Out of VRAM \"%s\".\n", filename);
+					kprintf("Out of VRAM \"%s\".\n", filename);
 					free(tex);
 					error_printf("Out of VRAM while loading texture (%s).", filename);
 					return NULL;
@@ -610,7 +630,7 @@ void reallocTexture(GSTEXTURE *tex)
 		if (tex->Vram != GSKIT_ALLOC_ERROR) {
 			gsKit_texture_upload(gsGlobal, tex);
 		} else {
-			printf("Out of VRAM.\n");
+			kprintf("Out of VRAM.\n");
 			error_printf("Out of VRAM while realloc texture.");
 		}
 	}
@@ -648,7 +668,7 @@ Menu *graphic_main(void)
 		frequenzy[0] = 50;
 	}
 
-	printf("Switching to %s\n", modeDescription[currentMode]);
+	kprintf("Switching to %s\n", modeDescription[currentMode]);
 
 	lastMode = currentMode;
 
@@ -686,15 +706,17 @@ Menu *graphic_main(void)
 
 	gsKit_init_screen(gsGlobal);
 
+	check_screen_offsets();
+
 	gsFont = gsKit_init_fontm();
 	if (gsKit_fontm_upload(gsGlobal, gsFont) != 0) {
-		printf("Can't find any font to use\n");
+		kprintf("Can't find any font to use\n");
 		SleepThread();
 	}
 
 	globalVram = gsKit_vram_alloc(gsGlobal, MAX_TEX_SIZE, GSKIT_ALLOC_USERBUFFER);
 	if (globalVram == GSKIT_ALLOC_ERROR) {
-		printf("Failed to allocate texture buffer.\n");
+		kprintf("Failed to allocate texture buffer.\n");
 		error_printf("Failed to allocate texture buffer.\n");
 	}
 
@@ -795,8 +817,8 @@ extern "C" {
 			errorMessage[writeMsgPos] = text;
 			writeMsgPos = (writeMsgPos + 1) % MAX_MESSAGES;
 		} else {
-			printf("Error message queue is full at error:\n");
-			printf("%s\n", text);
+			kprintf("Error message queue is full at error:\n");
+			kprintf("%s\n", text);
 		}
 	}
 
@@ -822,6 +844,8 @@ extern "C" {
 		if (errorMessage[writeMsgPos] == NULL) {
 			ret = vsnprintf(buffer[writeMsgPos], MAX_BUFFER, format, varg);
 
+			sio_putsn(buffer[writeMsgPos]);
+
 			setErrorMessage(buffer[writeMsgPos]);
 
 			if (graphicInitialized) {
@@ -831,7 +855,7 @@ extern "C" {
 				}
 			}
 		} else {
-			printf("error_printf loosing message: %s\n", format);
+			kprintf("error_printf loosing message: %s\n", format);
 			ret = -1;
 		}
 
@@ -845,7 +869,7 @@ extern "C" {
 		int remaining;
 
 		if (len > MAX_INFO_BUFFER) {
-			printf("info_prints(): text too long.\n");
+			kprintf("info_prints(): text too long.\n");
 			return;
 		}
 
@@ -1043,7 +1067,7 @@ extern "C" {
 		decrementMode();
 		incrementMode();
 
-		printf("Switching to %s\n", modeDescription[currentMode]);
+		kprintf("Switching to %s\n", modeDescription[currentMode]);
 		if (lastMode == currentMode) {
 			/* Nothing to do. */
 			return;
@@ -1094,15 +1118,23 @@ extern "C" {
 		gsGlobal->ZBuffering = GS_SETTING_OFF;
 	
 		gsKit_init_screen(gsGlobal);
+
+		check_screen_offsets();
+
+		if (gsGlobal->Width > 640) {
+			xoffset = (gsGlobal->Width - 640) / 2;
+		} else {
+			xoffset = 0;
+		}
 	
 		if (gsKit_fontm_upload(gsGlobal, gsFont) != 0) {
-			printf("Can't find any font to use\n");
+			kprintf("Can't find any font to use\n");
 			SleepThread();
 		}
 	
 		globalVram = gsKit_vram_alloc(gsGlobal, MAX_TEX_SIZE, GSKIT_ALLOC_USERBUFFER);
 		if (globalVram == GSKIT_ALLOC_ERROR) {
-			printf("Failed to allocate texture buffer.\n");
+			kprintf("Failed to allocate texture buffer.\n");
 			error_printf("Failed to allocate texture buffer.\n");
 		}
 	

@@ -1,3 +1,25 @@
+3.0
+- Verify read only part of kloader.elf with CRC32.
+- Put ELF files into read only segment.
+- Support SIO debug output in kernelloader
+- Several fixes.
+- Fix compile warnings.
+- Fix SifIopReset.
+- Fix, don't overwrite memory in read only segment.
+- Fix loading of kernel and SBIOS in some situations.
+- Kernelloader can now be used from ps2client/ps2link.
+- Fixed bug, fioRemove() creates an empty directory.
+- Removed modules which makes no sense.
+- Copy bootinfo in the last second to final destination,
+  so that now memory is overwritten before.
+- Improved handling of CDVD when no disc is inserted.
+- Added support for easy loading configurations files from USB
+- Improve NetSurf support.
+- Improved menu.
+- Improved support for showing console type in /proc.
+- Improved --no-cdvd parameter.
+- Add parameter --fix-no-disc, fix Linux start when no disc is inserted.
+
 2.7
 - Fix DVD-R support on Hong Kong consoles.
 - Fix hda3 selection (hda2 was selected).

@@ -18,12 +18,8 @@ ENTRY(sbios_header)
 SECTIONS {
 	. = phys + offset;
 
-	.header : AT(phys + offset) {
+	.text phys + offset : {
 		*(.header)
-	} > mem : text
-
-	.text : {
-  		. = ALIGN(32 / 8);
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 		/* .gnu.warning sections are handled specially by elf32.em.  */
 		*(.gnu.warning)

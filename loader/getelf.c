@@ -14,6 +14,7 @@
 #include "getelf.h"
 #include "configuration.h"
 #include "modules.h"
+#include "kprint.h"
 
 #define	ELFMAG		"\177ELF"
 
@@ -33,8 +34,8 @@ int real_copyRTEELF(void *arg)
 
 	outputfilename = param->outputFilename;
 	elfNumber = atoi(param->elfNumber);
-	printf("elfNumber 0x%08x.\n", elfNumber);
-	printf("Search for elf in \"%s\".\n", filename);
+	kprintf("elfNumber 0x%08x.\n", elfNumber);
+	kprintf("Search for elf in \"%s\".\n", filename);
 
 	graphic_setPercentage(0, filename);
 
@@ -79,7 +80,7 @@ int real_copyRTEELF(void *arg)
 			{
 				void *code;
 
-				printf("Found elf at file offset 0x%08x.\n",
+				kprintf("Found elf at file offset 0x%08x.\n",
 					((uint32_t) addr) - ((uint32_t) buffer));
 				for (code = addr + 4; code < ((void *) endaddr); code += 4) {
 					uint32_t value;
@@ -88,13 +89,13 @@ int real_copyRTEELF(void *arg)
 					if (value == *magic) {
 						/* memcopy gets SBIOS in register a1 and size in register a2. */
 						elfSize = ((uint32_t) code) - ((uint32_t) addr);
-						printf("ELF size is 0x%08x (1).\n", elfSize);
+						kprintf("ELF size is 0x%08x (1).\n", elfSize);
 						break;
 					}
 				}
 				if (elfSize == 0) {
 					elfSize = ((uint32_t) endaddr) - ((uint32_t) addr);
-					printf("ELF size is 0x%08x (2).\n", elfSize);
+					kprintf("ELF size is 0x%08x (2).\n", elfSize);
 				}
 
 				fout = fopen(outputfilename, "wb");
@@ -107,13 +108,14 @@ int real_copyRTEELF(void *arg)
 					if (fwrite(addr, elfSize, 1, fout) != 1)
 					{
 						fclose(fout);
-						unlink(outputfilename);
+						fioRemove(outputfilename);
+						fioRmdir(outputfilename); /* Needed because of bug in fioRemove. */
 						free(buffer);
 						error_printf("Failed to write \"%s\"", outputfilename);
 						return -5;
 					}
 					fclose(fout);
-					printf("\"%s\" written.\n", outputfilename);
+					kprintf("\"%s\" written.\n", outputfilename);
 				}
 				else
 				{

@@ -13,8 +13,8 @@
 
 #define SBCALL_MAX	256
 
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-#if 0 /* TBD: Too large for SBIOS. */
+#if defined(SBIOS_DEBUG)
+#ifdef OLD_ROM_MODULE_VERSION /* TBD: Too large for SBIOS. */
 static const char *sbiosDescription[] = {
 	"GETVER",
 	"HALT",
@@ -222,7 +222,7 @@ int sbcall_register_prints_callback(callback_prints_t *callback);
 void no_prints(const char *text);
 #endif
 
-static void *dispatch[SBCALL_MAX] __attribute__((section(".text"))) = {
+static void *dispatch[SBCALL_MAX] = {
 	/* 0 */
 	sbcall_getver,
 	/* 1 */
@@ -498,8 +498,8 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 {
 	int ret;
 	int (*sbfunc)(void *) = dispatch[sbcall];
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
-#if 0 /* TBD: Too large for SBIOS. */
+#if defined(SBIOS_DEBUG)
+#ifdef OLD_ROM_MODULE_VERSION /* TBD: Too large for SBIOS. */
 	const char *description = "unknown";
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {
@@ -520,7 +520,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 
 	ret = sbfunc(arg);
 
-#if defined(SBIOS_DEBUG) && (defined(SHARED_MEM_DEBUG) || defined(CALLBACK_DEBUG))
+#if defined(SBIOS_DEBUG)
 	printf("rv of sbios call %d\n", ret);
 #endif
 

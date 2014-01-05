@@ -58,6 +58,9 @@ extern "C" {
 	void homeCursorPos(void);
 	void endCursorPos(void);
 	void setEmulatedKey(int key);
+
+	extern int xoffset;
+	extern int yoffset;
 #ifdef __cplusplus
 }
 #endif

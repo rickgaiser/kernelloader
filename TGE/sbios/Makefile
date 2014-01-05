@@ -34,23 +34,20 @@ EE_FILES = prologue sbios misc sifdma core sifcmd sifrpc iopheap cache \
 	strlen strncpy memcpy pad memset strcpy cdvd ncmd scmd smod iopmem \
 	memcmp mc mutex sound dve_reg
 EE_OBJS = $(addsuffix _$(ROM_MODULE_VERSION).o, $(EE_FILES))
+EE_FILES += printf snprintf
 ifeq ($(FILEIO_DEBUG),yes)
 EE_CFLAGS += -DFILEIO_DEBUG
 EE_FILES += fileio
 endif
 ifeq ($(SHARED_MEM_DEBUG),yes)
-EE_FILES += printf snprintf
 EE_CFLAGS += -DSHARED_MEM_DEBUG
 EE_FILES += iopmemdebug
-else
-ifeq ($(FILEIO_DEBUG),yes)
-EE_FILES += printf snprintf
-else
+endif
 ifeq ($(CALLBACK_DEBUG),yes)
-EE_FILES += printf snprintf
 EE_CFLAGS += -DCALLBACK_DEBUG -fno-builtin
 endif
-endif
+ifeq ($(SIO_DEBUG),yes)
+EE_CFLAGS += -DSIO_DEBUG
 endif
 ifeq ($(ROM_MODULE_VERSION),old)
 EE_CFLAGS += -DOLD_ROM_MODULE_VERSION

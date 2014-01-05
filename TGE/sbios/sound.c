@@ -511,7 +511,7 @@ int sbcall_soundremote(tge_sbcall_rpc_arg_t *carg)
 {
 	if (!soundInitialized) {
 		return -1;
-	}
+	} /* TBD: Is this complete? */
 	carg = carg;
 	return -1;
 }
