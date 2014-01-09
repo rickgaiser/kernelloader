@@ -21,7 +21,7 @@ NEW_ROM_MODULES = no
 # Press button "R1" to get a screenshot on "host:" or "mass0:".
 SCREENSHOT = yes
 
-# Activate debug for SBIOS (has only effect with shared memory debug or callback debug).
+# Activate debug for SBIOS (has only effect with shared memory debug or callback debug or sio).
 SBIOS_DEBUG = no
 
 # Activate to be able to move the screen with the analog stick.

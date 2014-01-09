@@ -14,7 +14,7 @@
 #define SBCALL_MAX	256
 
 #if defined(SBIOS_DEBUG)
-#ifdef OLD_ROM_MODULE_VERSION /* TBD: Too large for SBIOS. */
+#if 0 /* TBD: Too large for SBIOS. */
 static const char *sbiosDescription[] = {
 	"GETVER",
 	"HALT",
@@ -499,7 +499,7 @@ int sbios(tge_sbcall_t sbcall, void *arg)
 	int ret;
 	int (*sbfunc)(void *) = dispatch[sbcall];
 #if defined(SBIOS_DEBUG)
-#ifdef OLD_ROM_MODULE_VERSION /* TBD: Too large for SBIOS. */
+#if 0 /* TBD: Too large for SBIOS. */
 	const char *description = "unknown";
 
 	if (sbcall < sizeof(sbiosDescription) / sizeof(sbiosDescription[0])) {

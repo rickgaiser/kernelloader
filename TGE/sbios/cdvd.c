@@ -131,6 +131,9 @@ extern u32 searchFileRecvBuff;
 static void cdvdInitCallback(void *rarg)
 {
 	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
+#ifdef SBIOS_DEBUG
+	printf("cdvdInitCallback stage %d\n", cdvdInitCounter);
+#endif
 	switch(cdvdInitCounter) {
 	case 0:
 		if (clientInit.server != 0) {
@@ -192,6 +195,9 @@ static void cdvdInitCallback(void *rarg)
 		CDVD_UNLOCKS();
 		break;
 	}
+#ifdef SBIOS_DEBUG
+	printf("cdvdInitCallback stage %d result %d\n", cdvdInitCounter, carg->result);
+#endif
 	carg->endfunc(carg->efarg, carg->result);
 }
 
@@ -202,7 +208,9 @@ static void cdvdInitCallback(void *rarg)
 //                      0 if error
 int sbcall_cdvdinit(tge_sbcall_rpc_arg_t *carg)
 {
-	//printf("sbcall_cdvdinit stage %d\n", cdvdInitCounter);
+#if !defined(FILEIO_DEBUG) || defined(SBIOS_DEBUG)
+	printf("sbcall_cdvdinit stage %d\n", cdvdInitCounter);
+#endif
 	switch(cdvdInitCounter) {
 	case 0:
 		if (CDVD_LOCKS()) {
@@ -248,11 +256,15 @@ int sbcall_cdvdinit(tge_sbcall_rpc_arg_t *carg)
 			/* Temporay not available. */
 			return -SIF_RPCE_SENDP;
 		}
-		initMode = CDVD_INIT_INIT;
+#if 0
+		initMode = CDVD_INIT_INIT; /* TBD: Hangs when no disc was inserted since power on. */
+#else
+		initMode = CDVD_INIT_NOCHECK;
+#endif
 		SifWriteBackDCache(&initMode, 4);
 		if (SifCallRpc(&clientInit, 0, SIF_RPC_M_NOWAIT, &initMode, 4, 0, 0, cdvdInitCallback, carg) < 0) {
 			CDVD_UNLOCKS();
-			printf("CDVD: rpc call err CDVD_INIT_INIT\n");
+			printf("CDVD: rpc call err CDVD_INIT_NOCHECK\n");
 			return -SIF_RPCE_SENDP;
 		}
 		break;
@@ -285,6 +297,9 @@ int sbcall_cdvdinit(tge_sbcall_rpc_arg_t *carg)
 		break;
 	}
 
+#ifdef SBIOS_DEBUG
+	printf("sbcall_cdvdinit stage %d ret 0\n", cdvdInitCounter);
+#endif
 	return 0;
 }
 
@@ -292,6 +307,9 @@ static void cdResetCallback(void *rarg)
 {
 	tge_sbcall_rpc_arg_t *carg = (tge_sbcall_rpc_arg_t *) rarg;
 	carg->result = 0;
+#if !defined(FILEIO_DEBUG) || defined(SBIOS_DEBUG)
+	printf("cdResetCallback\n");
+#endif
 	carg->endfunc(carg->efarg, carg->result);
 }
 
@@ -305,9 +323,16 @@ int sbcall_cdvdreset(tge_sbcall_rpc_arg_t *carg)
 	bindDiskReady = -1;
 	bindInit = -1;
 #endif
+#if !defined(FILEIO_DEBUG) || defined(SBIOS_DEBUG)
+	printf("sbcall_cdvdreset\n");
+#endif
 
 	/* Just call init again. */
-	initMode = CDVD_INIT_INIT;
+#if 0
+	initMode = CDVD_INIT_INIT; /* TBD: Hangs when no disc was inserted since power on. */
+#else
+	initMode = CDVD_INIT_NOCHECK;
+#endif
 	SifWriteBackDCache(&initMode, 4);
 	if (SifCallRpc(&clientInit, 0, SIF_RPC_M_NOWAIT, &initMode, 4, 0, 0, cdResetCallback, carg) < 0) {
 		return -SIF_RPCE_SENDP;
