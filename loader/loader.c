@@ -446,8 +446,6 @@ moduleEntry_t modules[] = {
 		.buffered = -1,
 		.argLen = 0,
 		.args = NULL,
-		.defaultmod = 2,
-		.slim = -1,
 		/* Only hard disc and USB is working. */
 	},
 	{
