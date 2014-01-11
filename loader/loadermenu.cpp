@@ -1035,13 +1035,22 @@ void initMenu(Menu *menu)
 
 	menu->setTitle("Boot Menu");
 	menu->addItem("Boot Current Config", loader, NULL);
-	Menu *fileMenu = menu->addSubMenu("File Menu");
-	fileMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	menu->addItem("Restore defaults", setDefaultConfiguration, NULL);
+	menu->addItem("Edit Kernel Parameter", editString, kernelParameter);
+	menu->addItem("Edit Video Parameter", editString, videoParameter);
+	menu->addItem(" Set to current mode", setDefaultVideoParameterMenu, videoParameter);
+	menu->addItem("Load Config from MC0", mcLoadConfig, (void *) CONFIG_FILE);
+	menu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
+	menu->addItem("Load Config from USB", mcLoadConfig, (void *) USB_CONFIG_FILE);
+	menu->addItem("Load NetSurf Config from USB", mcLoadConfig, (void *) PS2NS_CONFIG_FILE);
+	menu->addItem("Save Config on MC0", mcSaveConfig, (void *) CONFIG_FILE);
+	Menu *advancedMenu = menu->addSubMenu("Advanced Menu");
+	advancedMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+
+	advancedMenu->addItem("Boot Current Config", loader, NULL);
+	Menu *fileMenu = advancedMenu->addSubMenu("File Menu");
+	fileMenu->addItem(advancedMenu->getTitle(), setCurrentMenu, advancedMenu, getTexBack());
 	fileMenu->addItem("Restore defaults", setDefaultConfiguration, NULL);
-	fileMenu->addItem("Load Config from MC0", mcLoadConfig, (void *) CONFIG_FILE);
-	fileMenu->addItem("Load Config from DVD", mcLoadConfig, (void *) DVD_CONFIG_FILE);
-	fileMenu->addItem("Load Config from USB", mcLoadConfig, (void *) USB_CONFIG_FILE);
-	fileMenu->addItem("Load NetSurf Config from USB", mcLoadConfig, (void *) PS2NS_CONFIG_FILE);
 	fileMenu->addItem("Load Selected Config", mcLoadConfig, configfile);
 	fileMenu->addItem("Save Config on MC0", mcSaveConfig, (void *) CONFIG_FILE);
 	fileMenu->addItem("Save Selected Config", mcSaveConfig, configfile);
@@ -1106,8 +1115,8 @@ void initMenu(Menu *menu)
 	};
 	configFileMenu->addItem(ccdfsParam.menuName, fsroot, (void *) &ccdfsParam);
 
-	Menu *linuxMenu = menu->addSubMenu("Select Kernel");
-	linuxMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	Menu *linuxMenu = advancedMenu->addSubMenu("Select Kernel");
+	linuxMenu->addItem(advancedMenu->getTitle(), setCurrentMenu, advancedMenu, getTexBack());
 
 	strcpy(kernelFilename, EXAMPLE_KERNEL);
 	addConfigTextItem("KernelFileName", kernelFilename, MAX_PATH_LEN);
@@ -1117,7 +1126,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t kusbParam = {
 		kernelFilename,
-		menu,
+		advancedMenu,
 		linuxMenu,
 		NULL,
 		"USB Memory Stick",
@@ -1128,7 +1137,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t kmc0Param = {
 		kernelFilename,
-		menu,
+		advancedMenu,
 		linuxMenu,
 		NULL,
 		"Memory Card 1",
@@ -1139,7 +1148,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t kmc1Param = {
 		kernelFilename,
-		menu,
+		advancedMenu,
 		linuxMenu,
 		NULL,
 		"Memory Card 2",
@@ -1150,7 +1159,7 @@ void initMenu(Menu *menu)
 #if !defined(RESET_IOP)
 	static fsRootParam_t khostParam = {
 		kernelFilename,
-		menu,
+		advancedMenu,
 		linuxMenu,
 		NULL,
 		"Host",
@@ -1161,7 +1170,7 @@ void initMenu(Menu *menu)
 #endif
 	static fsRootParam_t kcdfsParam = {
 		kernelFilename,
-		menu,
+		advancedMenu,
 		linuxMenu,
 		NULL,
 		"CD/DVD",
@@ -1170,9 +1179,9 @@ void initMenu(Menu *menu)
 	};
 	linuxMenu->addItem(kcdfsParam.menuName, fsroot, (void *) &kcdfsParam);
 
-	Menu *initrdMenu = menu->addSubMenu("Select RAM disc");
+	Menu *initrdMenu = advancedMenu->addSubMenu("Select RAM disc");
 
-	initrdMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	initrdMenu->addItem(advancedMenu->getTitle(), setCurrentMenu, advancedMenu, getTexBack());
 	initrdFilename[0] = 0;
 	addConfigTextItem("InitrdFileName", initrdFilename, MAX_PATH_LEN);
 	//initrdMenu->addItem("Show Filename", showText, (void *) &initrdFilename);
@@ -1181,7 +1190,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t usbParam = {
 		initrdFilename,
-		menu,
+		advancedMenu,
 		initrdMenu,
 		NULL,
 		"USB Memory Stick",
@@ -1192,7 +1201,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t mc0Param = {
 		initrdFilename,
-		menu,
+		advancedMenu,
 		initrdMenu,
 		NULL,
 		"Memory Card 1",
@@ -1203,7 +1212,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t mc1Param = {
 		initrdFilename,
-		menu,
+		advancedMenu,
 		initrdMenu,
 		NULL,
 		"Memory Card 2",
@@ -1214,7 +1223,7 @@ void initMenu(Menu *menu)
 #if !defined(RESET_IOP)
 	static fsRootParam_t hostParam = {
 		initrdFilename,
-		menu,
+		advancedMenu,
 		initrdMenu,
 		NULL,
 		"Host",
@@ -1226,7 +1235,7 @@ void initMenu(Menu *menu)
 
 	static fsRootParam_t cdfsParam = {
 		initrdFilename,
-		menu,
+		advancedMenu,
 		initrdMenu,
 		NULL,
 		"CD/DVD",
@@ -1236,8 +1245,8 @@ void initMenu(Menu *menu)
 	initrdMenu->addItem(cdfsParam.menuName, fsroot, (void *) &cdfsParam);
 
 	/* Config menu */
-	Menu *configMenu = menu->addSubMenu("Configuration Menu");
-	configMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	Menu *configMenu = advancedMenu->addSubMenu("Configuration Menu");
+	configMenu->addItem(advancedMenu->getTitle(), setCurrentMenu, advancedMenu, getTexBack());
 	configMenu->addItem("Edit Kernel Parameter", editString, kernelParameter);
 	configMenu->addItem(" Set to initrd", setDefaultKernelParameterMenu, kernelParameter);
 	configMenu->addItem(" Set to hda1", setParameterMenu, &hda1Config);
@@ -1288,9 +1297,9 @@ void initMenu(Menu *menu)
 		sbiosCallsMenu->addCheckItem(sbiosDescription[i],
 			&sbiosCallEnabled[i]);
 	}
-	menu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
-	menu->addItem("Power off", poweroff, NULL);
-	menu->addItem("Reboot", reboot, NULL);
+	advancedMenu->addMultiSelectionItem("Auto Boot", autoBootText, &loaderConfig.autoBootTime, NULL);
+	advancedMenu->addItem("Power off", poweroff, NULL);
+	advancedMenu->addItem("Reboot", reboot, NULL);
 
 	/* PS2LINK debug entries. */
 	Menu *netMenu = configMenu->addSubMenu("Net Options");
@@ -1354,8 +1363,8 @@ void initMenu(Menu *menu)
 #endif
 	;
 
-	versionMenu = menu->addSubMenu("Versions");
-	versionMenu->addItem(menu->getTitle(), setCurrentMenu, menu, getTexBack());
+	versionMenu = advancedMenu->addSubMenu("Versions");
+	versionMenu->addItem(advancedMenu->getTitle(), setCurrentMenu, advancedMenu, getTexBack());
 	versionMenu->addItem("Kernelloader Version", showText, (void *) kloader_version);
 	versionMenu->addItem("PS2 Console type", showText, (void *) ps2_console_type);
 	versionMenu->addItem("PS2 Region type", showText, (void *) ps2_region_type);

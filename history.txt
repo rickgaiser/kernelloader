@@ -19,6 +19,8 @@
 - Improved support for showing console type in /proc.
 - Improved --no-cdvd parameter.
 - Add parameter --fix-no-disc, fix Linux start when no disc is inserted.
+- Easier menu with most important features directly accessible.
+  The old menu can be reached via "Advanced Menu".
 
 2.7
 - Fix DVD-R support on Hong Kong consoles.
