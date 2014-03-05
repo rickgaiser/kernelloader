@@ -169,6 +169,14 @@ static void sif_cmd_interrupt()
 	int size, pktquads, i = 0;
 	uint32_t id;
 
+	if (_lw(EE_DMAC_SIF0_CHCR) & 0x0100) {
+		/* Interrupt to early. Transfer is still in process. */
+#if defined(SBIOS_DEBUG)
+		printf("sif_cmd_interrupt: transfer not finished\n");
+#endif
+		return;
+	}
+
 	/* Align packet or u128 copy will fail. */
 	packet_aligned = (unsigned int) packetbuf;
 	packet_aligned += 16 - 1;
