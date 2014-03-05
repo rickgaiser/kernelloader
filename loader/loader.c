@@ -78,6 +78,12 @@
 /** Definition of kernel entry function. */
 typedef int (entry_t)(int argc, char **argv, char **envp, int *prom_vec);
 
+typedef struct {
+	struct ps2_bootinfo bootinfo;
+	char commandline[2 * MAX_INPUT_LEN];
+	char ver_model[32];
+} ps2_bootpage_t;
+
 /** Parameter for IOP reset. */
 char iop_reset_param[MAX_INPUT_LEN] = "rom0:UDNL rom0:OSDCNF";
 
@@ -1870,13 +1876,13 @@ static void SetSysConf(struct ps2_sysconf *sysconf)
 	}
 }
 
-const char *load_sbios(struct ps2_bootinfo *bootinfo)
+const char *load_sbios(ps2_bootpage_t *bootpage)
 {
 	const char *sbios_filename = NULL;
 	int sbios_size = 0;
 	const char *sbios = NULL;
 	char *sbiosbuffer = NULL;
-	static uint8_t sbiosbin[MAX_SBIOS_SIZE + SBIOS_RESERVED] __attribute__((aligned(4)));
+	static uint8_t sbiosbin[MAX_SBIOS_SIZE] __attribute__((aligned(4)));
 	uint32_t *SBIOSCallTable = NULL;
 	int found = 0;
 	int i;
@@ -1947,8 +1953,8 @@ const char *load_sbios(struct ps2_bootinfo *bootinfo)
 			found = 1;
 
 			/* Found magic, store location in bootinfo structure. */
-			bootinfo->sbios_base = SBIOS_START_ADDRESS + (i - 1) * 4;
-			kprintf("SBIOS base 0x%08x\n", bootinfo->sbios_base);
+			bootpage->bootinfo.sbios_base = SBIOS_START_ADDRESS + (i - 1) * 4;
+			kprintf("SBIOS base 0x%08x\n", bootpage->bootinfo.sbios_base);
 			SBIOSCallTable = getSBIOSCallTable((char *) (&(((uint32_t *) sbiosbin)[i - 1])));
 			if (SBIOSCallTable != NULL) {
 				break;
@@ -1968,18 +1974,13 @@ const char *load_sbios(struct ps2_bootinfo *bootinfo)
 	disableSBIOSCalls(SBIOSCallTable);
 	graphic_setStatusMessage(NULL);
 
-	/* Check if there is free memory for the console type. */
-	if (strlen(ps2_console_type) >= SBIOS_RESERVED) {
-		error_printf("PS2 console string is to long!");
-		return NULL;
-	}
-	/* Add PS2 console type behind SBIOS. */
-	strcpy(((void *) sbiosbin) + sbios_size, ps2_console_type);
+	/* Bootpage will be later relocated to PS2_BOOTINFO_OLDADDR. */
+	bootpage->bootinfo.ver_model =
+		(char *) (((unsigned int) &((ps2_bootpage_t *) PS2_BOOTINFO_OLDADDR)->ver_model[0]) | KSEG0_MASK);
 
-	/* sbiosbin will be copied later to SBIOS_START_ADDRESS.
-	 * Access data from kernel space, because this will be accessed by
-	 * the Linux kernel. */
-	bootinfo->ver_model = (void *) (SBIOS_START_ADDRESS + sbios_size);
+	/* Add PS2 console type behind SBIOS. */
+	strncpy(bootpage->ver_model, ps2_console_type, sizeof(bootpage->ver_model) - 1);
+	bootpage->ver_model[sizeof(bootpage->ver_model) - 1] = 0;
 
 	return sbiosbin;
 }
@@ -1994,9 +1995,8 @@ static int real_loader(void)
 	int ret;
 	char *buffer = NULL;
 	const char *sbios = NULL;
-	struct ps2_bootinfo bootinfo;
+	static ps2_bootpage_t bootpage;
 	register int sp asm("sp");
-	static char commandline[2 * MAX_INPUT_LEN] = "";
 	uint32_t iopaddr;
 	volatile uint32_t *sbios_iopaddr = (uint32_t *) 0x80001008;
 #if 0
@@ -2009,21 +2009,26 @@ static int real_loader(void)
 	uint32_t initrd_size = 0;
 
 	/* Initialize memboot parameter. */
-	memset(&bootinfo, 0, sizeof(struct ps2_bootinfo));
+	memset(&bootpage, 0, sizeof(bootpage));
 
-	strcpy(commandline, getKernelParameter());
+	bootpage.bootinfo.magic = PS2_BOOTINFO_MAGIC;
 
-	bootinfo.size = sizeof(struct ps2_bootinfo);
+	strcpy(bootpage.commandline, getKernelParameter());
+
+	bootpage.bootinfo.size = sizeof(bootpage.bootinfo);
 	if (IsT10K()) {
-		bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_T10K;
-		bootinfo.maxmem = 128 * 1024 * 1024;
+		bootpage.bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_T10K;
+		bootpage.bootinfo.maxmem = 128 * 1024 * 1024;
 	} else {
-		bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
-		bootinfo.maxmem = 32 * 1024 * 1024 - 4096;
+		bootpage.bootinfo.mach_type = PS2_BOOTINFO_MACHTYPE_PS2;
+		bootpage.bootinfo.maxmem = 32 * 1024 * 1024 - 4096;
 	}
-	bootinfo.opt_string = (char *) (((unsigned int) commandline) | KSEG0_MASK); /* Command line parameters. */
 
-	SetSysConf(&bootinfo.sysconf);
+	/* Bootpage will be later relocated to PS2_BOOTINFO_OLDADDR. */
+	bootpage.bootinfo.opt_string =
+		(char *) (((uint32_t) &((ps2_bootpage_t *) PS2_BOOTINFO_OLDADDR)->commandline[0]) | KSEG0_MASK);
+
+	SetSysConf(&bootpage.bootinfo.sysconf);
 
 	kprintf("Started loader\n");
 
@@ -2034,7 +2039,7 @@ static int real_loader(void)
 		error_printf("Stack is unusable!");
 		return -1;
 	}
-	sbios = load_sbios(&bootinfo);
+	sbios = load_sbios(&bootpage);
 	if (sbios == NULL) {
 		return -35;
 	}
@@ -2133,7 +2138,7 @@ static int real_loader(void)
 					initrd_start |= KSEG0_MASK;
 
 					/* Linux 2.6 has parameters for initrd. */
-					snprintf(commandline, sizeof(commandline), "%s rd_start=0x%08x rd_size=0x%08x",
+					snprintf(bootpage.commandline, sizeof(bootpage.commandline), "%s rd_start=0x%08x rd_size=0x%08x",
 						getKernelParameter(), initrd_start, initrd_size);
 				} else {
 					error_printf("Loading of initrd failed (1).");
@@ -2222,7 +2227,7 @@ static int real_loader(void)
 		graphic_setStatusMessage("Starting modules");
 		//kprintf("Starting modules\n");
 
-		startModules(&bootinfo);
+		startModules(&bootpage.bootinfo);
 
 		graphic_setStatusMessage("Started all modules");
 
@@ -2301,7 +2306,7 @@ static int real_loader(void)
 		if (isSlimPSTwo()) {
 			if (loaderConfig.enableDev9 && hasNetworkSupport()) {
 				/* Use value 0x0200 to inform Linux about slim PSTwo. This was not part of Sony's Linux. */
-				bootinfo.pccard_type = 0x0200;
+				bootpage.bootinfo.pccard_type = 0x0200;
 			}
 		} else {
 			if (loaderConfig.enableDev9 && hasNetworkSupport()) {
@@ -2313,14 +2318,14 @@ static int real_loader(void)
 					ata_setup();
 	
 					/* Tell Linux to activate HDD and Network. */
-					bootinfo.pccard_type = 0x0100;
+					bootpage.bootinfo.pccard_type = 0x0100;
 					pcicType = getPcicType();
 					if (strlen(pcicType) > 0) {
 						/* User configured calue in menu. */
-						bootinfo.pcic_type = atoi(pcicType);
+						bootpage.bootinfo.pcic_type = atoi(pcicType);
 					} else {
 						/* Auto detect type. */
-						bootinfo.pcic_type = pcic_get_cardtype();
+						bootpage.bootinfo.pcic_type = pcic_get_cardtype();
 					}
 				}
 			}
@@ -2423,7 +2428,7 @@ static int real_loader(void)
 #endif
 		/* Install SBIOS. */
 		/* Copy binary data. */
-		kmemcpy((void *) SBIOS_START_ADDRESS, sbios, MAX_SBIOS_SIZE + SBIOS_RESERVED);
+		kmemcpy((void *) SBIOS_START_ADDRESS, sbios, MAX_SBIOS_SIZE);
 
 		/* Install linux kernel. */
 		kputs("Copy kernel\n");
@@ -2440,7 +2445,7 @@ static int real_loader(void)
 #endif
 		kprintf("Patched sbios_iopaddr 0x%08x\n", iopaddr);
 
-		kmemcpy((void *) PS2_BOOTINFO_OLDADDR, &bootinfo, sizeof(bootinfo));
+		kmemcpy((void *) PS2_BOOTINFO_OLDADDR, &bootpage, sizeof(bootpage));
 
 		if (entry != NULL) {
 			/* Activate SBIOS and linux kernel. */

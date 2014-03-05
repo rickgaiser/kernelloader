@@ -33,7 +33,7 @@ nvm_offsets_t nvmOff[] = {
 /** Store copy of DVD internal NVRAM. */
 static u8 nvm[0x400];
 
-char ps2_console_type[SBIOS_RESERVED] = "CDVD error";
+char ps2_console_type[32] = "CDVD error";
 char ps2_region_type[32] = "CDVD error";
 int nvm_errors = -1;
 

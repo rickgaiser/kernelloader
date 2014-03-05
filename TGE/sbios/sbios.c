@@ -497,7 +497,7 @@ int sbcall_register_prints_callback(callback_prints_t *callback)
 int sbios(tge_sbcall_t sbcall, void *arg)
 {
 	int ret;
-	int (*sbfunc)(void *) = dispatch[sbcall];
+	int (*sbfunc)(void *) = (((uint32_t) sbcall) < SBCALL_MAX) ? dispatch[sbcall] : NULL;
 #if defined(SBIOS_DEBUG)
 #if 0 /* TBD: Too large for SBIOS. */
 	const char *description = "unknown";

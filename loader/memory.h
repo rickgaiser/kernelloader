@@ -21,8 +21,7 @@
 
 /** Base address for SBIOS. */
 #define SBIOS_START_ADDRESS 0x80001000
-#define MAX_SBIOS_SIZE 0xefc0
-#define SBIOS_RESERVED 0x20
+#define MAX_SBIOS_SIZE 0xf000
 /** Normal usable memory starts here.*/
 #define NORMAL_MEMORY_START 0x80000
 
