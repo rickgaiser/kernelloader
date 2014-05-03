@@ -132,7 +132,8 @@ int initializePad(int port, int slot)
 	// (it has no actuator engines)
 	if (modes == 0) {
 		kprintf("This is a digital controller?\n");
-		return 0;
+		padInitialized[port] = -1;
+		return 1;
 	}
 	// Verify that the controller has a DUAL SHOCK mode
 	i = 0;
@@ -229,27 +230,31 @@ int readPad(int port)
 
 		paddata = 0xffff ^ buttons.btns;
 
+
 #ifdef PAD_MOVE_SCREEN
-		/* Change screen position with left analog stick. */
-		if (buttons.ljoy_h >= 0xbf) {
-			d = (buttons.ljoy_h - 0xbf) / 0x10;
-			d++;
-			moveScreen(d, 0);
-		}
-		if (buttons.ljoy_h < 0x40) {
-			d = (buttons.ljoy_h - 0x40) / 0x10;
-			d--;
-			moveScreen(d, 0);
-		}
-		if (buttons.ljoy_v >= 0xbf) {
-			d = (buttons.ljoy_v - 0xbf) / 0x40;
-			d++;
-			moveScreen(0, d);
-		}
-		if (buttons.ljoy_v < 0x40) {
-			d = (buttons.ljoy_v - 0x40) / 0x40;
-			d--;
-			moveScreen(0, d);
+		if (buttons.mode & 0x20) { /* PAD_TYPE_DUALSHOCK */
+		//if (padInfoMode(port, slot, PAD_MODECURID, 0) == PAD_TYPE_DUALSHOCK) {
+			/* Change screen position with left analog stick. */
+			if (buttons.ljoy_h >= 0xbf) {
+				d = (buttons.ljoy_h - 0xbf) / 0x10;
+				d++;
+				moveScreen(d, 0);
+			}
+			if (buttons.ljoy_h < 0x40) {
+				d = (buttons.ljoy_h - 0x40) / 0x10;
+				d--;
+				moveScreen(d, 0);
+			}
+			if (buttons.ljoy_v >= 0xbf) {
+				d = (buttons.ljoy_v - 0xbf) / 0x40;
+				d++;
+				moveScreen(0, d);
+			}
+			if (buttons.ljoy_v < 0x40) {
+				d = (buttons.ljoy_v - 0x40) / 0x40;
+				d--;
+				moveScreen(0, d);
+			}
 		}
 #endif
 

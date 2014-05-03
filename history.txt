@@ -21,6 +21,8 @@
 - Add parameter --fix-no-disc, fix Linux start when no disc is inserted.
 - Easier menu with most important features directly accessible.
   The old menu can be reached via "Advanced Menu".
+- Fixed handling of old PS1 controllers inside kernelloader menu
+  SCPH-1180 and SCPH-1080 were not detected. The menu was partly frozen.
 
 2.7
 - Fix DVD-R support on Hong Kong consoles.
