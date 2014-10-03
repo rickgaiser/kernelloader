@@ -19,7 +19,7 @@ http://sourceforge.net/projects/kernelloader/files/Linux%202.4/Linux%202.4.17%20
 http://sourceforge.net/projects/kernelloader/files/Initial%20RAM%20Disc/
 
 You can copy the files to an USB stick and then select the files in the
-menu ("Select Kernel" -> vmlinux, "Select RAM disc" -> initrd).
+menu ("Advanced menu" -> "Select Kernel" -> vmlinux, "Select RAM disc" -> initrd).
 
 Virtual Keyboard
 ################
