@@ -1865,7 +1865,7 @@ static void SetSysConf(struct ps2_sysconf *sysconf)
 	sysconf->video = osdconfig.videoOutput;
 
 	/* Check if it is an early Japan console. */
-	if (osdconfig.region != 0) {
+	if (osdconfig.version != 0) {
 		Config2Param osdconfig2;
 
 		/* Later models support osdconfig2. */
@@ -2200,10 +2200,10 @@ static int real_loader(void)
 			graphic_setStatusMessage("PreReset Init RPC");
 			SifInitRpc(0);
 
-			graphic_setStatusMessage("CDVD_INIT_NOCHECK\n");
-			cdInit(CDVD_INIT_NOCHECK);
-			graphic_setStatusMessage("CDVD_INIT_EXIT\n");
-			cdInit(CDVD_INIT_EXIT);
+			graphic_setStatusMessage("SCECdINoD\n");
+			sceCdInit(SCECdINoD);
+			graphic_setStatusMessage("SCECdEXIT\n");
+			sceCdInit(SCECdEXIT);
 
 			graphic_setStatusMessage("Reseting IOP");
 			while (!SifIopReset(iop_reset_param, 0));
@@ -2313,10 +2313,10 @@ static int real_loader(void)
 				/* DEV9 can be only used by Linux, when PS2LINK is not loaded. */
 				if (ps2dev9_init() == 0) {
 					const char *pcicType;
-	
+
 					/* Activate hard disc. */
 					ata_setup();
-	
+
 					/* Tell Linux to activate HDD and Network. */
 					bootpage.bootinfo.pccard_type = 0x0100;
 					pcicType = getPcicType();
@@ -2517,7 +2517,7 @@ int loader(void *arg)
 
 	if (isDVDVSupported()) {
 		type = CDDA_DiskType();
-	
+
 		/* Detect disk type, so loading will work. */
 		if (type == DiskType_DVDV) {
 			CDVD_SetDVDV(1);

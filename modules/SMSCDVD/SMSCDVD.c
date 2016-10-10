@@ -188,10 +188,10 @@ static int s_FDUsed[16];
 static int s_FilesOpen;
 static iop_io_device_t file_driver;
 static dir_cache_info CachedDirInfo;
-static cd_read_mode_t s_CDReadMode;
+static sceCdRMode s_CDReadMode;
 static unsigned int s_LastSector;
 static unsigned int s_LastBk;
-static cd_read_mode_t s_DVDReadMode;
+static sceCdRMode s_DVDReadMode;
 static int s_DVDVSupport;
 static char s_DirName[1024];
 static char s_Buffer[9 * 2064];
@@ -203,8 +203,8 @@ static int (*Func_DRead) (iop_io_file_t *, void *);
 static int (*Func_DClose) (iop_io_file_t *);
 
 static int CDVD_init(iop_io_device_t *);
-static int CDVD_open(iop_io_file_t *, const char *, int, ...);
-static int CDVD_lseek(iop_io_file_t *, unsigned long, int);
+static int CDVD_open(iop_io_file_t *, const char *, int);
+static int CDVD_lseek(iop_io_file_t *, int, int);
 static int CDVD_read(iop_io_file_t *, void *, int);
 static int CDVD_write(iop_io_file_t *, void *, int);
 static int CDVD_close(iop_io_file_t *);
@@ -227,7 +227,7 @@ static void *CDVD_rpc_server(int, void *, int);
 static void CDVD_Thread(void *);
 
 static int ReadSect(u32 aStartSector, u32 anSectors, void *apBuf,
-	cd_read_mode_t * aMode)
+	sceCdRMode * aMode)
 {
 
 	int lRetry;
@@ -244,9 +244,9 @@ static int ReadSect(u32 aStartSector, u32 anSectors, void *apBuf,
 		else
 			s_CDReadMode.spindlctrl = 0;
 
-		CdDiskReady(0);
+		sceCdDiskReady(0);
 
-		if (CdRead(aStartSector, anSectors, apBuf, aMode) != TRUE) {
+		if (sceCdRead(aStartSector, anSectors, apBuf, aMode) != TRUE) {
 
 			if (lRetry == 31) {
 
@@ -257,12 +257,12 @@ static int ReadSect(u32 aStartSector, u32 anSectors, void *apBuf,
 			/* end if */
 		} else {
 
-			CdSync(0);
+			sceCdSync(0);
 			break;
 
 		}						/* end else */
 
-		lResult = CdGetError();
+		lResult = sceCdGetError();
 
 		if (!lResult)
 			break;
@@ -309,7 +309,7 @@ int CDVD_init(iop_io_device_t * apDriver)
 	printf("...and Eugene Plotnikov (aka EEUG)\n");
 	printf("CDVD: Initializing '%s' file driver.\n", apDriver->name);
 
-	CdInit(1);
+	sceCdInit(1);
 
 	mips_memset(s_FDTable, 0, sizeof(s_FDTable));
 	mips_memset(s_FDUsed, 0, 16 * 4);
@@ -317,7 +317,7 @@ int CDVD_init(iop_io_device_t * apDriver)
 	s_DVDVSupport = 1;
 	s_DVDReadMode.trycount = 5;
 	s_DVDReadMode.spindlctrl = 11;
-	s_DVDReadMode.datapattern = CdSecS2048;
+	s_DVDReadMode.datapattern = SCECdSecS2048;
 	s_DVDReadMode.pad = 0x00;
 
 	return 0;
@@ -379,7 +379,7 @@ static int ISO_Open(iop_io_file_t * apFile, const char *name)
 
 }								/* end ISO_Open */
 
-static int CDVD_open(iop_io_file_t * apFile, const char *apName, int aMode, ...)
+static int CDVD_open(iop_io_file_t * apFile, const char *apName, int aMode)
 {
 
 	if (aMode != O_RDONLY)
@@ -389,7 +389,7 @@ static int CDVD_open(iop_io_file_t * apFile, const char *apName, int aMode, ...)
 
 }								/* end CDVD_open */
 
-static int CDVD_lseek(iop_io_file_t * apFile, unsigned long offset, int whence)
+static int CDVD_lseek(iop_io_file_t * apFile, int offset, int whence)
 {
 
 	int i = _LookupFD((int) apFile->privdata);
@@ -732,7 +732,7 @@ int CDVD_Cache_Dir(const char *apPath, enum Cache_getMode aMode)
 
 	}
 	/* end if */
-	CdDiskReady(0);
+	sceCdDiskReady(0);
 	CDVD_GetVolumeDescriptor();
 
 	CachedDirInfo.m_PathDepth = 0;
@@ -770,7 +770,7 @@ static int FindPath(char *pathname)
 
 	lDirName = strtok(pathname, "\\/");
 
-	CdDiskReady(0);
+	sceCdDiskReady(0);
 
 	while (lDirName) {
 
@@ -923,7 +923,7 @@ static void *CDVDRpc_FlushCache(void)
 static void *CDVDRpc_Stop(void)
 {
 
-	CdStop();
+	sceCdStop();
 
 	return NULL;
 
@@ -1060,7 +1060,7 @@ static int ISO_DRead(iop_io_file_t * apFile, void *apRetVal)
 
 }								/* end ISO_DRead */
 
-static int CDVD_dread(iop_io_file_t * apFile, void *apRetVal)
+static int CDVD_dread(iop_io_file_t * apFile, io_dirent_t *apRetVal)
 {
 
 	return Func_DRead(apFile, apRetVal);
@@ -1277,7 +1277,7 @@ static int CDVD_deinit(iop_io_device_t * apDev)
 
 }								/* end CDVD_deinit */
 
-static int CDVD_format(iop_io_file_t * apFile, ...)
+static int CDVD_format(iop_io_file_t * apFile)
 {
 
 	return -ENOTSUP;
@@ -1299,14 +1299,14 @@ static int CDVD_dummy_file(iop_io_file_t * apFile, const char *apName)
 }								/* end CDVD_dummy_file */
 
 static int CDVD_getstat(iop_io_file_t * apFile, const char *apName,
-	void *apRetVal)
+	io_stat_t *apRetVal)
 {
 
 	return -ENOTSUP;
 
 }								/* end CDVD_getstat */
 
-static int CDVD_chstat(iop_io_file_t * apFile, const char *apName, void *apPtr,
+static int CDVD_chstat(iop_io_file_t * apFile, const char *apName, io_stat_t *apPtr,
 	unsigned int aVal)
 {
 
@@ -1318,7 +1318,6 @@ static iop_io_device_ops_t s_CDFSOps;
 
 int _start(int argc, char **argv)
 {
-	int ret, rv;
 	iop_thread_t param;
 	int th;
 
@@ -1336,8 +1335,8 @@ int _start(int argc, char **argv)
 			(char *) AllocSysMemory(0, MAX_DIR_CACHE_SECTORS * 2048, NULL);
 
 	s_CDReadMode.trycount = 0;
-	s_CDReadMode.spindlctrl = CdSpinStm;
-	s_CDReadMode.datapattern = CdSecS2048;
+	s_CDReadMode.spindlctrl = SCECdSpinStm;
+	s_CDReadMode.datapattern = SCECdSecS2048;
 
 	file_driver.name = "cdfs";
 	file_driver.type = 16;

@@ -59,16 +59,16 @@ void nvram_init(void)
 		}
 	}
 
-	rv = cdInit(CDVD_INIT_NOCHECK);
+	rv = sceCdInit(SCECdINoD);
 	if (rv != 1) {
-		kprintf("Error: cdInit(CDVD_INIT_NOCHECK) failed\n");
+		kprintf("Error: sceCdInit(SCECdINoD) failed\n");
 		return;
 	}
 
 	nvm_errors = 0;
 	memset(nvm, 0, sizeof(nvm));
 	for (addr = 0; addr < sizeof(nvm)/2; addr++) {
-		rv = cdReadNVM(addr, &data, &stat);
+		rv = sceCdReadNVM(addr, &data, &stat);
 		if (rv != 1) {
 			kprintf("sceCdReadNVM Error: rv = %d, addr = 0x%04x data = 0x%04x, stat = 0x%02x\n", rv, 2 * addr, data, stat);
 			nvm_errors++;
@@ -77,9 +77,9 @@ void nvram_init(void)
 			nvm[addr * 2 + 1] = (data >> 8) & 0xFF;
 		}
 	}
-	rv = cdInit(CDVD_INIT_EXIT);
+	rv = sceCdInit(SCECdEXIT);
 	if (rv != 1) {
-		kprintf("Error: cdInit(CDVD_INIT_EXIT) failed\n");
+		kprintf("Error: sceCdInit(SCECdEXIT) failed\n");
 	}
 
 	memcpy(ps2_console_type, &nvm[off->console_type], sizeof(ps2_console_type));

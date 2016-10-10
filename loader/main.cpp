@@ -99,10 +99,10 @@ int main(int argc, char **argv)
 
 		if (!disable_cdrom) {
 			/* Initialize CDVD, because SifIopReset() can hang otherwise. */
-			sio_printf("kloader CDVD_INIT_NOCHECK\n");
-			cdInit(CDVD_INIT_NOCHECK);
-			sio_printf("kloader CDVD_INIT_EXIT\n");
-			cdInit(CDVD_INIT_EXIT);
+			sio_printf("kloader SCECdINoD\n");
+			sceCdInit(SCECdINoD);
+			sio_printf("kloader SCECdEXIT\n");
+			sceCdInit(SCECdEXIT);
 		}
 
 		sio_printf("kloader SifIopReset\n");
@@ -114,10 +114,10 @@ int main(int argc, char **argv)
 		printAllModules();
 	}
 
-  	SifInitRpc(0); 	    		  	
+  	SifInitRpc(0);
 	SifLoadFileInit();
 	SifInitIopHeap();
-			
+
 	sbv_patch_enable_lmb();
 
 	sbv_patch_disable_prefix_check();
@@ -450,7 +450,7 @@ extern "C" {
 		smod_mod_info_t module;
 		bool usePad;
 
-		usePad = false;	
+		usePad = false;
 		if (smod_get_mod_by_name("padman", &module) != 0) {
 #ifdef OLD_ROM_MODULES
 			/* Only old ROM version of padman is working. */
@@ -486,7 +486,7 @@ extern "C" {
 					scrollDownFast();
 				}
 			} while (!(new_pad & PAD_CROSS));
-	
+
 			clearInfoBuffer();
 			deinitializeController();
 		} else {

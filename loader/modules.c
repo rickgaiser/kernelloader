@@ -184,14 +184,6 @@ static moduleLoaderEntry_t moduleList[] = {
 	},
 #endif
 	{
-		.path = "dns.irx",
-		.argLen = 0,
-		.args = NULL,
-		.checkMc = -1,
-		.dns = -1,
-		.network = -1,
-	},
-	{
 		.path = "ps2http.irx",
 		.argLen = 0,
 		.args = NULL,
@@ -205,7 +197,7 @@ static moduleLoaderEntry_t moduleList[] = {
 		.checkMc = -1
 	},
 	{
-		.path = "usb_mass.irx",
+		.path = "usbhdfsd.irx",
 		.argLen = 0,
 		.args = NULL,
 		.checkMc = -1
@@ -494,7 +486,7 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 				romfile = rom_getFile(moduleList[i].path);
 				if (romfile != NULL) {
 					int ret;
-	
+
 					ret = SifExecModuleBuffer((void *) romfile->start, romfile->size, moduleList[i].argLen, moduleList[i].args, &rv);
 					if (ret < 0) {
 						rv = ret;
@@ -564,11 +556,11 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 
 		if (lrv != 0) {
 			DiskType type;
-	
+
 			graphic_setStatusMessage("Load config from DVD");
 
 			type = CDDA_DiskType();
-	
+
 			if (type == DiskType_DVDV) {
 				CDVD_SetDVDV(1);
 			} else {

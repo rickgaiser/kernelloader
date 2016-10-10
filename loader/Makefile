@@ -66,13 +66,12 @@ MODULES = \
 	ioptrap.irx \
 	poweroff.irx \
 	ps2ip.irx \
-	dns.irx \
 	ps2http.irx \
 	ps2link.irx \
 	ps2smap.irx \
 	sharedmem.irx \
 	usbd.irx \
-	usb_mass.irx \
+	usbhdfsd.irx \
 	ps2kbd.irx \
 	smaprpc.irx
 
@@ -124,7 +123,7 @@ all: $(PACKEDFILE)
 
 $(PACKEDFILE): $(EE_BIN)
 	../crc32gen/crc32gen $^
-	sjcrunch $^ $@
+	ps2-packer $^ $@
 
 $(MODULES):
 	for file in $@; do install -m 644 $(PS2SDK)/iop/irx/$$file $$file; done
