@@ -386,8 +386,10 @@ int loadLoaderModules(int debug_mode, int disable_cdrom)
 
 	eromdrvSupport = 0;
 
+	/* FIXME: eedebug handler seems to crash the ee
 	graphic_setStatusMessage("Add eedebug handler");
 	addEEDebugHandler();
+	*/
 
 	graphic_setStatusMessage("Loading modules");
 	for (i = 0; i < moduleLoaderNumberOfModules; i++) {

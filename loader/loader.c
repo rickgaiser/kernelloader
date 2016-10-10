@@ -2220,9 +2220,11 @@ static int real_loader(void)
 			sbv_patch_disable_prefix_check();
 		}
 
+		/* FIXME: eedebug handler seems to crash the ee
 		graphic_setStatusMessage("Adding eedebug handler");
 
 		addEEDebugHandler();
+		*/
 
 		graphic_setStatusMessage("Starting modules");
 		//kprintf("Starting modules\n");
