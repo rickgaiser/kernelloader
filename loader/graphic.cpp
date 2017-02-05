@@ -179,12 +179,12 @@ static void gsKit_texture_upload_inline(GSGLOBAL *gsGlobal, GSTEXTURE *Texture)
 	if ((lastMem != Texture->Mem) || (lastVram != Texture->Vram)) {
 		/* Texture was not uploaded, need to upload it. */
 		gsKit_setup_tbw(Texture);
-	
+
 		if (Texture->PSM == GS_PSM_T8)
 		{
 			gsKit_texture_send_inline(gsGlobal, Texture->Mem, Texture->Width, Texture->Height, Texture->Vram, Texture->PSM, Texture->TBW, GS_CLUT_TEXTURE);
 			gsKit_texture_send_inline(gsGlobal, Texture->Clut, 16, 16, Texture->VramClut, Texture->ClutPSM, 1, GS_CLUT_PALLETE);
-	
+
 		}
 		else if (Texture->PSM == GS_PSM_T4)
 		{
@@ -236,14 +236,14 @@ void paintTexture(GSTEXTURE *tex, int x, int y, int z)
 						}
 					} while (size & 15); /* Wait until size is 16 Byte aligned. */
 				}
-	
+
 				uploadTex = *tex;
 				uploadTex.Height = slice;
-	
-				/* Upload image as slices. */	
+
+				/* Upload image as slices. */
 				for (offset = 0; offset < tex->Height; offset += slice) {
 					u32 remaining;
-	
+
 					remaining = tex->Height - offset;
 					if (remaining < slice) {
 						uploadTex.Height = remaining;
@@ -341,7 +341,7 @@ int printTextBlock(int x, int y, int z, int maxCharsPerLine, int maxY, const cha
 			char *a;
 			char *c;
 
-			a = &lineBuffer[insertCursorPos + 1], 
+			a = &lineBuffer[insertCursorPos + 1],
 			c = &lineBuffer[lastSpace];
 			for (c = &lineBuffer[lastSpace]; c >= &lineBuffer[insertCursorPos]; c--) {
 				c[1] = c[0];
@@ -672,7 +672,7 @@ Menu *graphic_main(void)
 
 	lastMode = currentMode;
 
-	if (currentMode == 0) { 
+	if (currentMode == 0) {
 		gsGlobal->Mode = gsKit_detect_signal();
 	} else {
 		gsGlobal->Mode = modeList[currentMode];
@@ -1042,7 +1042,7 @@ extern "C" {
 		gsGlobal->StartX &= 0xFFF;
 		gsGlobal->StartY += dy;
 		gsGlobal->StartY &= 0xFFF;
-	
+
 		GS_SET_DISPLAY1(gsGlobal->StartX,		// X position in the display area (in VCK unit
 				gsGlobal->StartY,		// Y position in the display area (in Raster u
 				gsGlobal->MagH,			// Horizontal Magnification
@@ -1077,7 +1077,7 @@ extern "C" {
 
 		gsKit_deinit_global(gsGlobal);
 
-		/* XXX: gsKit has no function to free allocated memory for fonts. */	
+		/* XXX: gsKit has no function to free allocated memory for fonts. */
 		if (gsFont->Header.offset_table != NULL) {
 			free(gsFont->Header.offset_table);
 			gsFont->Header.offset_table = NULL;
@@ -1093,30 +1093,30 @@ extern "C" {
 
 		gsGlobal = gsKit_init_global();
 
-	
-		if (currentMode == 0) { 
+
+		if (currentMode == 0) {
 			gsGlobal->Mode = gsKit_detect_signal();
 		} else {
 			gsGlobal->Mode = modeList[currentMode];
 		}
-	
+
 		if (isNTSCMode()) {
 			numberOfMenuItems = 7;
 		} else {
 			numberOfMenuItems = 8;
 		}
-	
+
 		dmaKit_init(D_CTRL_RELE_OFF, D_CTRL_MFD_OFF, D_CTRL_STS_UNSPEC,
 			D_CTRL_STD_OFF, D_CTRL_RCYC_8, 1 << DMA_CHANNEL_GIF);
-	
+
 		// Initialize the DMAC
 		dmaKit_chan_init(DMA_CHANNEL_GIF);
 		dmaKit_chan_init(DMA_CHANNEL_FROMSPR);
 		dmaKit_chan_init(DMA_CHANNEL_TOSPR);
-	
+
 		gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 		gsGlobal->ZBuffering = GS_SETTING_OFF;
-	
+
 		gsKit_init_screen(gsGlobal);
 
 		check_screen_offsets();
@@ -1126,18 +1126,18 @@ extern "C" {
 		} else {
 			xoffset = 0;
 		}
-	
+
 		if (gsKit_fontm_upload(gsGlobal, gsFont) != 0) {
 			kprintf("Can't find any font to use\n");
 			SleepThread();
 		}
-	
+
 		globalVram = gsKit_vram_alloc(gsGlobal, MAX_TEX_SIZE, GSKIT_ALLOC_USERBUFFER);
 		if (globalVram == GSKIT_ALLOC_ERROR) {
 			kprintf("Failed to allocate texture buffer.\n");
 			error_printf("Failed to allocate texture buffer.\n");
 		}
-	
+
 		gsFont->Spacing = 0.8f;
 		reallocTexture(texFolder);
 		reallocTexture(texUp);
@@ -1148,16 +1148,16 @@ extern "C" {
 		reallocTexture(texDisc);
 		reallocTexture(texCloud);
 
-		if (mainMenu != NULL) {	
+		if (mainMenu != NULL) {
 			mainMenu->reset(gsGlobal, gsFont, numberOfMenuItems);
 			mainMenu->setPosition(50, 120);
 		}
-	
+
 		gsKit_mode_switch(gsGlobal, GS_ONESHOT);
-	
+
 		/* Activate graphic routines. */
 		graphicInitialized = true;
-	
+
 		for (i = 0; i < 2; i++) {
 			graphic_paint();
 		}
