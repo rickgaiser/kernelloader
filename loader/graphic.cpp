@@ -1038,24 +1038,13 @@ extern "C" {
 
 	void moveScreen(int dx, int dy)
 	{
-		gsGlobal->StartX += dx;
-		gsGlobal->StartX &= 0xFFF;
-		gsGlobal->StartY += dy;
-		gsGlobal->StartY &= 0xFFF;
+		static int x = 0;
+		static int y = 0;
 
-		GS_SET_DISPLAY1(gsGlobal->StartX,		// X position in the display area (in VCK unit
-				gsGlobal->StartY,		// Y position in the display area (in Raster u
-				gsGlobal->MagH,			// Horizontal Magnification
-				gsGlobal->MagV,			// Vertical Magnification
-				gsGlobal->DW - 1,	// Display area width
-				gsGlobal->DH - 1);		// Display area height
-	
-		GS_SET_DISPLAY2(gsGlobal->StartX,		// X position in the display area (in VCK units)
-				gsGlobal->StartY,		// Y position in the display area (in Raster units)
-				gsGlobal->MagH,			// Horizontal Magnification
-				gsGlobal->MagV,			// Vertical Magnification
-				gsGlobal->DW - 1,	// Display area width
-				gsGlobal->DH - 1);		// Display area height
+		x += dx;
+		y += dy;
+
+		gsKit_set_display_offset(gsGlobal, x, y);
 	}
 
 	void changeMode(void)
