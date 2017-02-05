@@ -1,5 +1,5 @@
 PS2LINUXDVD = /media/cdrom
-TARGET_IP = 192.168.0.23
+TARGET_IP = 192.168.1.10
 EXAMPLE_ELF = ../hello/hello.elf
 
 # Set debug output type:
