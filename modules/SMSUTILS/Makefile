@@ -1,3 +1,7 @@
+IOP_OBJS_DIR = ./
+IOP_BIN_DIR  = ./
+IOP_SRC_DIR  = ./
+
 IOP_BIN      = SMSUTILS.irx
 IOP_OBJS     = SMSUTILS.o
 IOP_CFLAGS  += -Wall -fno-builtin-printf
@@ -12,3 +16,4 @@ clean:
 include $(PS2SDKSRC)/Defs.make
 include $(PS2SDKSRC)/iop/Rules.make
 include $(PS2SDKSRC)/iop/Rules.release
+

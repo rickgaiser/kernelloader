@@ -1,5 +1,3 @@
-#include <sys/types.h>
-#include <sys/config.h>
 #include <stdio.h>
 #include <graphic.h>
 #include <sio.h>

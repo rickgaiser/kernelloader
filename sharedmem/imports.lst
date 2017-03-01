@@ -19,3 +19,9 @@ I_strtol
 I_sprintf
 sysclib_IMPORTS_end
 
+thbase_IMPORTS_start
+I_CreateThread
+I_StartThread
+I_DelayThread
+thbase_IMPORTS_end
+

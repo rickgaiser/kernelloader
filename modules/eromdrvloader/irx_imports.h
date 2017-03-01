@@ -13,6 +13,6 @@
 
 /* Please keep these in alphabetical order!  */
 #include "modload_ext.h"
-
+# include <stdio.h>
 
 #endif /* IOP_IRX_IMPORTS_H */
