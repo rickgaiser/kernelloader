@@ -60,7 +60,6 @@ EE_CXXFLAGS = $(EE_FLAGS) -D_STLP_NO_NAMESPACES -D_NOTHREADS -D_STLP_NO_EXCEPTIO
 
 MODULES = \
 	ps2dev9.irx \
-	eedebug.irx \
 	fileXio.irx \
 	iomanX.irx \
 	ioptrap.irx \
@@ -72,18 +71,12 @@ MODULES = \
 	sharedmem.irx \
 	usbd.irx \
 	usbhdfsd.irx \
-	ps2kbd.irx \
-	smaprpc.irx
+	ps2kbd.irx
 
 ROM_FILES += $(MODULES) \
 	SMSUTILS.irx \
 	SMSCDVD.irx \
 	eromdrvloader.irx \
-	TGE/dmarelay.irx \
-	TGE/intrelay-direct.irx \
-	TGE/intrelay-dev9.irx \
-	TGE/intrelay-direct-rpc.irx \
-	TGE/intrelay-dev9-rpc.irx \
 	TGE/sbios_old.elf \
 	TGE/sbios_new.elf \
 	kernel.elf \
